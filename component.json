@@ -1,0 +1,18 @@
+{
+  "name": "calvad_rscripts",
+  "repo": "jmarca/calvad_rscripts",
+  "description": "Imputation and analysis of CalVAD data in R",
+  "version": "0.0.1",
+  "keywords": ["CalVAD", "R", "rstats"],
+  "main":"lib/vds_self_impute_missing_distributed.R",
+  "scripts": [
+      "lib/amelia_plots_and_diagnostics.R",
+      "lib/get.medianed.amelia.vds.R",
+      "lib/load.pems.raw.file.R",
+      "lib/vds.processing.functions.R",
+      "lib/vds_impute.R",
+      "lib/vds_plots.R",
+      "lib/vds_self_impute_missing_distributed.R"
+  ],
+  "license": "GPLV2"
+}
