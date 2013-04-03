@@ -1,0 +1,383 @@
+
+get.amelia.vds.file <- function(vdsid,path='/',year,server='http://calvad.ctmlabs.net'){
+
+  path <- toupper(path)
+  amelia.dump.file <- make.amelia.output.pattern(vdsid,year)
+  files <- get.filenames(server=server,base.dir=path, pattern=amelia.dump.file)
+  df.vds.agg.imputed <- list();
+  if(length(files)==0){
+    return('todo')
+  }
+  result <- 'fail'
+  attempt <- 0
+  while(attempt < 10){
+    attempt <-  attempt + 1
+    print(paste('try',attempt,'loading stored vds amelia object from file',files[1]))
+    fetched <- fetch.remote.file(server,service='vdsdata',root=paste(path,'/',sep=''),file=files[1])
+    r <- try(result <- load(file=fetched))
+    if(class(r) == "try-error") {
+      next
+    }
+    unlink(x=fetched)
+    break
+  }
+  if(result == 'reject'){
+    return(paste('rejected',files[1]))
+  }
+  if (attempt>9){
+    couch.set.state(year,vdsid,doc=list('truckimputed'='todo'),local=TRUE)
+    stop()
+  }
+  df.vds.agg.imputed
+}
+
+unget.amelia.vds.file <- function(vdsid,path='/',year,server='http://calvad.ctmlabs.net'){
+
+  path <- toupper(path)
+  amelia.dump.file <- make.amelia.output.pattern(vdsid,year)
+  files <- get.filenames(server=server,base.dir=path, pattern=amelia.dump.file)
+  df.vds.agg.imputed <- list()
+  if(length(files)==0){
+    return()
+  }
+  unmap.temp.files(files[1])
+  return()
+}
+
+transpose.lanes.to.rows <- function(df){
+
+  varnames <- names(df)
+  lane.pattern = '(r\\d+$|l1)$';
+  not.lanes <- grep(pattern=lane.pattern,x=varnames,perl=TRUE,value=TRUE,inv=TRUE)
+  lanes <- regexec(lane.pattern,varnames)
+  lanes <- unique(unlist( regmatches(varnames, lanes) ))
+  recode <- data.frame()
+  for(lane in lanes){
+    lane.columns <- grep(pattern=paste(lane,'$',sep=''),x=varnames,perl=TRUE,value=TRUE)
+    if(!length(lane.columns)>0){
+      next
+    }
+    keepvars <- c(not.lanes,lane.columns)
+    subset <- data.frame(df[,keepvars])
+    names(subset) <- gsub(paste('_?',lane,'$',sep=''),'',keepvars,perl=TRUE)
+    subset$lane <- lane
+
+    if(length(recode)==0){
+      recode <- subset
+    }else{
+      ## make sure names match up
+      missing.recode <- setdiff(names(recode),names(subset))
+      missing.subset <- setdiff(names(subset),names(recode))
+
+      if(length(missing.recode)>0){
+        subset[,missing.recode] <- NA
+      }
+      if(length(missing.subset)>0){
+        recode[,missing.subset] <- NA
+      }
+      recode <- rbind(recode,subset)
+    }
+  }
+  recode
+}
+
+district.from.vdsid <- function(vdsid){
+  district <- as.integer(sub( "\\d{5}$","",x=vdsid))
+  if(district < 10){
+    district <- paste('d0',district,sep='')
+  }else{
+    district <- paste('d',district,sep='')
+  }
+  ## setup.district.replication(district,year)
+  district
+}
+
+tempfix.borkborkbork <- function(df){
+  ## use zoo to combine a mean, no, median value
+  varnames <- names(df)
+  varnames <- grep( pattern="^ts",x=varnames,perl=TRUE,inv=TRUE,value=TRUE)
+
+  df.z <- zooreg(df[,varnames]
+                 ,order.by=as.numeric(df$ts))
+
+  hour=3600
+    print('make it an hour')
+  df.z$tick <- 1
+    df.z <-  aggregate(df.z,
+                       as.numeric(time(df.z)) -
+                       as.numeric(time(df.z)) %% hour,
+                       sum, na.rm=TRUE)
+  names.occ <- grep( pattern="(^o(l|r)\\d+$)",x=names(df.z),perl=TRUE)
+  df.z[,names.occ] <-  df.z[,names.occ] / df.z[,'tick']
+  df.z$tick <- NULL
+  unzoo.incantation(df.z)
+}
+
+unzoo.incantation <- function(df.z){
+  ts.ts <- unclass(time(df.z))+ISOdatetime(1970,1,1,0,0,0,tz='UTC')
+  keep.columns <-  grep( pattern="(^ts|^day|^tod|^obs_count)",x=names(df.z),perl=TRUE,value=TRUE,invert=TRUE)
+  df.m <- data.frame(coredata(df.z[,keep.columns]))
+  df.m$ts <- ts.ts
+  ts.lt <- as.POSIXlt(df.m$ts)
+  df.m$tod   <- ts.lt$hour + (ts.lt$min/60)
+  df.m$day   <- ts.lt$wday
+  df.m
+}
+
+medianed.aggregate.df <- function(df.combined,op=median){
+  ## use zoo to combine a mean, no, median value
+  varnames <- names(df.combined)
+  varnames <- grep( pattern="^ts",x=varnames,perl=TRUE,inv=TRUE,value=TRUE)
+
+  df.z <- zooreg(df.combined[,varnames]
+                       ,order.by=as.numeric(df.combined$ts))
+
+  ## using median not mean because median is resistant to extreme outliers
+  df.z <- aggregate(df.z, identity, op, na.rm=TRUE )
+  hour=3600
+  print(table(df.z$tod))
+  print('make it an hour')
+  df.z$tick <- 1
+  df.z <-  aggregate(df.z,
+                     as.numeric(time(df.z)) -
+                     as.numeric(time(df.z)) %% hour,
+                     sum, na.rm=TRUE)
+  names.occ <- grep( pattern="(^o(l|r)\\d+$)",x=names(df.z),perl=TRUE)
+  df.z[,names.occ] <-  df.z[,names.occ] / df.z[,'tick']
+  df.z$tick <- NULL
+  df.z
+}
+
+condense.amelia.output.into.zoo <- function(df.amelia,op=median){
+
+  ## as with the with WIM data, using median
+  df.amelia.c <- df.amelia$imputations[[1]]
+  if(length(df.amelia$imputations) >1){
+    for(i in 2:length(df.amelia$imputations)){
+      df.amelia.c <- rbind(df.amelia.c,df.amelia$imputations[[i]])
+    }
+  }
+  df.zoo <- medianed.aggregate.df(df.amelia.c,op)
+  df.zoo
+}
+
+get.and.plot.vds.amelia <- function(pair,year,cdb.wimid=NULL,doplots=TRUE){
+  ## load the imputed file for this site, year
+  district <- district.from.vdsid(pair)
+  df.vds.amelia <- get.amelia.vds.file(pair,path=district,year=year)
+  if(length(df.vds.amelia) == 1){
+    print(paste("amelia run for vds not good",df.vds.amelia))
+    couch.set.state(year,pair,doc=list('vdsimputed'=df.vds.amelia))
+    couch.set.state(year,pair,doc=list('vdsraw_chain_lengths'=df.vds.amelia))
+    if(!is.null(cdb.wimid)){
+      couch.set.state(year=year,detector.id=cdb.wimid,doc=list('badpair'=pair))
+    }
+    return(NULL)
+  }else if(!length(df.vds.amelia)>0 || !length(df.vds.amelia$imputations)>0 || df.vds.amelia$code!=1 ){
+    print("amelia run for vds not good")
+    couch.set.state(year,pair,doc=list('vdsimputed'='unusable'))
+    couch.set.state(year,pair,doc=list('vdsraw_chain_lengths'='unusable raw data'))
+    if(!is.null(cdb.wimid)){
+      couch.set.state(year=year,detector.id=cdb.wimid,doc=list('badpair'=pair))
+    }
+    return(NULL)
+  }
+  store.amelia.chains(df.vds.amelia,year,pair,'vdsraw')
+  ## as with the with WIM data, using median
+  df.vds.amelia.c <- df.vds.amelia$imputations[[1]]
+  if(length(df.vds.amelia$imputations) >1){
+    for(i in 2:length(df.vds.amelia$imputations)){
+      df.vds.amelia.c <- rbind(df.vds.amelia.c,df.vds.amelia$imputations[[i]])
+    }
+  }
+
+  df.vds.zoo <- medianed.aggregate.df(df.vds.amelia.c)
+
+  ## prior to binding, weed out excessive flows
+  varnames <- names(df.vds.zoo)
+  flowvars <- grep('^n(r|l)\\d',x=varnames,perl=TRUE,value=TRUE)
+  for(lane in flowvars){
+    idx <- df.vds.zoo[,lane] > 2500
+    df.vds.zoo[idx,lane] <- 2500
+  }
+
+  couch.set.state(year,pair,doc=list('occupancy_averaged'=1))
+  ts.ts <- unclass(time(df.vds.zoo))+ISOdatetime(1970,1,1,0,0,0,tz='UTC')
+  ts.lt <- as.POSIXlt(ts.ts)
+  df.vds.zoo$tod   <- ts.lt$hour + (ts.lt$min/60)
+  df.vds.zoo$day   <- ts.lt$wday
+
+  rm(df.vds.amelia,df.vds.amelia.c)
+
+  if(doplots){
+    plot.zooed.vds.data(df.vds.zoo,pair,year)
+  }
+  gc()
+  df.vds.zoo
+}
+
+plot.zooed.vds.data <- function(df.vds.zoo,vdsid,year,fileprefix=NULL,subhead='\npost imputation'){
+
+  ## temporary variable for the diagnostic plots
+  ## wish I could spawn this as a separate job
+  df.merged <- unzoo.incantation(df.vds.zoo)
+  plot.vds.data(df.merged,vdsid,year,fileprefix,subhead)
+  rm(df.merged)
+  gc()
+  TRUE
+}
+
+check.for.plot.attachment <- function(vdsid,year,fileprefix=NULL,subhead='\npost imputation'){
+  imagefileprefix <- paste(vdsid,year,sep='_')
+  if(!is.null(fileprefix)){
+    imagefileprefix <- paste(vdsid,year,fileprefix,sep='_')
+  }
+  fourthfile <- paste(imagefileprefix,'004.png',sep='_')
+  print(paste('checking for ',fourthfile,'in tracking doc'))
+  return (couch.has.attachment(trackingdb,vdsid,fourthfile))
+}
+
+plot.vds.data  <- function(df.merged,vdsid,year,fileprefix=NULL,subhead='\npost imputation'){
+  have.plot <- check.for.plot.attachment(vdsid,year,fileprefix,subhead)
+  if(have.plot){
+    return (1)
+  }
+  print('need to make plots')
+  varnames <- names(df.merged)
+  ## make some diagnostic plots
+  ## set up a reconfigured dataframe
+  plotvars <- grep('^n(r|l)\\d',x=varnames,perl=TRUE,value=TRUE)
+
+  recode <- data.frame()
+  for(nlane in plotvars){
+    lane <- substr(nlane,2,3)
+    olane <- paste('o',lane,sep='')
+    keepvars <- c(nlane,olane,'tod','day','ts')
+    subset <- data.frame(df.merged[,keepvars])
+    subset$lane <- lane
+    names(subset) <- c('n','o','tod','day','ts','lane')
+    if(length(recode)==0){
+      recode <- subset
+    }else{
+      recode <- rbind(recode,subset)
+    }
+  }
+
+
+  numlanes <- length(levels(as.factor(recode$lane)))
+  plotheight = 300 * numlanes
+
+  savepath <- 'images'
+  if(!file.exists(savepath)){dir.create(savepath)}
+  savepath <- paste(savepath,vdsid,sep='/')
+  if(!file.exists(savepath)){dir.create(savepath)}
+
+  imagefileprefix <- paste(vdsid,year,sep='_')
+  if(!is.null(fileprefix)){
+    imagefileprefix <- paste(vdsid,year,fileprefix,sep='_')
+  }
+
+  imagefilename <- paste(savepath,paste(imagefileprefix,'%03d.png',sep='_'),sep='/')
+
+  print(paste('plotting to',imagefilename))
+
+  png(file = imagefilename, width=900, height=plotheight, bg="transparent",pointsize=24)
+
+  plotvars <- grep('^n',x=varnames,perl=TRUE,value=TRUE)
+  f <- formula(paste( paste(plotvars,collapse='+' ),' ~ tod | day'))
+  strip.function.a <- strip.custom(which.given=1,factor.levels=day.of.week, strip.levels = TRUE )
+  strip.function.b <- strip.custom(which.given=2,factor.levels=lane.defs[1:length(plotvars)], strip.levels = TRUE )
+  a <- xyplot( n ~ tod | day + lane, data=recode
+              ,main=paste("Scatterplot volume in each lane, by time of day and day of week, for ",year," at site",vdsid,subhead),
+              ,strip = function(...){
+                strip.function.a(...)
+                strip.function.b(...)
+              }
+              ,ylab=list(label='hourly volume, by lane', cex=2)
+              ,xlab=list(label='time of day', cex=2)
+              ,type='p' ## or 'l
+              ,pch='*'
+              ,scales=list(cex=1.8)
+              ,par.settings=simpleTheme(lty=1:length(plotvars),lwd=3)
+              ,panel=pf
+              ,auto.key = list(
+                 space='bottom',
+                 points = TRUE, lines = FALSE,columns=length(plotvars),padding.text=10,cex=2
+                 )
+              )
+  print(a)
+
+  plotvars <- grep('^o(r|l)\\d',x=varnames,perl=TRUE,value=TRUE)
+  f <- formula(paste( paste(plotvars,collapse='+' ),' ~ tod | day'))
+  a <- xyplot( o ~ tod | day + lane, data=recode
+              ,main=paste("Scatterplot occupancy in each lane, by time of day and day of week, for ",year," at site",vdsid,subhead)
+              ,strip = function(...){
+                strip.function.a(...)
+                strip.function.b(...)
+              }
+              ,ylab=list(label='hourly occupancy, by lane', cex=2)
+              ,xlab=list(label='time of day', cex=2)
+              ,type='p' ## or 'l'
+              ,pch='*'
+              ,scales=list(cex=1.8)
+              ,par.settings=simpleTheme(lty=1:length(plotvars),lwd=3)
+              ,panel=pf
+              ,auto.key = list(
+                 space='bottom',
+                 points = TRUE, lines = FALSE,columns=length(plotvars),padding.text=10,cex=2
+                 )
+              )
+
+  print(a)
+
+
+  a <- xyplot(n ~ o | day + lane, data=recode
+              ,main=paste("Scatterplot hourly volume vs occupancy per lane, by day of week, for ",year," at site",vdsid,subhead)
+              ,strip = function(...){
+                strip.function.a(...)
+                strip.function.b(...)
+              }
+              ,ylab=list(label='hourly volume', cex=2)
+              ,xlab=list(label='hourly occupancy', cex=2)
+              ,type='p' ## or 'l'
+              ,pch='*'
+              ,scales=list(cex=1.8)
+              ,par.settings=simpleTheme(lty=1:length(plotvars),lwd=3)
+              ,panel=pf
+              ,auto.key = list(
+                 space='bottom',
+                 points = TRUE, lines = FALSE,columns=length(plotvars),padding.text=10,cex=2
+                 )
+              )
+
+  print(a)
+
+  strip.function.b <- strip.custom(which.given=1,factor.levels=lane.defs[1:length(plotvars)], strip.levels = TRUE )
+
+  a <- xyplot(n ~ ts | lane, data=recode
+              ,main=paste("Scatterplot hourly volume vs time, per lane, for ",year," at site",vdsid,subhead)
+              ,strip = function(...){
+                strip.function.b(...)
+              }
+              ,ylab=list(label='hourly volume', cex=2)
+              ,xlab=list(label='date', cex=2)
+              ,type='p' ## or 'l'
+              ,scales=list(cex=1.8)
+              ,par.settings=simpleTheme(lty=1:length(plotvars),lwd=3)
+              ,auto.key = list(
+                 space='bottom',
+                 points = TRUE, lines = FALSE,columns=length(plotvars),padding.text=10,cex=2
+                 )
+              )
+  print(a)
+
+  dev.off()
+
+  files.to.attach <- dir(savepath,pattern=paste(imagefileprefix,'0',sep='_'),full.names=TRUE)
+  for(f2a in files.to.attach){
+    couch.attach(trackingdb,vdsid,f2a)
+  }
+  rm(recode)
+  gc()
+  TRUE
+}

@@ -1,0 +1,178 @@
+
+
+load.raw.file <- function (file="",skip=0,nlines=0){
+  whatlist <- list(ts="",vds_id=0,
+                   n1=0,o1=0,s1=0,
+                   n2=0,o2=0,s2=0,
+                   n3=0,o3=0,s3=0,
+                   n4=0,o4=0,s4=0,
+                   n5=0,o5=0,s5=0,
+                   n6=0,o6=0,s6=0,
+                   n7=0,o7=0,s7=0,
+                   n8=0,o8=0,s8=0)
+  testScan <-
+    scan(file, what=whatlist, skip=skip,nlines=nlines,multi.line=FALSE,flush=TRUE,sep=',')
+  testScan
+}
+
+load.file <- function(f,fname,year,path){
+  ## is there a df available?
+  df <- data.frame()
+  target.file =paste(fname,'.df.*',year,'RData',sep='')
+  isa.df <- dir(path, pattern=target.file,full.names=TRUE, ignore.case=TRUE,recurs=TRUE)
+  need.to.save <- FALSE
+  if(length(isa.df)>0){
+    print (paste('loading', isa.df[1]))
+    load.result <-  load(file=isa.df[1])
+  }else{
+    print (paste('scanning', f))
+    fileScan <- load.raw.file(f)
+
+    ## pre-process the vds data
+    ts <- as.POSIXct(strptime(fileScan$ts,"%m/%d/%Y %H:%M:%S",tz='GMT'))
+    df <- trim.empty.lanes(fileScan)
+    if(dim(df)[2]>0                    ## sometimes df is totally NA
+       & is.element("n1",names(df))    ## sometimes get random interior lanes
+       ){
+       df <- recode.lanes(df)
+    }
+    ## save for next time
+    df$ts <- ts
+    save(df,file=paste(path,'/',fname,'.df.',year,'RData',sep=''),compress='xz')
+  }
+  df
+}
+
+trim.empty.lanes <- function(testScan){
+  df <- data.frame(testScan)
+
+  ## bug bit me in the behind.  If the first row has missing values but a non-missing time,
+  ## then this will fail
+  # pattern <- ! is.na(df[1,])
+  ## so going with mean, which chokes on na's
+
+  ## bleh.  Another bug, a little more difficult.  sometimes speed in
+  ## one lane seems to be out.  so make sure if you have x lanes of n
+  ## and o, you also have x lanes of speed or none at all
+
+  ## old way: pattern <- ! is.nan(mean(df,na.rm=TRUE))
+  means <- mean(df,na.rm=TRUE)
+  pattern <- ( ! is.nan(means) ) ## old way
+  pattern[1]=FALSE ## don't need time twice
+  pattern[2]=FALSE ## don't need the vdsid for every record
+
+
+  ## hacktastic, sure to fail at some point, but vol of 0.01 avg is pretty low, as is occ of 0.00001
+  ## pattern[-1:-2] <-  means[-1:-2]>c(0.01,0.00001,0.1 )
+  ## pattern[-1:-2] <- pattern[-1:-2] & !is.na(pattern[-1:-2])
+  ## bail on that hack for now, just try this:
+
+  ## have seen cases with reasonable n, but nothing for o, and mostly NAs
+  ## so cut off cases with more than 95% missing as junk
+  pattern[pattern] <- (apply(df[pattern],2,pct.na) < 0.95)
+
+  ## if any speeds are non null, then make sure speed lanes equals v and o lanes
+  speed.names <- grepl( pattern="^s\\d",x=names(df),perl=TRUE)
+
+  if(any( speed.names & pattern ) ){
+    vol.names <- grepl( pattern="^n\\d",x=names(df),perl=TRUE)
+    vol.lanes.with.data <- pattern[vol.names] & !is.na(pattern[vol.names])
+    lanes <- length(vol.lanes.with.data[vol.lanes.with.data]  )
+    while(lanes>0){
+      pattern[paste('s',lanes,sep='')] <- TRUE
+      lanes <- lanes-1
+    }
+  }
+  df[,pattern]
+}
+pct.na <- function(v){
+  sum(is.na(v))/length(v)
+}
+
+vds.lane.numbers <- function(lanes,raw.data){
+
+  Y <- paste(raw.data,"l1", sep="")
+  YL <- paste(raw.data,"l1", sep="")
+  YR <- paste(raw.data,"r1", sep="")
+  if(lanes>2){
+    ## interior lanes
+    YM <- paste(raw.data,
+                "r",
+                rep(sort(rep(c((lanes-1):2),length(raw.data)),decreasing=TRUE)),
+                sep="")
+    Y <- c(YL,YM,YR)
+  }else{
+    ## no interior lanes, could also be a ramp
+    if(lanes==1){
+      Y <- c(YR)
+    }else{
+      ## lanes == 2
+      Y <- c(YL,YR)
+    }
+  }
+
+  Y
+}
+## dead reckoning is madness.  add .deprecated to get rid of calls
+guess.lanes.deprecated <- function(df){
+  lanes <- floor(length(df[1,])/2)
+  ## check both for original and recoded versions of speed in lane 1
+  if( ! is.null(df$s1) || ! is.null(df$sl1)  ){
+    lanes <- floor(length(df[1,])/3)
+  }
+  lanes
+}
+recode.lanes <- function(df){
+                                        # run this only after you've
+                                        # run trim empty lanes
+
+## This is broken if the lanes are screwy after trim empty lanes
+## example:
+## > summary(df)
+##        n1               n2               n5                  o5                 n6               o6
+##  Min.   :     0   Min.   :     0   Min.   :0.000e+00   Min.   :0.000e+00  Min.   :     0   Min.   :     0
+##  1st Qu.:     0   1st Qu.:     0   1st Qu.:0.000e+00   1st Qu.:0.000e+00  1st Qu.:     0   1st Qu.:     0
+##  Median :     0   Median :     0   Median :0.000e+00   Median :0.000e+00  Median :     0   Median :     0
+##  Mean   :     0   Mean   :     0   Mean   :6.646e-02   Mean   :9.154e-04  Mean   :     0   Mean   :     0
+##  3rd Qu.:     0   3rd Qu.:     0   3rd Qu.:0.000e+00   3rd Qu.:0.000e+00  3rd Qu.:     0   3rd Qu.:     0
+##  Max.   :     0   Max.   :     0   Max.   :1.800e+01   Max.   :9.044e-01  Max.   :     0   Max.   :     0
+##  NA's   :521354   NA's   :521354   NA's   :2.013e+05   NA's   :2.013e+05  NA's   :201302   NA's   :201302
+
+## here I have n1, n2, but not n3, n4, and not o[1..4], so recode thinks there are 2 lanes, and recodes the names on teh wrong variables.
+
+
+
+  ##
+  ## recode to be right lane (r1), right lane but one (r2), r3, ... and then
+  ## left lane (l1)
+  ##
+
+  names.data <- names(df)
+
+  ## testing:
+  ## names.data <-c('n1', 'n2',  'n5', 'o5', 'n6', 'o6')
+  ## eventually recode this to use grep.
+  YR <- NULL
+  for (site.lanes in 1:8){
+     r.d <- NULL
+     if( is.element(paste("n",site.lanes,sep=''),names.data)){
+          r.d <- c('n')
+     }
+     if( is.element(paste("o",site.lanes,sep=''),names.data)){
+          r.d <- c(r.d,'o')
+     }
+     if( is.element(paste("s",site.lanes,sep=''),names.data)){
+          r.d <- c(r.d,'s')
+     }
+     if(!is.null(r.d)){
+         if(site.lanes == 1){
+             YR <- c(YR, paste(r.d,'l1',sep=""))
+         }else{
+             YR <- c(YR, paste(r.d,paste('r',site.lanes-1,sep=""),sep=""))
+         }
+     }
+  }
+
+  names(df) <- YR
+  df
+}
