@@ -12,7 +12,8 @@
       "lib/vds.processing.functions.R",
       "lib/vds_impute.R",
       "lib/vds_plots.R",
-      "lib/vds_self_impute_missing_distributed.R"
+      "lib/vds_self_impute_missing_distributed.R",
+      "lib/wim.aggregate.fixed.R"
   ],
   "license": "GPLV2"
 }
