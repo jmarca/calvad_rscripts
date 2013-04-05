@@ -1,19 +1,23 @@
 
-get.amelia.vds.file <- function(vdsid,path='/',year,server='http://calvad.ctmlabs.net'){
-
-  path <- toupper(path)
-  amelia.dump.file <- make.amelia.output.pattern(vdsid,year)
-  files <- get.filenames(server=server,base.dir=path, pattern=amelia.dump.file)
+get.amelia.vds.file <- function(vdsid,path='/',year,server='http://calvad.ctmlabs.net',serverfile='none'){
   df.vds.agg.imputed <- list();
-  if(length(files)==0){
-    return('todo')
+  files = c(serverfile)
+  if(serverfile == 'none'){
+    path <- toupper(path)
+    amelia.dump.file <- make.amelia.output.pattern(vdsid,year)
+    files <- get.filenames(server=server,base.dir=path, pattern=amelia.dump.file)
+    df.vds.agg.imputed <- list();
+    if(length(files)==0){
+      return('todo')
+    }
   }
   result <- 'fail'
   attempt <- 0
+  serverfile = files[1]
   while(attempt < 10){
     attempt <-  attempt + 1
-    print(paste('try',attempt,'loading stored vds amelia object from file',files[1]))
-    fetched <- fetch.remote.file(server,service='vdsdata',root=paste(path,'/',sep=''),file=files[1])
+    print(paste('try',attempt,'loading stored vds amelia object from file',serverfile))
+    fetched <- fetch.remote.file(server,service='vdsdata',root=paste(path,'/',sep=''),file=serverfile)
     r <- try(result <- load(file=fetched))
     if(class(r) == "try-error") {
       next
@@ -161,28 +165,16 @@ condense.amelia.output.into.zoo <- function(df.amelia,op=median){
   df.zoo
 }
 
-get.and.plot.vds.amelia <- function(pair,year,cdb.wimid=NULL,doplots=TRUE){
-  ## load the imputed file for this site, year
-  district <- district.from.vdsid(pair)
-  df.vds.amelia <- get.amelia.vds.file(pair,path=district,year=year)
+get.zooed.vds.amelia <- function(vdsid,serverfile='none'){
+    district <- district.from.vdsid(vdsid)
+  df.vds.amelia <- get.amelia.vds.file(vdsid,path=district,year=year,serverfile=serverfile)
   if(length(df.vds.amelia) == 1){
-    print(paste("amelia run for vds not good",df.vds.amelia))
-    couch.set.state(year,pair,doc=list('vdsimputed'=df.vds.amelia))
-    couch.set.state(year,pair,doc=list('vdsraw_chain_lengths'=df.vds.amelia))
-    if(!is.null(cdb.wimid)){
-      couch.set.state(year=year,detector.id=cdb.wimid,doc=list('badpair'=pair))
-    }
+    print("amelia run for vds not good")
     return(NULL)
   }else if(!length(df.vds.amelia)>0 || !length(df.vds.amelia$imputations)>0 || df.vds.amelia$code!=1 ){
     print("amelia run for vds not good")
-    couch.set.state(year,pair,doc=list('vdsimputed'='unusable'))
-    couch.set.state(year,pair,doc=list('vdsraw_chain_lengths'='unusable raw data'))
-    if(!is.null(cdb.wimid)){
-      couch.set.state(year=year,detector.id=cdb.wimid,doc=list('badpair'=pair))
-    }
     return(NULL)
   }
-  store.amelia.chains(df.vds.amelia,year,pair,'vdsraw')
   ## as with the with WIM data, using median
   df.vds.amelia.c <- df.vds.amelia$imputations[[1]]
   if(length(df.vds.amelia$imputations) >1){
@@ -190,9 +182,12 @@ get.and.plot.vds.amelia <- function(pair,year,cdb.wimid=NULL,doplots=TRUE){
       df.vds.amelia.c <- rbind(df.vds.amelia.c,df.vds.amelia$imputations[[i]])
     }
   }
+  medianed.aggregate.df(df.vds.amelia.c)
+}
 
-  df.vds.zoo <- medianed.aggregate.df(df.vds.amelia.c)
-
+get.and.plot.vds.amelia <- function(pair,year,cdb.wimid=NULL,doplots=TRUE){
+  ## load the imputed file for this site, year
+  df.vds.zoo <- get.zooed.vds.amelia(pair)
   ## prior to binding, weed out excessive flows
   varnames <- names(df.vds.zoo)
   flowvars <- grep('^n(r|l)\\d',x=varnames,perl=TRUE,value=TRUE)
