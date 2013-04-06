@@ -9,6 +9,7 @@
       "lib/amelia_plots_and_diagnostics.R",
       "lib/get.medianed.amelia.vds.R",
       "lib/get_couch.R",
+      "lib/just.amelia.call.R",
       "lib/load.pems.raw.file.R",
       "lib/vds.processing.functions.R",
       "lib/vds_impute.R",
