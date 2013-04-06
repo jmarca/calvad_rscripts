@@ -165,9 +165,10 @@ condense.amelia.output.into.zoo <- function(df.amelia,op=median){
   df.zoo
 }
 
-get.zooed.vds.amelia <- function(vdsid,serverfile='none'){
+get.zooed.vds.amelia <- function(vdsid,serverfile='none',path='none'){
     district <- district.from.vdsid(vdsid)
-  df.vds.amelia <- get.amelia.vds.file(vdsid,path=district,year=year,serverfile=serverfile)
+    if(path=='none'){path = district}
+    df.vds.amelia <- get.amelia.vds.file(vdsid,path=path,year=year,serverfile=serverfile)
   if(length(df.vds.amelia) == 1){
     print("amelia run for vds not good")
     return(NULL)

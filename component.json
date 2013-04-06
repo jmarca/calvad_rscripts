@@ -17,5 +17,8 @@
       "lib/wim.aggregate.fixed.R",
       "lib/wim.loading.functions.R"
   ],
+  "dependencies": {
+    "jmarca/rstats_couch_utils":"*"
+  },
   "license": "GPLV2"
 }
