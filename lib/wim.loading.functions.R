@@ -51,9 +51,15 @@ get.list.neighbor.wim.sites <- function(vds.id){
 ## that above one prevents imputing paired sites.  Not sure that is good.  trying the following
 
 ## select direction, Task #724
-db.query <- paste("select distinct c.site_no as wim_id,c.dist as distance,direction from (select a.* from imputed.vds_wim_neighbors a left outer join imputed.vds_wim_pairs b on (a.vds_id=b.vds_id and a.site_no=b.wim_id) where a.vds_id =",vds.id, ") c",sep='')
+##db.query <- paste("select distinct c.site_no as wim_id,c.dist as distance,direction from (select a.* from imputed.vds_wim_neighbors a left outer join imputed.vds_wim_pairs b on (a.vds_id=b.vds_id and a.site_no=b.wim_id) where a.vds_id =",vds.id, ") c",sep='')
 
   ## select a.* from imputed.vds_wim_neighbors a left outer join imputed.vds_wim_pairs b on (a.vds_id=b.vds_id and a.site_no=b.wim_id) where wim_id is null;
+
+  # add lane count too
+  withstatement <- "with maxlanes as (select site_no, newctmlmap.canonical_direction(direction) as direction, max(lane_no) as lanes from wim_lane_dir group by site_no, direction order by site_no, direction) "
+  selectstatement <- " select distinct c.site_no as wim_id, c.dist as distance, direction, lanes from "
+  subselect <- " (select a.*,ml.lanes from imputed.vds_wim_neighbors a left outer join imputed.vds_wim_pairs b on (a.vds_id=b.vds_id and a.site_no=b.wim_id) join maxlanes ml on (ml.site_no=a.site_no and newctmlmap.canonical_direction(a.direction)=ml.direction) "
+  db.query <- paste(withstatement, selectstatement,subselect," where a.vds_id =",vds.id, ") c order by lanes desc",sep='')
 
   print(db.query)
   rs <- dbSendQuery(con,db.query)
