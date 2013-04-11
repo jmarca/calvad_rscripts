@@ -27,7 +27,6 @@ get.amelia.vds.file <- function(vdsid,path='/',year,server='http://calvad.ctmlab
   if (attempt>9){
     stop('no data from data server')
   }
-  df.vds.agg.imputed
 }
 
 unget.amelia.vds.file <- function(vdsid,path='/',year,server='http://calvad.ctmlabs.net'){
@@ -163,19 +162,21 @@ condense.amelia.output.into.zoo <- function(df.amelia,op=median){
 get.zooed.vds.amelia <- function(vdsid,serverfile='none',path='none'){
     district <- district.from.vdsid(vdsid)
     if(path=='none'){path = district}
-    df.vds.amelia <- get.amelia.vds.file(vdsid,path=path,year=year,serverfile=serverfile)
-  if(length(df.vds.amelia) == 1){
+    get.amelia.vds.file(vdsid,path=path,year=year,serverfile=serverfile)
+    
+
+    if(length(df.vds.agg.imputed) == 1){
     print("amelia run for vds not good")
     return(NULL)
-  }else if(!length(df.vds.amelia)>0 || !length(df.vds.amelia$imputations)>0 || df.vds.amelia$code!=1 ){
+  }else if(!length(df.vds.agg.imputed)>0 || !length(df.vds.agg.imputed$imputations)>0 || df.vds.agg.imputed$code!=1 ){
     print("amelia run for vds not good")
     return(NULL)
   }
   ## as with the with WIM data, using median
-  df.vds.amelia.c <- df.vds.amelia$imputations[[1]]
-  if(length(df.vds.amelia$imputations) >1){
-    for(i in 2:length(df.vds.amelia$imputations)){
-      df.vds.amelia.c <- rbind(df.vds.amelia.c,df.vds.amelia$imputations[[i]])
+  df.vds.amelia.c <- df.vds.agg.imputed$imputations[[1]]
+  if(length(df.vds.agg.imputed$imputations) >1){
+    for(i in 2:length(df.vds.agg.imputed$imputations)){
+      df.vds.amelia.c <- rbind(df.vds.amelia.c,df.vds.agg.imputed$imputations[[i]])
     }
   }
   medianed.aggregate.df(df.vds.amelia.c)
@@ -198,7 +199,7 @@ get.and.plot.vds.amelia <- function(pair,year,cdb.wimid=NULL,doplots=TRUE){
   df.vds.zoo$tod   <- ts.lt$hour + (ts.lt$min/60)
   df.vds.zoo$day   <- ts.lt$wday
 
-  rm(df.vds.amelia,df.vds.amelia.c)
+  rm(df.vds.agg.imputed,df.vds.amelia.c)
 
   if(doplots){
     plot.zooed.vds.data(df.vds.zoo,pair,year)
