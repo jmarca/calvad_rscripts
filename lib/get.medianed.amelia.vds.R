@@ -18,19 +18,14 @@ get.amelia.vds.file <- function(vdsid,path='/',year,server='http://calvad.ctmlab
     attempt <-  attempt + 1
     print(paste('try',attempt,'loading stored vds amelia object from file',serverfile))
     fetched <- fetch.remote.file(server,service='vdsdata',root=paste(path,'/',sep=''),file=serverfile)
-    r <- try(result <- load(file=fetched))
-    if(class(r) == "try-error") {
-      next
-    }
-    unlink(x=fetched)
-    break
+    if(fetched == 'df.vds.agg.imputed') break
+    print(paste('attempt ',attempt))
   }
   if(result == 'reject'){
     return(paste('rejected',files[1]))
   }
   if (attempt>9){
-    couch.set.state(year,vdsid,doc=list('truckimputed'='todo'),local=TRUE)
-    stop()
+    stop('no data from data server')
   }
   df.vds.agg.imputed
 }
