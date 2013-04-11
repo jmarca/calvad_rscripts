@@ -1,3 +1,4 @@
+library('zoo')
 
 get.amelia.vds.file <- function(vdsid,path='/',year,server='http://calvad.ctmlabs.net',serverfile='none'){
   df.vds.agg.imputed <- list();
@@ -123,7 +124,7 @@ unzoo.incantation <- function(df.z){
 }
 
 medianed.aggregate.df <- function(df.combined,op=median){
-  ## use zoo to combine a mean, no, median value
+  print('use zoo to combine a value')
   varnames <- names(df.combined)
   varnames <- grep( pattern="^ts",x=varnames,perl=TRUE,inv=TRUE,value=TRUE)
 
@@ -173,6 +174,7 @@ get.zooed.vds.amelia <- function(vdsid,serverfile='none',path='none'){
     return(NULL)
   }
   ## as with the with WIM data, using median
+    print('stack the imputations')
   df.vds.amelia.c <- df.vds.agg.imputed$imputations[[1]]
   if(length(df.vds.agg.imputed$imputations) >1){
     for(i in 2:length(df.vds.agg.imputed$imputations)){
