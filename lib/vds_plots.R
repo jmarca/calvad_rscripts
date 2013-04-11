@@ -58,13 +58,10 @@ plot.raw.data <- function(fname,f,path,year,vds.id){
 
   rdata.file <- make.amelia.output.file(path,fname,seconds,year)
   fetched <- fetch.remote.file(server,service='vdsdata',root=path,file=rdata.file)
-  r <- try(result <- load(file=fetched))
-  if(class(r) == "try-error") {
+  if(fetched != 'df'){
     print (paste('need to get the raw file.  hold off for now'))
     return (FALSE)
   }
-  unlink(x=fetched)
-
   ## break out ts
   ts <- df$ts
   df$ts <- NULL
