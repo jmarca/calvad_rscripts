@@ -67,6 +67,23 @@ get.list.neighbor.wim.sites <- function(vds.id){
   df.q
 }
 
+get.list.district.neighbor.wim.sites <- function(vdsid){
+  with.part <- "with maxlanes as (select site_no, newctmlmap.canonical_direction(direction) as direction, max(lane_no) as lanes from wim_lane_dir group by site_no, direction order by site_no, direction) "
+  select.part <- "select distinct w.site_no,ST_Distance_Sphere(v.geom,w.geom) as dist,newctmlmap.canonical_direction(w.direction),lanes" 
+  from.part <- paste("from newtbmap.tvd v ",
+                     "join wim_district wd on (wd.district_id=v.district)",
+                     "join newctmlmap.wim_view w on (wd.wim_id=w.site_no)",
+                     "join imputed.vds_wim_pairs wp on (w.site_no = wp.wim_id and newctmlmap.canonical_direction(w.direction) = newctmlmap.canonical_direction(wp.direction))")
+  where.part <- paste("where v.id=",vdsid,"order by lanes desc")
+  query <- paste(with.part,select.part,from.part,where.part)
+  print(query)
+  rs <- dbSendQuery(con,query)
+  df.wim <- fetch(rs,n=-1)
+  df.wim
+}
+
+
+
 get.list.closest.wim.pairs <- function(){
 
   wim.query <- paste("select vds_id,wim_id,direction from imputed.vds_wim_pairs")
