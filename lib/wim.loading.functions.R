@@ -575,6 +575,7 @@ load.wim.pair.data <- function(wim.ids,vds.nvars,lanes=0){
   ready.wimids = list()
   spd.pattern <- "(^sl1$|^sr\\d$)"
 
+    checked.already=c(1)
   for( wii in 1:length(wim.ids$wim_id) ){
     wim.id <- wim.ids[wii,'wim_id']
     wim.dir <- wim.ids[wii,'direction']
@@ -586,6 +587,8 @@ load.wim.pair.data <- function(wim.ids,vds.nvars,lanes=0){
     paired.vdsids <- wim.vds.pairs[wim.vds.pairs$wim_id==wim.id  & wim.vds.pairs$direction==wim.dir,'vds_id']
     print(paired.vdsids)
     for(paired.vdsid in paired.vdsids){
+      if(paired.vdsid %in% checked.already) { next }
+      checked.already <- c(checked.already,paired.vdsid)
       paired.RData <- get.RData.view(paired.vdsid,year)
       if(length(paired.RData)==0) { next }
       result <- couch.get.attachment(trackingdb,paired.vdsid,paired.RData,local=localcouch)
