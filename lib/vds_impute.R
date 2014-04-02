@@ -1,3 +1,5 @@
+source("./load.pems.raw.file.R")
+
 junk.shot <- function(vds.id,path,fname,seconds,year,df){
   target.file <-  make.amelia.output.file(path,fname,seconds,year)
   reject <- 'reject'
@@ -12,41 +14,17 @@ junk.shot <- function(vds.id,path,fname,seconds,year,df){
 
 self.agg.impute.VDS.site.no.plots <- function(fname,f,path,year,seconds,goodfactor=2){
   ## aggregate, then impute
+  vds.id <-  get.vdsid.from.filename(fname)
 
   ## return 1 if properly aggregated, return 0 if not
   returnval <- 0
   ## fname is the filename for the vds data.
   ## f is the full path to the file I need to grab
 
-  ## is there a df available?
-  ts <- data.frame()
-  df <- data.frame()
-  vds.id <-  get.vdsid.from.filename(fname)
-  target.file =paste(fname,'.df.*',year,'RData',sep='')
-  isa.df <- dir(path, pattern=target.file,full.names=TRUE, ignore.case=TRUE,recurs=TRUE)
-  need.to.save <- FALSE
-  if(length(isa.df)>0){
-    print (paste('loading', isa.df[1]))
-    load.result <-  load(file=isa.df[1])
-    ## break out ts
-    ts <- df$ts
-    df$ts <- NULL
-  }else{
-    print (paste('scanning', f))
-    fileScan <- load.raw.file(f)
-
-    ## pre-process the vds data
-    ts <- as.POSIXct(strptime(fileScan$ts,"%m/%d/%Y %H:%M:%S",tz='GMT'))
-    df <- trim.empty.lanes(fileScan)
-    if(dim(df)[2]>0                    ## sometimes df is totally NA
-       & is.element("n1",names(df))    ## sometimes get random interior lanes
-       ){
-       df <- recode.lanes(df)
-    }
-    df$ts <- ts
-    save(df,file=paste(path,'/',fname,'.df.',year,'RData',sep=''),compress='xz')
-    df$ts <- NULL
-  }
+  df <- load.file(f,fname,year,path)
+  ## break out times
+  ts <- df$ts
+  df$ts <- NULL
 
   if(sanity.check(df,ts)){
     gc()
@@ -110,7 +88,7 @@ self.agg.impute.VDS.site.no.plots <- function(fname,f,path,year,seconds,goodfact
         returnval <- paste(r,'')
         ## junk shot !
         junk.shot(vds.id,path,fname,seconds,year,df)
-        
+
         return(returnval)
       }
 
