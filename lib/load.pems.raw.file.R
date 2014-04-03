@@ -56,16 +56,14 @@ trim.empty.lanes <- function(testScan){
   ## and o, you also have x lanes of speed or none at all
 
   ## old way: pattern <- ! is.nan(mean(df,na.rm=TRUE))
-  means <- mean(df,na.rm=TRUE)
-  pattern <- ( ! is.nan(means) ) ## old way
+  pattern <- rep(TRUE,dim(df)[2])
+  names(pattern) <- colnames(df)
+
   pattern[1]=FALSE ## don't need time twice
   pattern[2]=FALSE ## don't need the vdsid for every record
+  means <- colMeans(df[,pattern],na.rm=TRUE)
+  pattern[pattern] <- ( ! is.nan(means) ) ## old way
 
-
-  ## hacktastic, sure to fail at some point, but vol of 0.01 avg is pretty low, as is occ of 0.00001
-  ## pattern[-1:-2] <-  means[-1:-2]>c(0.01,0.00001,0.1 )
-  ## pattern[-1:-2] <- pattern[-1:-2] & !is.na(pattern[-1:-2])
-  ## bail on that hack for now, just try this:
 
   ## have seen cases with reasonable n, but nothing for o, and mostly NAs
   ## so cut off cases with more than 95% missing as junk
