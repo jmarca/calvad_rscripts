@@ -4,25 +4,6 @@ pf <- function(x,y){panel.smoothScatter(x,y,nbin=c(200,200))}
 day.of.week <- c('Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday')
 lane.defs <- c('left lane','right lane 1', 'right lane 2', 'right lane 3', 'right lane 4', 'right lane 5', 'right lane 6', 'right lane 7', 'right lane 8')
 
-store.amelia.chains <- function(df.amelia,year,detector.id,imputation.name=''){
-  m <- length(df.amelia$imputations)
-  itercount = 0;
-  chains=rep(0,m)
-  for (i in 1:m) {
-    chains[i]=nrow(df.amelia$iterHist[[i]])
-    if(chains[i]==200){
-      itercount <- itercount + 1
-    }
-  }
-  ## I hate that R does not interpolate list names
-  trackerdoc <- list('chain_lengths'=chains,'max_iterations'=itercount)
-  if(imputation.name != '' ){
-    names(trackerdoc) <- paste(imputation.name,names(trackerdoc),sep='_')
-  }
-  couch.set.state(year=year,detector.id=detector.id,doc=trackerdoc)
-  return (itercount)
-}
-
 make.truck.plots <- function(df,year,site,dir,cdb.id,imputed=TRUE){
   varnames <-  names(df)
   ## make some diagnostic plots
