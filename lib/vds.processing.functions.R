@@ -1,3 +1,5 @@
+source('./utils.R')
+
 sanity.check <- function(data,ts){
 
   return.val <- (dim(data)[2] > 0  ## catch empty data right away

@@ -17,7 +17,8 @@
       "lib/vds_plots.R",
       "lib/vds_self_impute_missing_distributed.R",
       "lib/wim.aggregate.fixed.R",
-      "lib/wim.loading.functions.R"
+      "lib/wim.loading.functions.R",
+      "lib/utils.R"
   ],
   "dependencies": {
     "jmarca/rstats_couch_utils":"*"
