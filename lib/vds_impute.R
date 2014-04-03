@@ -1,6 +1,6 @@
-source("./load.pems.raw.file.R")
-source("./vds.processing.functions.R")
-source("./vds.aggregate.R")
+source("load.pems.raw.file.R")
+source("vds.processing.functions.R")
+source("vds.aggregate.R")
 
 junk.shot <- function(vds.id,path,fname,seconds,year,df){
   target.file <-  make.amelia.output.file(path,fname,seconds,year)
