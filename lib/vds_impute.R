@@ -128,7 +128,8 @@ self.agg.impute.VDS.site.no.plots <- function(fname,f,path,year,seconds,goodfact
 
             if(df.vds.agg.imputed$code==1){
                 ## that means good imputation
-                target.file <-  make.amelia.output.file(path,fname,seconds,year)
+                savepath <- get.save.path(f)
+                target.file <-  make.amelia.output.file(savepath,fname,seconds,year)
                 save(df.vds.agg.imputed,file=target.file,compress='xz')
                 verify.db.dump(fname,path,year,seconds,df.vds.agg.imputed)
                 store.amelia.chains(df.vds.agg.imputed,year,vds.id,'vdsraw')

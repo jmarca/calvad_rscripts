@@ -38,7 +38,8 @@ load.file <- function(f,fname,year,path){
     }
     ## save for next time
     df$ts <- ts
-    save(df,file=paste(path,'/',fname,'.df.',year,'.RData',sep=''),compress='xz')
+    savepath <- get.save.path(f)
+    save(df,file=paste(savepath,'/',fname,'.df.',year,'.RData',sep=''),compress='xz')
   }
   df
 }

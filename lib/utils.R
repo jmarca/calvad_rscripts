@@ -1,3 +1,7 @@
+get.save.path <- function(f){
+    file.names <- strsplit(f,split="/")[[1]]
+    savepath <- paste(file.names[-(length(file.names))],collapse='/')
+}
 
 unzoo.incantation <- function(df.z){
   ts.ts <- unclass(time(df.z))+ISOdatetime(1970,1,1,0,0,0,tz='UTC')
