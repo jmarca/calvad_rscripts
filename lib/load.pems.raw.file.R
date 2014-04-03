@@ -113,15 +113,7 @@ vds.lane.numbers <- function(lanes,raw.data){
 
   Y
 }
-## dead reckoning is madness.  add .deprecated to get rid of calls
-guess.lanes.deprecated <- function(df){
-  lanes <- floor(length(df[1,])/2)
-  ## check both for original and recoded versions of speed in lane 1
-  if( ! is.null(df$s1) || ! is.null(df$sl1)  ){
-    lanes <- floor(length(df[1,])/3)
-  }
-  lanes
-}
+
 recode.lanes <- function(df){
                                         # run this only after you've
                                         # run trim empty lanes

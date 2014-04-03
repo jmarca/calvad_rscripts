@@ -1,4 +1,6 @@
 source("./load.pems.raw.file.R")
+source("./vds.processing.functions.R")
+source("./vds.aggregate.R")
 
 junk.shot <- function(vds.id,path,fname,seconds,year,df){
   target.file <-  make.amelia.output.file(path,fname,seconds,year)
@@ -32,6 +34,7 @@ self.agg.impute.VDS.site.no.plots <- function(fname,f,path,year,seconds,goodfact
     print(paste('agg.impute.vds.site,',fname,', lanes',lanes))
 
     df.vds.agg <- vds.aggregate(df,ts,lanes=lanes,seconds=seconds)
+
     good.periods <- df.vds.agg$obs_count==seconds/30   & ! is.na(df.vds.agg$obs_count)
 
     ## this is tricky.  So because I am summing above, I only keep
@@ -43,22 +46,33 @@ self.agg.impute.VDS.site.no.plots <- function(fname,f,path,year,seconds,goodfact
     ## possible.
 
     print(paste(length(df.vds.agg[good.periods,'obs_count' ]),' good periods versus total periods of ', (length(df.vds.agg$obs_count)) ))
-    if(length(df.vds.agg[good.periods,'obs_count' ]) > (length(df.vds.agg$obs_count)/goodfactor)){
-      print ('imputing')
-      n.idx <- vds.lane.numbers(lanes,c("n"))
-      o.idx <- vds.lane.numbers(lanes,c("o"))
-      o.cols <- (1:length(names(df.vds.agg)))[is.element(names(df.vds.agg), o.idx)]
-      o.bds.len <- length(o.cols)
-      o.bds <- matrix(c(o.cols,sort( rep(c(0, 1),o.bds.len))), nrow = o.bds.len, byrow=FALSE)
 
-      df.vds.agg.imputed <- list()
+    ## decide whether or not to impute
 
-      r <- try(
-               df.vds.agg.imputed <-
-               amelia(df.vds.agg,idvars=c('ts','obs_count'),ts="tod",splinetime=6,autopri=0.001,
-                      lags =c(n.idx),leads=c(n.idx),cs="day",intercs=TRUE,
-                      sqrts=n.idx, bounds=o.bds,max.resample=10,emburn=c(2,300))
-               )
+    if(length(df.vds.agg[good.periods,'obs_count' ]) < (length(df.vds.agg$obs_count)/goodfactor)){
+
+        print ('not okay to process this file' )
+        returnval <- "raw data failed basic sanity checks"
+        ## junk shot !
+        junk.shot(vds.id,path,fname,seconds,year,df)
+
+    }else{
+
+        print ('imputing')
+        n.idx <- vds.lane.numbers(lanes,c("n"))
+        o.idx <- vds.lane.numbers(lanes,c("o"))
+        o.cols <- (1:length(names(df.vds.agg)))[is.element(names(df.vds.agg), o.idx)]
+        o.bds.len <- length(o.cols)
+        o.bds <- matrix(c(o.cols,sort( rep(c(0, 1),o.bds.len))), nrow = o.bds.len, byrow=FALSE)
+
+        df.vds.agg.imputed <- list()
+
+        r <- try(
+            df.vds.agg.imputed <-
+            amelia(df.vds.agg,idvars=c('ts','obs_count'),ts="tod",splinetime=6,autopri=0.001,
+                   lags =c(n.idx),leads=c(n.idx),cs="day",intercs=TRUE,
+                   sqrts=n.idx, bounds=o.bds,max.resample=10,emburn=c(2,300))
+            )
 
 ####### these are various different things I tried with imputation  ###
       ## df.vds.1800.imputed.2 <-
@@ -108,11 +122,6 @@ self.agg.impute.VDS.site.no.plots <- function(fname,f,path,year,seconds,goodfact
       returnval <- paste(length(df.vds.agg[good.periods,'obs_count' ]),'good periods vs', length(df.vds.agg$obs_count),'total periods at agglevel of',seconds,'seconds')
     }
     ## df.vds.agg
-  }else{
-    print ('not okay to process this file' )
-    returnval <- "raw data failed basic sanity checks"
-    ## junk shot !
-    junk.shot(vds.id,path,fname,seconds,year,df)
   }
   returnval
 }
