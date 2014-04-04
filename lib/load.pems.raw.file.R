@@ -18,7 +18,7 @@ load.raw.file <- function (file="",skip=0,nlines=0){
 load.file <- function(f,fname,year,path){
   ## is there a df available?
   df <- data.frame()
-  target.file =paste(fname,'.df.*',year,'RData',sep='')
+  target.file =paste(fname,'.df.*',year,'.RData',sep='')
   isa.df <- dir(path, pattern=target.file,full.names=TRUE, ignore.case=TRUE,recurs=TRUE)
   need.to.save <- FALSE
   if(length(isa.df)>0){
