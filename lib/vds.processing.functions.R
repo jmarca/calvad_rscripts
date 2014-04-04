@@ -1,58 +1,104 @@
-vds.anything.missing <- function(df,ts,lanes=0,seconds){
-  ## this function checks if it is worth running interpolation.
+source('./utils.R')
 
-}
+sanity.check <- function(data,ts,year=0,vdsid='missing'){
+    problem <- list()
 
-sanity.check <- function(data,ts){
+  return.val <- dim(data)[2] > 0  ## catch empty data right away
 
+    if(!return.val){
+        problem['rawdata'] <- 'no rows of data in raw vds file'
+    }
+    if(return.val){
+        return.val <- is.element("nr1",names(data))    ## sometimes get random interior lanes
+        if(!return.val){
+            problem['rawdata'] <- 'have data, but not right hand lane? in raw vds file'
+        }
+    }
 
-  return.val <- (dim(data)[2] > 0  ## catch empty data right away
-                 & is.element("nr1",names(data)))    ## sometimes get random interior lanes
-  names.vds <- names(data)
-  max.lanes <- 8
-  lane <- 0
-  ## first check that both n and o are always there together
-  while( return.val & lane < max.lanes ){
-    lane <- lane + 1
-    if( ( is.element(paste("nr",lane), names.vds ) & ! is.element(paste("or",lane), names.vds ) ) |
-       ( is.element(paste("or",lane), names.vds ) & ! is.element(paste("nr",lane), names.vds ) ) ){
-      return.val <- FALSE
+    if(return.val){
+        names.vds <- names(data)
+        max.lanes <- 8
+        lane <- 0
+        ## first check that both n and o are always there together
+        while( return.val & lane < max.lanes ){
+            lane <- lane + 1
+            if( ( is.element(paste("nr",lane), names.vds ) & ! is.element(paste("or",lane), names.vds ) ) |
+               ( is.element(paste("or",lane), names.vds ) & ! is.element(paste("nr",lane), names.vds ) ) ){
+                problem['rawdata'] <- paste('do not have both occupancy and counts for lane',paste("nr",lane),'in raw vds file')
+                return.val <- FALSE
+            }
+            if( ( is.element(paste("nl",lane), names.vds ) & ! is.element(paste("ol",lane), names.vds ) ) |
+               ( is.element(paste("ol",lane), names.vds ) & ! is.element(paste("nl",lane), names.vds ) ) ){
+                problem['rawdata'] <- paste('do not have both occupancy and counts for lane',paste("nr",lane),'in raw vds file')
+                return.val <- FALSE
+            }
+
+        }
     }
-    if( ( is.element(paste("nl",lane), names.vds ) & ! is.element(paste("ol",lane), names.vds ) ) |
-       ( is.element(paste("ol",lane), names.vds ) & ! is.element(paste("nl",lane), names.vds ) ) ){
-      return.val <- FALSE
+    if(return.val){
+        ## now check if there *is* a speed value, that there is an n and o value
+        lane <- 0
+        while( return.val & lane < max.lanes ){
+            lane <- lane + 1
+            if( is.element(paste("sr",lane), names.vds ) & (! is.element(paste("nr",lane), names.vds ) & ! is.element(paste("or",lane), names.vds ) ) ){
+                problem['rawdata'] <- paste('have a speed value, but not both occupancy and counts for lane',paste("nr",lane),'in raw vds file')
+                return.val <- FALSE
+            }
+            if( is.element(paste("sl",lane), names.vds ) & (! is.element(paste("nl",lane), names.vds ) & ! is.element(paste("ol",lane), names.vds ) ) ){
+                problem['rawdata'] <- paste('have a speed value, but not both occupancy and counts for lane',paste("nr",lane),'in raw vds file')
+                return.val <- FALSE
+            }
+        }
     }
-  }
-  ## now check if there *is* a speed value, that there is an n and o value
-  lane <- 0
-  while( return.val & lane < max.lanes ){
-    lane <- lane + 1
-    if( is.element(paste("sr",lane), names.vds ) & (! is.element(paste("nr",lane), names.vds ) & ! is.element(paste("or",lane), names.vds ) ) ){
-      return.val <- FALSE
+    if(return.val){
+        ## finally, can't do any imputation unless you have at least a month of data
+        difference <- difftime(ts[length(ts)],ts[1],units='weeks')
+        if(difference < 4){
+            problem['rawdata'] <- paste('need more than 4 weeks of data, have only',difference,'weeks','in raw vds file')
+            return.val <- FALSE
+        }
     }
-    if( is.element(paste("sl",lane), names.vds ) & (! is.element(paste("nl",lane), names.vds ) & ! is.element(paste("ol",lane), names.vds ) ) ){
-      return.val <- FALSE
+    if(return.val){ ## still going good, do some more checks
+        lanes <- longway.guess.lanes(data)
+        n.idx <- vds.lane.numbers(lanes,c("n"))
+        if(! length(data$nl1) > 0){
+            problem['rawdata'] <- paste('do not have counts in left lane','in raw vds file')
+            return.val <- FALSE
+        } else {
+            if(! length(data$ol1) > 0 ){
+                problem['rawdata'] <- paste('do not have occupancies in left lane','in raw vds file')
+                return.val <- FALSE
+            } else {
+                mean.ns <- sapply(data[n.idx],mean,na.rm=TRUE)
+                bad.lanes <-  length(n.idx[( mean.ns <0.0001)])
+                if(! bad.lanes == 0 ){
+                    problem['rawdata'] <- paste('mean volumes too low in some lanes:',paste(n.idx[( mean.ns <0.0001)],mean.ns[( mean.ns <0.0001)],sep=':',collapse=', '),'in raw vds file',collapse=' ')
+                    return.val <- FALSE
+                }
+            }
+        }
     }
-  }
-  ## finally, can't do any imputation unless you have at least a month of data
-  difference <- difftime(ts[length(ts)],ts[1],units='weeks')
-  if(difference < 4){
-    return.val <- FALSE
-  }
-  if(return.val){ ## still going good, do some more checks
-    lanes <- longway.guess.lanes(data)
-    n.idx <- vds.lane.numbers(lanes,c("n"))
-    return.val <- (length(data$nl1) > 0 &
-                   length(data$ol1)>0 &
-                   length(n.idx[( sapply(data[n.idx],mean,na.rm=TRUE)<0.0001)])==0 )
-  }
-  if(return.val){ ## check that we're not stuck on zero
-    return.val <- max(data$nl1,na.rm=TRUE)>0
-  }
-  if(return.val){ ## check for 4 weeks of raw data
-    return.val <- length(data[!is.na(data[1]),1]) > 2*60*24*7*4 # 4 weeks * 2 obs/min * 60 min/hr * 24 hr/day * 7 days/week
-  }
-  return.val
+    if(return.val){ ## check that we're not stuck on zero
+        return.val <- max(data$nl1,na.rm=TRUE)>0
+        if(!return.val){
+            problem['rawdata'] <- paste('left lane max count is zero','in raw vds file')
+        }
+    }
+    if(return.val){ ## check for 4 weeks of raw data
+        return.val <- length(data[!is.na(data[1]),1]) > 2*60*24*7*4 # 4 weeks * 2 obs/min * 60 min/hr * 24 hr/day * 7 days/week
+        if(!return.val){
+            weeks.data <- length(data[!is.na(data[1]),1]) / 2*60*24*7
+            problem['rawdata'] <- paste('need at least 4 weeks of raw data total.  Have only',weeks.data,'in raw vds file')
+        }
+    }
+    if(!return.val){
+        ## save to couchdb
+        if(year != 0 & vdsid != 'missing' ){
+            couch.set.state(year,vdsid,doc=problem,local=TRUE)
+        }
+
+    }
+    return.val
 }
 
 
@@ -294,282 +340,6 @@ impute.aggregate <- function(aout,hour=3600){
   aggimp
 }
 
-vds.aggregate <- function(df,ts,lanes=0,seconds){
-  df.mi.input <-  NA
-  if(lanes==0){
-    ## figure it out
-    lanes <- longway.guess.lanes(df)
-  }
-  if(lanes>0 && difftime(ts[length(ts)],ts[1],units='hours') > 1){
-    ## have lanes, have more than one hour of data (don't laugh, have
-    ## a look at site 716359...3 minutes in July is all
-    print(paste('in vds.processing.functions:vds.aggregate',lanes))
-    n.idx <- vds.lane.numbers(lanes,c("n"))
-    o.idx <- vds.lane.numbers(lanes,c("o"))
-    s.idx <- vds.lane.numbers(lanes,c("s"))
-
-    df$periods <- 1
-    ## ts.hour <- as.POSIXct(trunc(ts,units='hours'),tz='UTC')
-
-    print(paste('make df.zoo.n'))
-    df.zoo.n <- zooreg(df[,c(n.idx,'periods')],order.by=ts)
-    df.zoo.n <-  aggregate(df.zoo.n,
-                           as.numeric(time(df.zoo.n)) -
-                           as.numeric(time(df.zoo.n)) %% seconds,
-                           sum, na.rm=TRUE)
-
-    ## df.zoo.o <- zooreg(df[,c(o.idx,'periods')],order.by=ts)
-    ## df.zoo.o <-  aggregate(df.zoo.o,
-    ##                        as.numeric(time(df.zoo.o)) -
-    ##                        as.numeric(time(df.zoo.o)) %% seconds,
-    ##                        mean, na.rm=TRUE)
-
-    print(paste('make df.zoo.o'))
-    df.zoo.o <- zooreg(df[,c(o.idx,'periods')],order.by=ts)
-    df.zoo.o <-  aggregate(df.zoo.o,
-                           as.numeric(time(df.zoo.o)) -
-                           as.numeric(time(df.zoo.o)) %% seconds,
-                           sum, na.rm=TRUE)
-    df.zoo.o <- df.zoo.o/df.zoo.o$periods
-
-    ## print(paste('check for speed'))
-    ## if(! is.null(df[1,s.idx[1]]) ){
-    ##   ## speed is in the dataset.
-
-    ##   ## I've noticed that speeds of zero happen when vol is zero.
-    ##   ## recode to NA so as not to mess up averages??  Or perhaps weight
-    ##   ## by vehicle count?
-    ##   df.weighted.s = data.frame(df[,n.idx])
-    ##   df.weighted.s[,s.idx] <- df[,s.idx] * df[,n.idx]
-    ##   names(df.weighted.s) = c(n.idx,s.idx)
-
-    ##   df.zoo.s <- zooreg(df.weighted.s,order.by=ts)
-    ##   df.zoo.s <-  aggregate(df.zoo.s,
-    ##                          as.numeric(time(df.zoo.s)) -
-    ##                          as.numeric(time(df.zoo.s)) %% seconds,
-    ##                          sum, na.rm=TRUE)
-    ##   for(i in 1:(length(s.idx))){
-    ##     df.zoo.s[,s.idx[i]] <- df.zoo.s[,s.idx[i]]/df.zoo.s[,n.idx[i]]
-    ##   }
-    ##   df.zoo.o <- merge( df.zoo.o,df.zoo.s[,s.idx] )
-    ##   names(df.zoo.o) <- c(o.idx,'periods',s.idx)
-    ##   o.idx <- c(o.idx,s.idx)
-    ## }
-
-    print(paste('merge sets'))
-    ## merge sets
-    aggregate.combined <- merge( df.zoo.n,df.zoo.o, suffixes = c("sum", "ave"))
-    time(aggregate.combined) <- time(df.zoo.n)
-
-    ## convert to ts, create "missing" hours
-    full.hours<-aggregate.combined
-
-    keep <- aggregate.combined[,'periods.sum']==seconds/30
-    ## this is tricky.  So because I am summing above, I only keep those
-    ## time periods that have a full set of observations (if
-    ## seconds=3600, that is 3600/30=120 observations) because
-    ## periods==120.  Otherwise, if periods is less than 120, then I am
-    ## not going to keep that hour of data.  A little bit wasteful of
-    ## information, but the flip side is imputing every 30 seconds and
-    ## that is not possible.
-
-    full.hours[!keep]<-NA
-    full.hours$periods.sum <- aggregate.combined$periods.sum
-    df.mi.input <- unzoo.incantation(full.hours)
-    df.mi.input['obs_count'] <- df.mi.input['periods.sum']
-    df.mi.input['periods.sum'] <- NULL
-
-    ## I son't want periods.ave
-    df.mi.input['periods.ave']<- NULL
-
-    ## ts.ts <- unclass(time(df.agg.ts))+ISOdatetime(1970,1,1,0,0,0,tz='UTC')
-    ## ts1.year.lt <- as.POSIXlt(ts.ts)
-
-    ## print(paste('make df.mi.input'))
-
-    ## df.mi.input <- data.frame(ts=ts.ts)
-    ## print(paste('n.idx, o.idx'))
-    ## df.mi.input[c(n.idx,o.idx,'obs_count')] <- df.agg.ts[,c(n.idx,o.idx,'periods.sum')]
-    ## print(paste('ts1 year lt'))
-    ## df.mi.input$tod   <- ts1.year.lt$hour + (ts1.year.lt$min/60)
-    ## print(paste('week day'))
-    ## df.mi.input$day   <- ts1.year.lt$wday
-  }
-  df.mi.input
-}
-
-
-self.agg.impute.VDS.site <- function(fname,f,path,year,seconds,goodfactor=2){
-  ## aggregate, then impute
-
-  ## return 1 if properly aggregated, return 0 if not
-  returnval <- 0
-  ## fname is the filename for the vds data.
-  ## f is the full path to the file I need to grab
-
-  ## is there a df available?
-  ts <- data.frame()
-  df <- data.frame()
-  vds.id <-  get.vdsid.from.filename(fname)
-  target.file =paste(fname,'.df.*',year,'RData',sep='')
-  isa.df <- dir(path, pattern=target.file,full.names=TRUE, ignore.case=TRUE,recurs=TRUE)
-  need.to.save <- FALSE
-  if(length(isa.df)>0){
-    print (paste('loading', isa.df[1]))
-    load.result <-  load(file=isa.df[1])
-    ## break out ts
-    ts <- df$ts
-    df$ts <- NULL
-  }else{
-    print (paste('scanning', f))
-    fileScan <- load.raw.file(f)
-
-    ## pre-process the vds data
-    ts <- as.POSIXct(strptime(fileScan$ts,"%m/%d/%Y %H:%M:%S",tz='GMT'))
-    df <- trim.empty.lanes(fileScan)
-    if(dim(df)[2]>0                    ## sometimes df is totally NA
-       & is.element("n1",names(df))    ## sometimes get random interior lanes
-       ){
-       df <- recode.lanes(df)
-    }
-    ## save for next time, if needed
-    need.to.save <-  TRUE
-    df$ts <- ts
-    save(df,file=paste(path,'/',fname,'.df.',year,'RData',sep=''),compress='xz')
-    df$ts <- NULL
-    need.to.save <-  FALSE
-
-  }
-
-  if(sanity.check(df,ts)){
-
-  df.m <- df
-  df.m$ts <- ts
-  ts.lt <- as.POSIXlt(ts)
-  df.m$tod   <- ts.lt$hour + (ts.lt$min/60)
-  df.m$day   <- ts.lt$wday
-  rm(ts.lt)
-  plot.vds.data(df.m,vds.id,year,fileprefix='raw',subhead='raw data')
-  rm(df.m)
-  gc()
-
-  lanes <- longway.guess.lanes(df)
-
-    print(paste('agg.impute.vds.site,',fname,', lanes',lanes))
-
-    df.vds.agg <- vds.aggregate(df,ts,lanes=lanes,seconds=seconds)
-    good.periods <- df.vds.agg$obs_count==seconds/30   & ! is.na(df.vds.agg$obs_count)
-
-    ## this is tricky.  So because I am summing above, I only keep
-    ## those time periods that have a full seconds/30 (= 3600/30 = 120
-    ## for an hour aggregate) observations because periods==120.
-    ## Otherwise, if periods is less than 120, then I am not going to
-    ## keep that hour of data.  A little bit wasteful of information,
-    ## but the flip side is imputing every 30 seconds and that is not
-    ## possible.
-
-    print(paste(length(df.vds.agg[good.periods,'obs_count' ]),' good periods versus total periods of ', (length(df.vds.agg$obs_count)) ))
-    if(length(df.vds.agg[good.periods,'obs_count' ]) > (length(df.vds.agg$obs_count)/goodfactor)){
-      print ('imputing')
-      n.idx <- vds.lane.numbers(lanes,c("n"))
-      o.idx <- vds.lane.numbers(lanes,c("o"))
-      o.cols <- (1:length(names(df.vds.agg)))[is.element(names(df.vds.agg), o.idx)]
-      o.bds.len <- length(o.cols)
-      o.bds <- matrix(c(o.cols,sort( rep(c(0, 1),o.bds.len))), nrow = o.bds.len, byrow=FALSE)
-
-      df.vds.agg.imputed <- list()
-
-      r <- try(
-               df.vds.agg.imputed <-
-               amelia(df.vds.agg,idvars=c('ts','obs_count'),ts="tod",splinetime=6,autopri=0.001,
-                      lags =c(n.idx),leads=c(n.idx),cs="day",intercs=TRUE,
-                      sqrts=n.idx, bounds=o.bds,max.resample=10,emburn=c(2,300))
-               )
-
-####### these are various different things I tried with imputation  ###
-      ## df.vds.1800.imputed.2 <-
-      ##   amelia(df.vds.1800,idvars=c('ts','obs_count'),ts="tod",splinetime=6,autopri=0.001,
-      ##          lags =c(n.idx),leads=c(n.idx),cs="day",intercs=TRUE,
-      ##          sqrts=n.idx, bounds=o.bds,max.resample=10,emburn=c(2,2000))
-
-      ## df.vds.agg.imputed5 <-
-      ##   amelia(df.vds.agg,idvars=c('ts','obs_count'),ts="tod",splinetime=6,autopri=0.001,
-      ##   cs="day",intercs=TRUE,
-      ##   sqrts=n.idx, bounds=o.bds,max.resample=10,emburn=c(2,2000))
-
-
-      ## amelia(df.vds.agg,idvars=c('ts','obs_count'),ts="tod",splinetime=6,autopri=0.001,
-      ## lags=c(n.idx,o.idx),leads=c(n.idx,o.idx),cs="day",intercs=TRUE,
-      ## sqrts=n.idx, bounds=o.bds,max.resample=10,emburn=c(2,2000))
-
-      ## amelia(df.vds.agg,idvars=c('ts','obs_count'),ts="tod",splinetime=3,autopri=0.001,
-      ##        lags =c(n.idx,o.idx),leads=c(n.idx,o.idx),cs="day",intercs=TRUE,
-      ##        sqrts=n.idx, bounds=o.bds,max.resample=10,emburn=c(2,2000))
-
-      ## amelia(df.vds.agg,idvars=c('ts','obs_count'),ts="tod",splinetime=5,autopri=0.001,
-      ##        lags =c(n.idx,o.idx),leads=c(n.idx,o.idx),cs="day",intercs=TRUE,
-      ##        sqrts=n.idx, bounds=o.bds,max.resample=10,emburn=c(2,2000))
-
-      if(class(r) == "try-error") {
-        returnval <- paste(r,'')
-        if(need.to.save){
-          df$ts <- ts
-          save(df,file=paste(path,'/',fname,'.df.',year,'RData',sep=''),compress='xz')
-        }
-        ## junk shot !
-        target.file <-  make.amelia.output.file(path,fname,seconds,year)
-        reject <- 'reject'
-        if( dim(df)[2] > 0 ){ ## don't get summary if there is nothing to summarize!
-          reject <- data.frame(summary=summary(df))
-        }
-        save(reject,file=target.file)
-        return(returnval)
-      }
-
-      if(df.vds.agg.imputed$code==1){
-            target.file <-  make.amelia.output.file(path,fname,seconds,year)
-      	    save(df.vds.agg.imputed,file=target.file,compress='xz')
-      	    verify.db.dump(fname,path,year,seconds,df.vds.agg.imputed)
-      	    returnval <- 1
-      }else{
-        returnval <- paste(df.vds.agg.imputed$code,'message',df.vds.agg.imputed$message)
-        print(paste("amelia not happy:",returnval))
-      }
-    }else{
-      print ('not imputing')
-      ## save(df.vds.agg,file=paste(path,'/',fname,'.',seconds,'.not_imputed.',year,'RData',sep=''),compress='xz')
-      if(need.to.save){
-        df$ts <- ts
-        save(df,file=paste(path,'/',fname,'.df.',year,'RData',sep=''),compress='xz')
-      }
-
-    }
-    ## df.vds.agg
-  }else{
-    print ('not okay to process this file' )
-    returnval <- "raw data failed basic sanity checks"
-    if(need.to.save){
-      df$ts <- ts
-      save(df,file=paste(path,'/',fname,'.df.',year,'RData',sep=''),compress='xz')
-    }
-    ## junk shot !
-    target.file <-  make.amelia.output.file(path,fname,seconds,year)
-    reject <- 'reject'
-    if( dim(df)[2] > 0 ){ ## don't get summary if there is nothing to summarize!
-      reject <- data.frame(summary=summary(df))
-    }
-    save(reject,file=target.file)
-    target.file <- make.db.dump.output.file(path,vds.id,year)
-    dump <- data.frame(vds_id=vds.id)
-    write.csv(dump,file=target.file,row.names = FALSE,col.names=TRUE,append=FALSE)
-
-  }
-  returnval
-}
-
-self.agg.impute.VDS.site.Hmisc <- function(fname,fileScan,path,year,seconds){
-  ## aggregate, then impute, but this one uses Hmisc areg.impute rather than amelia
-}
 
 hourly.agg.VDS.site <- function(fname,f,path,year,vds.id){
   ## aggregate non-missing data

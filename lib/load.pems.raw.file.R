@@ -18,7 +18,7 @@ load.raw.file <- function (file="",skip=0,nlines=0){
 load.file <- function(f,fname,year,path){
   ## is there a df available?
   df <- data.frame()
-  target.file =paste(fname,'.df.*',year,'RData',sep='')
+  target.file =paste(fname,'.df.*',year,'.RData',sep='')
   isa.df <- dir(path, pattern=target.file,full.names=TRUE, ignore.case=TRUE,recurs=TRUE)
   need.to.save <- FALSE
   if(length(isa.df)>0){
@@ -38,7 +38,8 @@ load.file <- function(f,fname,year,path){
     }
     ## save for next time
     df$ts <- ts
-    save(df,file=paste(path,'/',fname,'.df.',year,'RData',sep=''),compress='xz')
+    savepath <- get.save.path(f)
+    save(df,file=paste(savepath,'/',fname,'.df.',year,'.RData',sep=''),compress='xz')
   }
   df
 }
@@ -56,16 +57,14 @@ trim.empty.lanes <- function(testScan){
   ## and o, you also have x lanes of speed or none at all
 
   ## old way: pattern <- ! is.nan(mean(df,na.rm=TRUE))
-  means <- mean(df,na.rm=TRUE)
-  pattern <- ( ! is.nan(means) ) ## old way
+  pattern <- rep(TRUE,dim(df)[2])
+  names(pattern) <- colnames(df)
+
   pattern[1]=FALSE ## don't need time twice
   pattern[2]=FALSE ## don't need the vdsid for every record
+  means <- colMeans(df[,pattern],na.rm=TRUE)
+  pattern[pattern] <- ( ! is.nan(means) ) ## old way
 
-
-  ## hacktastic, sure to fail at some point, but vol of 0.01 avg is pretty low, as is occ of 0.00001
-  ## pattern[-1:-2] <-  means[-1:-2]>c(0.01,0.00001,0.1 )
-  ## pattern[-1:-2] <- pattern[-1:-2] & !is.na(pattern[-1:-2])
-  ## bail on that hack for now, just try this:
 
   ## have seen cases with reasonable n, but nothing for o, and mostly NAs
   ## so cut off cases with more than 95% missing as junk
@@ -113,15 +112,7 @@ vds.lane.numbers <- function(lanes,raw.data){
 
   Y
 }
-## dead reckoning is madness.  add .deprecated to get rid of calls
-guess.lanes.deprecated <- function(df){
-  lanes <- floor(length(df[1,])/2)
-  ## check both for original and recoded versions of speed in lane 1
-  if( ! is.null(df$s1) || ! is.null(df$sl1)  ){
-    lanes <- floor(length(df[1,])/3)
-  }
-  lanes
-}
+
 recode.lanes <- function(df){
                                         # run this only after you've
                                         # run trim empty lanes
