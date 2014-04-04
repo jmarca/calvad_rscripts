@@ -24,16 +24,18 @@ store.amelia.chains <- function(df.amelia,year,detector.id,imputation.name=''){
 }
 
 
-junk.shot <- function(vds.id,path,fname,seconds,year,df){
-  target.file <-  make.amelia.output.file(path,fname,seconds,year)
-  reject <- 'reject'
-  if( dim(df)[2] > 0 ){ ## don't get summary if there is nothing to summarize!
-    reject <- data.frame(summary=summary(df))
-  }
-  save(reject,file=target.file)
-  target.file <- make.db.dump.output.file(path,vds.id,year)
-  dump <- data.frame(vds_id=vds.id)
-  write.csv(dump,file=target.file,row.names = FALSE,col.names=TRUE,append=FALSE)
+junk.shot <- function(vds.id,f,fname,seconds,year,df){
+    savepath <- get.save.path(f)
+
+    target.file <-  make.amelia.output.file(savepath,fname,seconds,year)
+    reject <- 'reject'
+    if( dim(df)[2] > 0 ){ ## don't get summary if there is nothing to summarize!
+        reject <- data.frame(summary=summary(df))
+    }
+    save(reject,file=target.file)
+    ## target.file <- make.db.dump.output.file(savepath,vds.id,year)
+    ## dump <- data.frame(vds_id=vds.id)
+    ## write.csv(dump,file=target.file,row.names = FALSE,col.names=TRUE,append=FALSE)
 }
 
 self.agg.impute.VDS.site.no.plots <- function(fname,f,path,year,seconds,goodfactor=2){
@@ -50,7 +52,7 @@ self.agg.impute.VDS.site.no.plots <- function(fname,f,path,year,seconds,goodfact
     ts <- df$ts
     df$ts <- NULL
 
-    if(sanity.check(df,ts)){
+    if(sanity.check(df,ts,year=year,vdsid=vds.id)){
         gc()
         lanes <- longway.guess.lanes(df)
         print(paste('agg.impute.vds.site,',fname,', lanes',lanes))
@@ -121,7 +123,7 @@ self.agg.impute.VDS.site.no.plots <- function(fname,f,path,year,seconds,goodfact
             if(class(r) == "try-error") {
                 returnval <- paste(r,'')
                 ## junk shot !
-                junk.shot(vds.id,path,fname,seconds,year,df)
+                junk.shot(vds.id,f,fname,seconds,year,df)
 
                 return(returnval)
             }
@@ -145,7 +147,7 @@ self.agg.impute.VDS.site.no.plots <- function(fname,f,path,year,seconds,goodfact
         print ('not okay to process this file' )
         returnval <- "raw data failed basic sanity checks"
         ## junk shot !
-        junk.shot(vds.id,path,fname,seconds,year,df)
+        junk.shot(vds.id,f,fname,seconds,year,df)
 
     }
     returnval
