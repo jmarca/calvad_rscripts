@@ -72,7 +72,7 @@ sanity.check <- function(data,ts,year=0,vdsid='missing'){
                 mean.ns <- sapply(data[n.idx],mean,na.rm=TRUE)
                 bad.lanes <-  length(n.idx[( mean.ns <0.0001)])
                 if(! bad.lanes == 0 ){
-                    problem['rawdata'] <- paste('volumes too low in some lanes:',n.idx[( mean.ns <0.0001)],'in raw vds file',collapse=' ')
+                    problem['rawdata'] <- paste('mean volumes too low in some lanes:',paste(n.idx[( mean.ns <0.0001)],mean.ns[( mean.ns <0.0001)],sep=':',collapse=', '),'in raw vds file',collapse=' ')
                     return.val <- FALSE
                 }
             }
@@ -93,7 +93,7 @@ sanity.check <- function(data,ts,year=0,vdsid='missing'){
     }
     if(!return.val){
         ## save to couchdb
-        if(year != 0 & vdsid != 'missing' )){
+        if(year != 0 & vdsid != 'missing' ){
             couch.set.state(year,vdsid,doc=problem,local=TRUE)
         }
 
