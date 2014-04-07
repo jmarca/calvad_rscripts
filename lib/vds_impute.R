@@ -4,13 +4,13 @@ source("vds.aggregate.R")
 ##source('components/jmarca/rstats_couch_utils/master/couchUtils.R')
 
 
-store.amelia.chains <- function(df.amelia,year,detector.id,imputation.name=''){
+store.amelia.chains <- function(df.amelia,year,detector.id,imputation.name='',maxiter=300){
   m <- length(df.amelia$imputations)
   itercount = 0;
   chains=rep(0,m)
   for (i in 1:m) {
     chains[i]=nrow(df.amelia$iterHist[[i]])
-    if(chains[i]==200){
+    if(chains[i]==maxiter){
       itercount <- itercount + 1
     }
   }
@@ -38,7 +38,7 @@ junk.shot <- function(vds.id,f,fname,seconds,year,df){
     ## write.csv(dump,file=target.file,row.names = FALSE,col.names=TRUE,append=FALSE)
 }
 
-self.agg.impute.VDS.site.no.plots <- function(fname,f,path,year,seconds,goodfactor=2){
+self.agg.impute.VDS.site.no.plots <- function(fname,f,path,year,seconds,goodfactor=2,maxiter=300){
     ## aggregate, then impute
     vds.id <-  get.vdsid.from.filename(fname)
 
@@ -93,7 +93,7 @@ self.agg.impute.VDS.site.no.plots <- function(fname,f,path,year,seconds,goodfact
                 df.vds.agg.imputed <-
                 amelia(df.vds.agg,idvars=c('ts','obs_count'),ts="tod",splinetime=6,autopri=0.001,
                        lags =c(n.idx),leads=c(n.idx),cs="day",intercs=TRUE,
-                       sqrts=n.idx, bounds=o.bds,max.resample=10,emburn=c(2,300))
+                       sqrts=n.idx, bounds=o.bds,max.resample=10,emburn=c(2,maxiter))
                 )
 
 ####### these are various different things I tried with imputation  ###
@@ -134,7 +134,7 @@ self.agg.impute.VDS.site.no.plots <- function(fname,f,path,year,seconds,goodfact
                 target.file <-  make.amelia.output.file(savepath,fname,seconds,year)
                 save(df.vds.agg.imputed,file=target.file,compress='xz')
                 verify.db.dump(fname,path,year,seconds,df.vds.agg.imputed)
-                store.amelia.chains(df.vds.agg.imputed,year,vds.id,'vdsraw')
+                store.amelia.chains(df.vds.agg.imputed,year,vds.id,'vdsraw',maxiter=maxiter)
                 returnval <- 1
             }else{
                 returnval <- paste(df.vds.agg.imputed$code,'message',df.vds.agg.imputed$message)
