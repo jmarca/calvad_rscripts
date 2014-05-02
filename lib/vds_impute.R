@@ -4,7 +4,7 @@ source("vds.aggregate.R")
 ##source('components/jmarca/rstats_couch_utils/master/couchUtils.R')
 
 
-store.amelia.chains <- function(df.amelia,year,detector.id,imputation.name='',maxiter=300){
+store.amelia.chains <- function(df.amelia,year,detector.id,imputation.name='',maxiter=100){
   m <- length(df.amelia$imputations)
   itercount = 0;
   chains=rep(0,m)
@@ -38,7 +38,7 @@ junk.shot <- function(vds.id,f,fname,seconds,year,df){
     ## write.csv(dump,file=target.file,row.names = FALSE,col.names=TRUE,append=FALSE)
 }
 
-self.agg.impute.VDS.site.no.plots <- function(fname,f,path,year,seconds,goodfactor=2,maxiter=300){
+self.agg.impute.VDS.site.no.plots <- function(fname,f,path,year,seconds,goodfactor=2,maxiter=100){
     ## aggregate, then impute
     vds.id <-  get.vdsid.from.filename(fname)
 
