@@ -2,13 +2,12 @@ library('zoo')
 source('./utils.R')
 
 get.amelia.vds.file <- function(vdsid,path='/',year,server='http://calvad.ctmlabs.net',serverfile='none'){
-  df.vds.agg.imputed <- list();
+  df.vds.agg.imputed <- list()
   files = c(serverfile)
   if(serverfile == 'none'){
     path <- toupper(path)
     amelia.dump.file <- make.amelia.output.pattern(vdsid,year)
     files <- get.filenames(server=server,base.dir=path, pattern=amelia.dump.file)
-    df.vds.agg.imputed <- list();
     if(length(files)==0){
       return('todo')
     }
@@ -29,6 +28,23 @@ get.amelia.vds.file <- function(vdsid,path='/',year,server='http://calvad.ctmlab
   if (attempt>9){
     stop('no data from data server')
   }
+  df.vds.agg.imputed
+}
+
+get.amelia.vds.file.local <- function(vdsid,path='/',year,server,serverfile){
+  df.vds.agg.imputed <- list()
+
+  target.file <- make.amelia.output.pattern(vdsid,year)
+  isa.df <- dir(path, pattern=target.file,full.names=TRUE, ignore.case=TRUE,recurs=TRUE)
+  print(paste(path,target.file,isa.df[1],sep=' : '))
+  if(length(isa.df)==0){
+      return('todo')
+  }
+  print (paste('loading', isa.df[1]))
+  load.result <-  load(file=isa.df[1])
+  print(load.result)
+  df.vds.agg.imputed
+
 }
 
 unget.amelia.vds.file <- function(vdsid,path='/',year,server='http://calvad.ctmlabs.net'){
@@ -102,11 +118,18 @@ condense.amelia.output.into.zoo <- function(df.amelia,op=median){
   df.zoo
 }
 
-get.zooed.vds.amelia <- function(vdsid,serverfile='none',path='none'){
-    district <- district.from.vdsid(vdsid)
-    if(path=='none'){path = district}
-    get.amelia.vds.file(vdsid,path=path,year=year,serverfile=serverfile)
-
+get.zooed.vds.amelia <- function(vdsid,serverfile='none',path='none',remote=TRUE,year){
+    print(paste('in get.zooed.vds.amelia, remote is',remote))
+    df.vds.agg.imputed <- list()
+    if(path=='none'){
+        path <- district.from.vdsid(vdsid)
+    }
+    if(remote){
+        df.vds.agg.imputed <- get.amelia.vds.file(vdsid,path=path,year=year,serverfile=serverfile)
+    }else{
+        print('calling local version')
+        df.vds.agg.imputed <- get.amelia.vds.file.local(vdsid,path=path,year=year,serverfile=serverfile)
+    }
 
     if(length(df.vds.agg.imputed) == 1){
     print("amelia run for vds not good")
@@ -126,9 +149,9 @@ get.zooed.vds.amelia <- function(vdsid,serverfile='none',path='none'){
   medianed.aggregate.df(df.vds.amelia.c)
 }
 
-get.and.plot.vds.amelia <- function(pair,year,cdb.wimid=NULL,doplots=TRUE){
+get.and.plot.vds.amelia <- function(pair,year,cdb.wimid=NULL,doplots=TRUE,remote=TRUE,path){
   ## load the imputed file for this site, year
-  df.vds.zoo <- get.zooed.vds.amelia(pair)
+  df.vds.zoo <- get.zooed.vds.amelia(pair,year=year,path=path,remote=remote)
   ## prior to binding, weed out excessive flows
   varnames <- names(df.vds.zoo)
   flowvars <- grep('^n(r|l)\\d',x=varnames,perl=TRUE,value=TRUE)
