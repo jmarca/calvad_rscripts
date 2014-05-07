@@ -62,3 +62,12 @@ district.from.vdsid <- function(vdsid){
   ## setup.district.replication(district,year)
   district
 }
+
+
+add.time.of.day <- function(df){
+  ## add time of day and day of week here
+  ts.lt <- as.POSIXlt(df$ts)
+  df$tod   <- ts.lt$hour + (ts.lt$min/60)
+  df$day   <- ts.lt$wday
+  df
+}
