@@ -66,8 +66,9 @@ district.from.vdsid <- function(vdsid){
 
 add.time.of.day <- function(df){
   ## add time of day and day of week here
-  ts.lt <- as.POSIXlt(df$ts)
-  df$tod   <- ts.lt$hour + (ts.lt$min/60)
-  df$day   <- ts.lt$wday
+  ts.lt   <- as.POSIXlt(df$ts)
+  df$tod  <- ts.lt$hour + (ts.lt$min/60)
+  df$day  <- ts.lt$wday
+  df$hr   <- ts.lt$hr
   df
 }

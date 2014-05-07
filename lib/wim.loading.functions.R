@@ -1,6 +1,15 @@
 ### you need to have an existing value for con, a dbConnect object
 ### before the db query code here will work
 
+
+## to get from the db directly, without aggregating
+## pretty much use this for now
+load.wim.data.straight <- function(wim.site,year){
+  start.wim.time <-  paste(year,"-01-01",sep='')
+  end.wim.time <-   paste(year+1,"-01-01",sep='')
+  get.wim.site.2(wim.site,start.time=start.wim.time,end.time=end.wim.time)
+}
+
 get.list.wim.sites <-  function(){
   #   wim.query <- paste( "select distinct site_no,loc,lanes,vendor,wim_type from wim_stations join wim_district on (wim_id=site_no) where district_id in (7,8,11,12) and lanes>1 and wim_type != 'PrePass'" )
   #   wim.query <- paste( "select distinct site_no,loc,lanes,vendor,wim_type from wim_stations join wim_district on (wim_id=site_no) where district_id in (1,2,3,4,5,6,9,10) and lanes>1 and wim_type != 'PrePass'" )
@@ -69,7 +78,7 @@ get.list.neighbor.wim.sites <- function(vds.id){
 
 get.list.district.neighbor.wim.sites <- function(vdsid){
   with.part <- "with maxlanes as (select site_no, newctmlmap.canonical_direction(direction) as direction, max(lane_no) as lanes from wim_lane_dir group by site_no, direction order by site_no, direction) "
-  select.part <- "select distinct w.site_no as wim_id,ST_Distance_Sphere(v.geom,w.geom) as distance,newctmlmap.canonical_direction(w.direction) as direction,ml.lanes as lanes" 
+  select.part <- "select distinct w.site_no as wim_id,ST_Distance_Sphere(v.geom,w.geom) as distance,newctmlmap.canonical_direction(w.direction) as direction,ml.lanes as lanes"
   from.part <- paste("from newtbmap.tvd v ",
                      "join wim_district wd on (wd.district_id=v.district)",
                      "join newctmlmap.wim_view w on (wd.wim_id=w.site_no)",
