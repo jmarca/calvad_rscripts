@@ -2,6 +2,7 @@
 source('./utils.R')
 source('./wim.impute.functions.R')
 source('./wim.aggregate.fixed.R')
+source('./wim.loading.functions.R')
 
 pf <- function(x,y){panel.smoothScatter(x,y,nbin=c(200,200))}
 
@@ -10,8 +11,9 @@ lane.defs <- c('left lane','right lane 1', 'right lane 2', 'right lane 3', 'righ
 strip.function.a <- strip.custom(which.given=1,factor.levels=day.of.week, strip.levels = TRUE )
 
 
-process.wim.site <- function(wim.site,year,plot=TRUE,impute=TRUE){
+process.wim.site <- function(wim.site,year,plot=TRUE,impute=TRUE,wim.path='/data/backup/wim/'){
 
+    returnval <- 0
     if(! plot & !impute){
         print('nothing to do here, plot and impute both false')
         return()
@@ -234,15 +236,33 @@ process.wim.site <- function(wim.site,year,plot=TRUE,impute=TRUE){
         save(local.df.wim.agg,file=filepath,compress='xz')
         print('amelia run')
 
-        df.wim.amelia <- fill.wim.gaps(local.df.wim.agg
-                                       ,count.pattern='^(not_heavyheavy|heavyheavy|count_all_veh_speed)'
-                                       )
+        r <- try(
+            df.wim.amelia <- fill.wim.gaps(local.df.wim.agg
+                                           ,count.pattern='^(not_heavyheavy|heavyheavy|count_all_veh_speed)'
+                                           )
+            )
+        if(class(r) == "try-error") {
+            returnval <- paste(r,'')
+            print(paste('try error:',r))
+            couch.set.state(year=year,detector.id=cdb.wimid,doc=list('imputed'=paste('try error',r)))
+        }
 
-        ## have a WIM site data with no gaps.  save it
-        aout.name <- make.vds.wim.imputed.name(wim.site,direction,year)
-        ## fs write
-        save(df.wim.amelia,file=paste(savepath,aout.name,sep="/"),compress="xz")
+        if(df.wim.amelia$code==1){
+            ## that means good imputation
+            ## have a WIM site data with no gaps.  save it
+            target.file <- make.amelia.output.file(savepath,paste('wim',wim.site,direction,sep=''),seconds,year)
+            print(paste('name is',target.file,'savepath is',savepath))
+            ## fs write
+            save(df.wim.amelia,file=target.file,compress="xz")
+            couch.set.state(year=year,detector.id=cdb.wimid,doc=list('imputed'='finished'))
+            returnval <- 1
+        }else{
+            returnval <- paste(df.vds.agg.imputed$code,'message',df.vds.agg.imputed$message)
+            print(paste("amelia not happy:",returnval))
+            couch.set.state(year=year,detector.id=cdb.wimid,doc=list('imputed'=paste('error:',returnval)))
+        }
         rm(df.wim.amelia,local.df.wim.agg)
         gc()
     }
+    returnval
 }
