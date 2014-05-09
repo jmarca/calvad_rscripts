@@ -19,7 +19,7 @@
       "lib/wim.aggregate.fixed.R",
       "lib/wim.loading.functions.R",
       "lib/wim.impute.functions.R",
-      "lib/wim_impute_distributed.R",
+      "lib/process.wim.site.R",
       "lib/utils.R"
   ],
   "dependencies": {
