@@ -18,6 +18,8 @@
       "lib/vds_self_impute_missing_distributed.R",
       "lib/wim.aggregate.fixed.R",
       "lib/wim.loading.functions.R",
+      "lib/wim.impute.functions.R",
+      "lib/wim_impute_distributed.R",
       "lib/utils.R"
   ],
   "dependencies": {
