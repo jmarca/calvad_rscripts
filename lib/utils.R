@@ -72,3 +72,10 @@ add.time.of.day <- function(df){
   df$hr   <- ts.lt$hr
   df
 }
+
+make.amelia.output.file <- function(path,fname,seconds,year){
+  paste(path,'/',fname,'.',seconds,'.imputed.RData',sep='')
+}
+make.amelia.output.pattern <- function(fname,year){
+  paste(fname,'.*imputed.RData',sep='')
+}

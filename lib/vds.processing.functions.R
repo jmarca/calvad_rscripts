@@ -254,12 +254,6 @@ get.vds.file <- function(vds.id,path,year){
 }
 
 
-make.amelia.output.file <- function(path,fname,seconds,year){
-  paste(path,'/',fname,'.',seconds,'.imputed.RData',sep='')
-}
-make.amelia.output.pattern <- function(fname,year){
-  paste(fname,'.*imputed.RData',sep='')
-}
 make.db.dump.output.file <- function(path,vds.id,year){
   paste(path,paste('vds_hour_agg',vds.id,year,'dat',sep='.'),sep='/')
 }
