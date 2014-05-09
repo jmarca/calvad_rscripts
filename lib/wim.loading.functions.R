@@ -10,6 +10,16 @@ load.wim.data.straight <- function(wim.site,year){
   get.wim.site.2(wim.site,start.time=start.wim.time,end.time=end.wim.time)
 }
 
+get.wim.speed.from.sql <- function(wim.site,seconds,year=2008){
+  ## load wim data
+  ## by year
+  start.wim.time <-  paste(year,"-01-01",sep='')
+  end.wim.time <-   paste(year+1,"-01-01",sep='')
+  df.speed <-  get.wim.site.speed(wim.site,start.time=start.wim.time,end.time=end.wim.time)
+  df.speed <-  wim.recode.lanes(df.speed)
+  df.speed
+}
+
 get.list.wim.sites <-  function(){
   #   wim.query <- paste( "select distinct site_no,loc,lanes,vendor,wim_type from wim_stations join wim_district on (wim_id=site_no) where district_id in (7,8,11,12) and lanes>1 and wim_type != 'PrePass'" )
   #   wim.query <- paste( "select distinct site_no,loc,lanes,vendor,wim_type from wim_stations join wim_district on (wim_id=site_no) where district_id in (1,2,3,4,5,6,9,10) and lanes>1 and wim_type != 'PrePass'" )
@@ -199,6 +209,59 @@ get.wim.status <- function(wim.site){
   df.wim.status <- fetch(rs,n=-1)
   df.wim.status
 }
+
+
+## create additional variables for wim sites
+wim.additional.variables <- function(df.wim){
+
+  ## I want to parameterize the additional variables here, but can't see how
+
+
+  ## df.wim$gross_weight        df.wim$overweight          df.wim$total_axles         df.wim$truck               df.wim$veh_len
+  ## df.wim$heavyheavy          df.wim$site_no             df.wim$total_axle_spacing  df.wim$ts                  df.wim$veh_no
+  ## df.wim$lane                df.wim$speed               df.wim$total_axle_weight   df.wim$veh_class           df.wim$violation_code
+  ##  I used ot have df.wim$truck, but now in the sql that is all I have
+  ## no more of this kind of line
+  ## df.wim$over_weight <- ifelse(df.wim$truck && df.wim$overweight, df.wim$gross_weight,NA)
+
+  df.names <- names(df.wim)
+  if('overweight' %in% df.names){
+    df.wim$over_weight <- ifelse(df.wim$overweight, df.wim$gross_weight,NA)
+    ## df.wim$legal_weight <- ifelse(!df.wim$overweight, df.wim$gross_weight,NA)
+    ## that is wrong, I think
+  }
+  if('heavyheavy' %in% df.names){
+    df.wim$hh_weight <- ifelse(df.wim$heavyheavy, df.wim$gross_weight,NA)
+    df.wim$hh_axles <- ifelse(df.wim$heavyheavy, df.wim$total_axles,NA)
+    df.wim$hh_len <- ifelse(df.wim$heavyheavy, df.wim$total_axle_spacing,NA)
+    df.wim$hh_speed <- ifelse(df.wim$heavyheavy, df.wim$speed,NA)
+
+    df.wim$nh_weight <- ifelse(!df.wim$heavyheavy, df.wim$gross_weight,NA)
+    df.wim$nh_axles <- ifelse(!df.wim$heavyheavy, df.wim$total_axles,NA)
+    df.wim$nh_len <- ifelse(!df.wim$heavyheavy, df.wim$total_axle_spacing,NA)
+    df.wim$nh_speed <- ifelse(!df.wim$heavyheavy, df.wim$speed,NA)
+  }
+
+  if('empty' %in% df.names){
+    df.wim$mt_weight <- ifelse(df.wim$empty, df.wim$gross_weight,NA)
+    ## df.wim$mt_axles <- ifelse(df.wim$empty, df.wim$total_axles,NA)
+    ## df.wim$mt_len <- ifelse(df.wim$empty, df.wim$total_axle_spacing,NA)
+    df.wim$mt_speed <- ifelse(df.wim$empty, df.wim$speed,NA)
+  }
+
+  ## recode some names here to make naming scheme consistent.
+  orig.names <- names(df.wim)
+  orig.names[match(c("gross_weight","total_axles","total_axle_spacing","speed"),orig.names)]<- c("tr_weight","tr_axles","tr_len","tr_speed")
+  names(df.wim) <- orig.names
+
+  ## finally, I don't need total_axle_weight at this time
+  ta.weight <-  grep( pattern='total_axle_weight',x=names(df.wim) ,perl=TRUE,value=TRUE)
+  for(col in ta.weight){
+    df.wim[,col] <- NULL
+  }
+  df.wim
+}
+
 
 ## parameterize count variables here such that ,count.vars=c("truck","heavyheavy","overweight")
 process.wim.2 <- function(df.wim){
