@@ -1,5 +1,6 @@
 ##source('./components/jmarca-rstats_couch_utils/couchUtils.R')
 source('./utils.R')
+source('./wim.impute.functions.R')
 source('./wim.aggregate.fixed.R')
 
 pf <- function(x,y){panel.smoothScatter(x,y,nbin=c(200,200))}
