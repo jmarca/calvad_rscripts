@@ -4,6 +4,8 @@ source('./wim.impute.functions.R')
 source('./wim.aggregate.fixed.R')
 source('./wim.loading.functions.R')
 
+source('./amelia_plots_and_diagnostics.R')
+
 pf <- function(x,y){panel.smoothScatter(x,y,nbin=c(200,200))}
 
 day.of.week <-    c('Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday')
@@ -98,7 +100,11 @@ process.wim.site <- function(wim.site,year,plot=TRUE,impute=TRUE,wim.path='/data
 
         ## gc()
         if(plot){
-            png(file = paste(paste('images/',direction,'/',sep=''),paste(wim.site,direction,year,'agg.redo','%03d.png',sep='_'),sep=''), width=900, height=600, bg="transparent",pointsize=18)
+            file.pattern <- paste(wim.site,direction,year,'agg.redo',sep='_')
+
+            file.path <- paste(paste('images/',direction,'/',sep=''),file.pattern,sep='')
+
+            png(file = paste(file.path,'%03d.png',sep='_'), width=900, height=600, bg="transparent",pointsize=18)
 
             plotvars <- grep('not_heavyheavy_',x=names(local.df.wim.agg),perl=TRUE,value=TRUE)
             f <- formula(paste('I(', paste(plotvars,collapse='+' ),') ~ tod | day'))
@@ -199,7 +205,7 @@ process.wim.site <- function(wim.site,year,plot=TRUE,impute=TRUE,wim.path='/data
                 gc()
             }
 
-            files.to.attach <- dir(paste('images/',direction,sep=''),pattern=paste(wim.site,direction,year,'agg.redo_00',sep='_'),full.names=TRUE)
+            files.to.attach <- dir(paste('images/',direction,sep=''),pattern=paste("^",file.pattern,sep=''),full.names=TRUE)
 
             for(f2a in files.to.attach){
                 couch.attach(trackingdb
@@ -208,61 +214,91 @@ process.wim.site <- function(wim.site,year,plot=TRUE,impute=TRUE,wim.path='/data
                              ,local=TRUE
                              )
             }
+
         }
-        if(!impute){
-            next;
+        if(impute){
+
+            ## direction <- names(df.wim.split)[1]
+            print(paste(year,wim.site,direction))
+            couch.set.state(year=year,detector.id=cdb.wimid,doc=list('imputed'='started'))
+
+            ## save and move on to the next one
+
+            ## but save where?
+            ## to couchdb as hourly data??
+            ## no, to fs on lysithia.  brief digression to write that into my node server.
+
+            savepath <- paste(wim.path,year,sep='/')
+            if(!file.exists(savepath)){dir.create(savepath)}
+            savepath <- paste(savepath,wim.site,sep='/')
+            if(!file.exists(savepath)){dir.create(savepath)}
+            savepath <- paste(savepath,direction,sep='/')
+            if(!file.exists(savepath)){dir.create(savepath)}
+            filepath <- paste(savepath,'wim.agg.RData',sep='/')
+
+            db.legal.names  <- gsub("\\.", "_", names(local.df.wim.agg))
+
+            names(local.df.wim.agg) <- db.legal.names
+            save(local.df.wim.agg,file=filepath,compress='xz')
+            print('amelia run')
+
+            r <- try(
+                df.wim.amelia <- fill.wim.gaps(local.df.wim.agg
+                                               ,count.pattern='^(not_heavyheavy|heavyheavy|count_all_veh_speed)'
+                                               )
+                )
+            if(class(r) == "try-error") {
+                returnval <- paste(r,'')
+                print(paste('try error:',r))
+                couch.set.state(year=year,detector.id=cdb.wimid,doc=list('imputed'=paste('try error',r)))
+            }
+
+            if(df.wim.amelia$code==1){
+                ## that means good imputation
+                ## have a WIM site data with no gaps.  save it
+                target.file <- make.amelia.output.file(savepath,paste('wim',wim.site,direction,sep=''),seconds,year)
+                print(paste('name is',target.file,'savepath is',savepath))
+                ## fs write
+                save(df.wim.amelia,file=target.file,compress="xz")
+                couch.set.state(year=year,detector.id=cdb.wimid,doc=list('imputed'='finished'))
+                returnval <- 1
+            }else{
+                returnval <- paste(df.vds.agg.imputed$code,'message',df.vds.agg.imputed$message)
+                print(paste("amelia not happy:",returnval))
+                couch.set.state(year=year,detector.id=cdb.wimid,doc=list('imputed'=paste('error:',returnval)))
+            }
+            rm(df.wim.amelia,local.df.wim.agg)
+            gc()
         }
-        ## direction <- names(df.wim.split)[1]
-        print(paste(year,wim.site,direction))
-        couch.set.state(year=year,detector.id=cdb.wimid,doc=list('imputed'='started'))
-
-        ## save and move on to the next one
-
-        ## but save where?
-        ## to couchdb as hourly data??
-        ## no, to fs on lysithia.  brief digression to write that into my node server.
-
-        savepath <- paste(wim.path,year,sep='/')
-        if(!file.exists(savepath)){dir.create(savepath)}
-        savepath <- paste(savepath,wim.site,sep='/')
-        if(!file.exists(savepath)){dir.create(savepath)}
-        savepath <- paste(savepath,direction,sep='/')
-        if(!file.exists(savepath)){dir.create(savepath)}
-        filepath <- paste(savepath,'wim.agg.RData',sep='/')
-
-        db.legal.names  <- gsub("\\.", "_", names(local.df.wim.agg))
-
-        names(local.df.wim.agg) <- db.legal.names
-        save(local.df.wim.agg,file=filepath,compress='xz')
-        print('amelia run')
-
-        r <- try(
-            df.wim.amelia <- fill.wim.gaps(local.df.wim.agg
-                                           ,count.pattern='^(not_heavyheavy|heavyheavy|count_all_veh_speed)'
-                                           )
-            )
-        if(class(r) == "try-error") {
-            returnval <- paste(r,'')
-            print(paste('try error:',r))
-            couch.set.state(year=year,detector.id=cdb.wimid,doc=list('imputed'=paste('try error',r)))
-        }
-
-        if(df.wim.amelia$code==1){
-            ## that means good imputation
-            ## have a WIM site data with no gaps.  save it
+        if(plot){
+            // reload the imputed wim data
             target.file <- make.amelia.output.file(savepath,paste('wim',wim.site,direction,sep=''),seconds,year)
-            print(paste('name is',target.file,'savepath is',savepath))
-            ## fs write
-            save(df.wim.amelia,file=target.file,compress="xz")
-            couch.set.state(year=year,detector.id=cdb.wimid,doc=list('imputed'='finished'))
-            returnval <- 1
-        }else{
-            returnval <- paste(df.vds.agg.imputed$code,'message',df.vds.agg.imputed$message)
-            print(paste("amelia not happy:",returnval))
-            couch.set.state(year=year,detector.id=cdb.wimid,doc=list('imputed'=paste('error:',returnval)))
+            print(paste('name is',target.file,'loadpath is',savepath))
+            load.result <- load(file=target.file)
+            print(paste('load result is',load.result))
+            if(length(df.wim.amelia) == 1){
+                print(paste("amelia run for wim not good",df.wim.amelia))
+                ## couch.set.wim.imputed.state(year,wim.dir[1],wim.dir[2],df.wim.amelia)
+                next
+            }else if(!length(df.wim.amelia)>0 || !length(df.wim.amelia$imputations)>0 || df.wim.amelia$code!=1 ){
+                print("amelia run for vds not good")
+                ## couch.set.wim.imputed.state(year,wim.dir[1],wim.dir[2],'unusable')
+                next
+            }
+            ## use zoo to combine a mean value
+            df.wim.amelia.c <- df.wim.amelia$imputations[[1]]
+            for(i in 2:length(df.wim.amelia$imputations)){
+                df.wim.amelia.c <- rbind(df.wim.amelia.c,df.wim.amelia$imputations[[i]])
+            }
+            df.zoo <- medianed.aggregate.df(df.wim.amelia.c)
+
+            df.merged <- unzoo.incantation(df.zoo)
+            make.truck.plots(df.merged,year,wim.dir[1],wim.dir[2],cdb.wimid,imputed=TRUE)
+            rm(df.merged,df.zoo,df.wim.amelia.c,df.wim.amelia)
+            gc()
         }
-        rm(df.wim.amelia,local.df.wim.agg)
-        gc()
+
+
     }
     returnval
 }
