@@ -5,7 +5,7 @@ source('./wim.aggregate.fixed.R')
 source('./wim.loading.functions.R')
 
 source('./amelia_plots_and_diagnostics.R')
-
+source('./get.medianed.amelia.vds.R')
 pf <- function(x,y){panel.smoothScatter(x,y,nbin=c(200,200))}
 
 day.of.week <-    c('Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday')
@@ -13,16 +13,54 @@ lane.defs <- c('left lane','right lane 1', 'right lane 2', 'right lane 3', 'righ
 strip.function.a <- strip.custom(which.given=1,factor.levels=day.of.week, strip.levels = TRUE )
 
 
-process.wim.site <- function(wim.site,year,plot=TRUE,impute=TRUE,wim.path='/data/backup/wim/'){
+post.impute.plots <- function(wim.site,year,wim.path='/data/backup/wim'){
+    ## no need to load raw data
+    df.directions <- get.wim.directions(wim.site)
+    directions = df.directions$direction
+    print(paste(directions,collapse=','))
+    for(direction in directions){
+        ## reload the imputed wim data
+        cdb.wimid <- paste('wim',wim.site,direction,sep='.')
+        savepath <- paste(wim.path,year,wim.site,direction,sep='/')
+        target.file <- make.amelia.output.file(savepath,paste('wim',wim.site,direction,sep=''),seconds,year)
+        print(paste('loading',target.file))
+        ## fs write
+        load.result <- load(file=target.file)
+        print(paste('load result is',load.result))
+        if(length(df.wim.amelia) == 1){
+            print(paste("amelia run for wim not good",df.wim.amelia))
+            next
+        }else if(!length(df.wim.amelia)>0 || !length(df.wim.amelia$imputations)>0 || df.wim.amelia$code!=1 ){
+            print("amelia run for vds not good")
+            next
+        }
+        ## use zoo to combine a mean value
+        df.wim.amelia.c <- df.wim.amelia$imputations[[1]]
+        for(i in 2:length(df.wim.amelia$imputations)){
+            df.wim.amelia.c <- rbind(df.wim.amelia.c,df.wim.amelia$imputations[[i]])
+        }
+        print('median of amelia imputations')
+        df.zoo <- medianed.aggregate.df(df.wim.amelia.c)
+
+        df.merged <- unzoo.incantation(df.zoo)
+        print('make plots')
+        make.truck.plots(df.merged,year,wim.site,direction,cdb.wimid,imputed=TRUE)
+        rm(df.merged,df.zoo,df.wim.amelia.c,df.wim.amelia)
+        gc()
+    }
+    1
+}
+
+
+process.wim.site <- function(wim.site,year,preplot=TRUE,postplot=TRUE,impute=TRUE,wim.path='/data/backup/wim/'){
 
     returnval <- 0
-    if(! plot & !impute){
-        print('nothing to do here, plot and impute both false')
+    if(!preplot & !postplot & !impute){
+        print('nothing to do here, preplot, postplot, and impute all false')
         return()
     }
-
+    directions <- list()
     print(paste('starting to process  wim site ',wim.site))
-
     df.wim <- load.wim.data.straight(wim.site,year)
     ## only continue if I have real data
     if(dim(df.wim)[1]==0){
@@ -30,13 +68,14 @@ process.wim.site <- function(wim.site,year,plot=TRUE,impute=TRUE,wim.path='/data
         return()
     }
     df.wim.split <- split(df.wim, df.wim$direction)
+    directions <- names(df.wim.split)
     df.wim.speed <- get.wim.speed.from.sql(wim.site,seconds,year)
     df.wim.speed.split <- split(df.wim.speed, df.wim.speed$direction)
     rm(df.wim)
     rm(df.wim.speed)
 
     df.wim.dir <- list()
-    for(direction in names(df.wim.split)){
+    for(direction in directions){
         ## direction <- names(df.wim.split)[1]
         cdb.wimid <- paste('wim',wim.site,direction,sep='.')
         if(length(df.wim.split[[direction]]$ts)<100){
@@ -99,7 +138,7 @@ process.wim.site <- function(wim.site,year,plot=TRUE,impute=TRUE,wim.path='/data
         ##    df.wim.dir[[direction]] <- local.df.wim.agg
 
         ## gc()
-        if(plot){
+        if(preplot){
             file.pattern <- paste(wim.site,direction,year,'agg.redo',sep='_')
 
             file.path <- paste(paste('images/',direction,'/',sep=''),file.pattern,sep='')
@@ -205,7 +244,7 @@ process.wim.site <- function(wim.site,year,plot=TRUE,impute=TRUE,wim.path='/data
                 gc()
             }
 
-            files.to.attach <- dir(paste('images/',direction,sep=''),pattern=paste("^",file.pattern,sep=''),full.names=TRUE)
+            files.to.attach <- dir(file.path,pattern=paste("^",file.pattern,sep=''),full.names=TRUE)
 
             for(f2a in files.to.attach){
                 couch.attach(trackingdb
@@ -270,35 +309,8 @@ process.wim.site <- function(wim.site,year,plot=TRUE,impute=TRUE,wim.path='/data
             rm(df.wim.amelia,local.df.wim.agg)
             gc()
         }
-        if(plot){
-            // reload the imputed wim data
-            target.file <- make.amelia.output.file(savepath,paste('wim',wim.site,direction,sep=''),seconds,year)
-            print(paste('name is',target.file,'loadpath is',savepath))
-            load.result <- load(file=target.file)
-            print(paste('load result is',load.result))
-            if(length(df.wim.amelia) == 1){
-                print(paste("amelia run for wim not good",df.wim.amelia))
-                ## couch.set.wim.imputed.state(year,wim.dir[1],wim.dir[2],df.wim.amelia)
-                next
-            }else if(!length(df.wim.amelia)>0 || !length(df.wim.amelia$imputations)>0 || df.wim.amelia$code!=1 ){
-                print("amelia run for vds not good")
-                ## couch.set.wim.imputed.state(year,wim.dir[1],wim.dir[2],'unusable')
-                next
-            }
-            ## use zoo to combine a mean value
-            df.wim.amelia.c <- df.wim.amelia$imputations[[1]]
-            for(i in 2:length(df.wim.amelia$imputations)){
-                df.wim.amelia.c <- rbind(df.wim.amelia.c,df.wim.amelia$imputations[[i]])
-            }
-            df.zoo <- medianed.aggregate.df(df.wim.amelia.c)
-
-            df.merged <- unzoo.incantation(df.zoo)
-            make.truck.plots(df.merged,year,wim.dir[1],wim.dir[2],cdb.wimid,imputed=TRUE)
-            rm(df.merged,df.zoo,df.wim.amelia.c,df.wim.amelia)
-            gc()
-        }
-
 
     }
+
     returnval
 }

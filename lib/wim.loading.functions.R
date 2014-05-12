@@ -20,6 +20,15 @@ get.wim.speed.from.sql <- function(wim.site,seconds,year=2008){
   df.speed
 }
 
+get.wim.directions <- function(wim.site){
+  wim.query <- paste("select distinct direction as direction from wim_lane_dir where site_no=",wim.site,sep='')
+  print(wim.query)
+  rs <- dbSendQuery(con,wim.query)
+  df.wim <- fetch(rs,n=-1)
+  df.wim
+}
+
+
 get.list.wim.sites <-  function(){
   #   wim.query <- paste( "select distinct site_no,loc,lanes,vendor,wim_type from wim_stations join wim_district on (wim_id=site_no) where district_id in (7,8,11,12) and lanes>1 and wim_type != 'PrePass'" )
   #   wim.query <- paste( "select distinct site_no,loc,lanes,vendor,wim_type from wim_stations join wim_district on (wim_id=site_no) where district_id in (1,2,3,4,5,6,9,10) and lanes>1 and wim_type != 'PrePass'" )

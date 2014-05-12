@@ -16,7 +16,8 @@ make.truck.plots <- function(df,year,site,dir,cdb.id,imputed=TRUE){
   if(imputed){
     trucks <- 'imputed_trucks'
   }
-  imagefilename <- paste(savepath,paste(site,dir,year,trucks,'%03d.png',sep='_'),sep='/')
+  file.pattern  <- paste(site,dir,year,trucks,sep='_')
+  imagefilename <- paste(savepath,paste(file.pattern,'%03d.png',sep='_'),sep='/')
   png(file = imagefilename, width=900, height=600, bg="transparent",pointsize=24)
 
   ## heavy heavy
@@ -83,7 +84,7 @@ make.truck.plots <- function(df,year,site,dir,cdb.id,imputed=TRUE){
 
   dev.off()
 
-  files.to.attach <- dir(savepath,pattern=paste(site,dir,year,trucks,'00',sep='_'),full.names=TRUE)
+  files.to.attach <- dir(savepath,pattern=paste("^",file.pattern,sep=''),full.names=TRUE)
   for(f2a in files.to.attach){
     couch.attach(trackingdb,cdb.id,f2a)
   }
