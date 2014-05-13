@@ -16,6 +16,7 @@ fill.truck.gaps <- function(df
                             ,count.pattern = "(heavyheavy|^nl|^nr\\d|_weight|_axle|_length|_speed|_all_veh_speed)"
                             ,mean.pattern="(^ol|^or\\d)"
                             ,exclude.pattern="^(mean|mt_|tr_)"
+                            ,maxiter=200
                             ){
 
   ## truncate negative values to zero
@@ -62,7 +63,7 @@ fill.truck.gaps <- function(df
   ##          sqrts=count.vars,
   ##          cs="day",
   ##          intercs=TRUE,
-  ##          emburn=c(2,500),
+  ##          emburn=c(2,maxiter),
   ##          bounds = pos.bds, max.resample=10,empri = 0.05 *nrow(df))
   ## this one works
   ## df.amelia <-
@@ -73,7 +74,7 @@ fill.truck.gaps <- function(df
   ##          sqrts=count.vars,
   ##          cs="day",
   ##          intercs=TRUE,
-  ##          emburn=c(2,200),
+  ##          emburn=c(2,maxiter),
   ##          bounds = pos.bds, max.resample=10,empri = 0.05 *nrow(df)
   ##          )
   ## this one is going for speed
@@ -89,7 +90,7 @@ fill.truck.gaps <- function(df
            sqrts=count.vars,
            #cs="day",
            #intercs=TRUE,
-           emburn=c(2,200),
+           emburn=c(2,maxiter),
            bounds = pos.bds, max.resample=10,empri = 0.05 *nrow(df)
            ##,m=1 ## desperate measures!  set to limit the imputations
            )
@@ -262,7 +263,7 @@ names.munging <- function(names.df
 ##            sqrts=new.cnt.vs,
 ##            cs="day",
 ##            # intercs=TRUE,
-##            emburn=c(2,50),
+##            emburn=c(2,maxiter),
 ##            bounds = pos.bds, max.resample=10,empri = 0.05 *nrow(df))
 
 ##   df.amelia
