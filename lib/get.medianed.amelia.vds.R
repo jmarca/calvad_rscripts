@@ -152,6 +152,9 @@ get.zooed.vds.amelia <- function(vdsid,serverfile='none',path='none',remote=TRUE
 get.and.plot.vds.amelia <- function(pair,year,cdb.wimid=NULL,doplots=TRUE,remote=TRUE,path){
   ## load the imputed file for this site, year
   df.vds.zoo <- get.zooed.vds.amelia(pair,year=year,path=path,remote=remote)
+  if(is.null(df.vds.zoo)){
+      return (NULL)
+  }
   ## prior to binding, weed out excessive flows
   varnames <- names(df.vds.zoo)
   flowvars <- grep('^n(r|l)\\d',x=varnames,perl=TRUE,value=TRUE)
