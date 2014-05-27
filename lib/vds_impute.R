@@ -1,27 +1,10 @@
+source("utils.R")
 source("load.pems.raw.file.R")
 source("vds.processing.functions.R")
 source("vds.aggregate.R")
-##source('components/jmarca/rstats_couch_utils/master/couchUtils.R')
+## expects that somewhere you've already called
+## source('components/jmarca/rstats_couch_utils/master/couchUtils.R')
 
-
-store.amelia.chains <- function(df.amelia,year,detector.id,imputation.name='',maxiter=100){
-  m <- length(df.amelia$imputations)
-  itercount = 0;
-  chains=rep(0,m)
-  for (i in 1:m) {
-    chains[i]=nrow(df.amelia$iterHist[[i]])
-    if(chains[i]==maxiter){
-      itercount <- itercount + 1
-    }
-  }
-  ## I hate that R does not interpolate list names
-  trackerdoc <- list('chain_lengths'=chains,'max_iterations'=itercount)
-  if(imputation.name != '' ){
-    names(trackerdoc) <- paste(imputation.name,names(trackerdoc),sep='_')
-  }
-  couch.set.state(year=year,detector.id=detector.id,doc=trackerdoc)
-  return (itercount)
-}
 
 
 junk.shot <- function(vds.id,f,fname,seconds,year,df){

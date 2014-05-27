@@ -1,3 +1,25 @@
+## requires that couch utils has been loaded already
+
+store.amelia.chains <- function(df.amelia,year,detector.id,imputation.name='',maxiter=100){
+  m <- length(df.amelia$imputations)
+  itercount = 0;
+  chains=rep(0,m)
+  for (i in 1:m) {
+    chains[i]=nrow(df.amelia$iterHist[[i]])
+    if(chains[i]==maxiter){
+      itercount <- itercount + 1
+    }
+  }
+  ## I hate that R does not interpolate list names
+  trackerdoc <- list('chain_lengths'=chains,'max_iterations'=itercount)
+  if(imputation.name != '' ){
+    names(trackerdoc) <- paste(imputation.name,names(trackerdoc),sep='_')
+  }
+  couch.set.state(year=year,detector.id=detector.id,doc=trackerdoc)
+  return (itercount)
+}
+
+
 get.save.path <- function(f){
     file.names <- strsplit(f,split="/")[[1]]
     savepath <- paste(file.names[-(length(file.names))],collapse='/')
