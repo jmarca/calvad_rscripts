@@ -123,15 +123,20 @@ get.list.closest.wim.pairs <- function(){
   df.q
 }
 
-get.list.regenerate.wim.pairs <- function(wimid,direction){
+get.list.regenerate.wim.pairs <- function(wimid,direction,samefreeway=TRUE){
 
+    joinfreeway <- ''
+    if(samefreeway){
+        joinfreeway <- "join wim_freeway wf on (wf.wim_id=b.site_no and wf.freeway_id=b.freeway)"
+
+    }
   wim.query <- paste("select b.vds_id as vds_id,"
                      ,"b.site_no as wim_id ,"
                      ,"b.dist as distance,"
                      ,"b.freeway as freeway,"
                      ,"b.direction as direction"
                      ,"from  imputed.vds_wim_neighbors b"
-                     ,"join wim_freeway wf on (wf.wim_id=b.site_no and wf.freeway_id=b.freeway)"
+                     ,joinfreeway
                      ,"where b.site_no=",wimid,
                      ,"and b.direction=",direction
                      ,"order by dist limit 50")
