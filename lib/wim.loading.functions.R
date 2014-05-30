@@ -123,6 +123,27 @@ get.list.closest.wim.pairs <- function(){
   df.q
 }
 
+get.list.regenerate.wim.pairs <- function(wimid,direction){
+
+  wim.query <- paste("select b.vds_id as vds_id,"
+                     ,"b.site_no as wim_id ,"
+                     ,"b.dist as distance,"
+                     ,"b.freeway as freeway,"
+                     ,"b.direction as direction"
+                     ,"from  imputed.vds_wim_neighbors b"
+                     ,"join wim_freeway wf on (wf.wim_id=b.site_no and wf.freeway_id=b.freeway)"
+                     ,"where b.site_no=",wimid,
+                     ,"and b.direction=",direction
+                     ,"order by dist limit 50")
+
+  print(wim.query)
+  rs <- dbSendQuery(con,wim.query)
+  df.q <- fetch(rs,n=-1)
+  df.q
+
+}
+
+
 get.wim.site.speed <- function(wim.siteno,start.time,end.time){
   query <- paste(
                  "select extract(epoch from ts) as ts, b.lane_no as lane, veh_speed, veh_count, direction from  wim.summaries_5min_speed a join wim_lane_dir b on (b.site_no=a.site_no and  b.wim_lane_no=a.wim_lane_no) where  ts>='",start.time,"' and ts < '",end.time, "' and a.site_no=",wim.siteno)
