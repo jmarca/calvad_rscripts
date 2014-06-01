@@ -137,8 +137,8 @@ get.list.regenerate.wim.pairs <- function(wimid,direction,samefreeway=TRUE){
                      ,"b.direction as direction"
                      ,"from  imputed.vds_wim_neighbors b"
                      ,joinfreeway
-                     ,"where b.site_no=",wimid,
-                     ,"and b.direction=",direction
+                     ,"where b.site_no=",wimid
+                     ,paste("and b.direction=newctmlmap.canonical_direction('",direction,"')",sep='')
                      ,"order by dist limit 50")
 
   print(wim.query)
