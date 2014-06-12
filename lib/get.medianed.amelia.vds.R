@@ -169,8 +169,6 @@ get.and.plot.vds.amelia <- function(pair,year,cdb.wimid=NULL,doplots=TRUE,remote
   df.vds.zoo$tod   <- ts.lt$hour + (ts.lt$min/60)
   df.vds.zoo$day   <- ts.lt$wday
 
-  rm(df.vds.agg.imputed)
-
   if(doplots){
     plot.zooed.vds.data(df.vds.zoo,pair,year)
   }
