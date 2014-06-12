@@ -61,7 +61,10 @@ unget.amelia.vds.file <- function(vdsid,path='/',year,server='http://calvad.ctml
 }
 
 tempfix.borkborkbork <- function(df){
-  ## use zoo to combine a mean, no, median value
+  summing.zoo.combiner(df)
+}
+summing.zoo.combiner <- function(df){
+  ## use zoo to combine a mean of occupancy, sums of volumes
   varnames <- names(df)
   varnames <- grep( pattern="^ts",x=varnames,perl=TRUE,inv=TRUE,value=TRUE)
 
