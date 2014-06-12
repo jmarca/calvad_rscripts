@@ -16,9 +16,9 @@ get.vds.wim.pairs <- function(year,trackingdb='vdsdata%2ftracking'){
       m <- regexec("^wim\\.([0-9]+)\\.([NSEW])",x)
       wim.info <- regmatches(x,m)[[1]]
       return (list('year'=as.numeric(r$key[[1]]),
-                   'vds.id'=as.numeric(r$key[[2]]),
+                   'vds_id'=as.numeric(r$key[[2]]),
                    'doc'=r$key[[3]],
-                   'wim.id'=as.integer(wim.info[2]),
+                   'wim_id'=as.integer(wim.info[2]),
                    'direction'=wim.info[3]
                    ))
   })
@@ -27,8 +27,8 @@ get.vds.wim.pairs <- function(year,trackingdb='vdsdata%2ftracking'){
   }
   ## convert to a dataframe
   df.pairs <- data.frame(year=unlist(records[1,])
-                        ,vds.id=unlist(records[2,])
-                        ,wim.id=unlist(records[4,])
+                        ,vds_id=unlist(records[2,])
+                        ,wim_id=unlist(records[4,])
                         ,direction=unlist(records[5,])
                         ,doc=unlist(records[3,])
                         ,stringsAsFactors=FALSE)

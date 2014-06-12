@@ -50,21 +50,48 @@ load.wim.pair.data <- function(wim.ids,vds.nvars,lanes=0,year=0){
                 next
             }
             ic.names <- names(df.merged)
+
+            ## this is an ugly hack that needs fixing
+            ##
+            ## I go through the variables I expect, and if they aren't
+            ## there, I bail, but instead of looking up each name
+            ## individually, which is possible, I instead just sum up
+            ## the expected number of variables, which again, is a
+            ## hack and needs fixing
+            ##
+            ## I don't even know for a fact that the summary report
+            ## speed and count data is even used in the imputations?
+            ##
+            ## I mean, those vars are *in* the imputation, but I don't
+            ## use the output, I use the truck counts and such.  these
+            ## vars are only in to help the imputation move along
+            ## nicely and be consistent with itself.
+
             shouldbe <-
                 (wim.lanes * 2) + ## n and o for each lane
                     (2 * 10) +  ## two right hand lanes should have 10 truck vars
                         (wim.lanes * 2) + ## each lane has speed and count from summary report
                             3 ## ts, tod, day
+            minlanes <- min(2,wim.lanes)
+            atleast <-
+                (wim.lanes * 2) + ## n and o for each lane
+                    (2 * 10) +  ## two right hand lanes should have 10 truck vars
+                        (minlanes * 2) + ## at the very least, need two lanes lane has speed and count from summary report
+                            3 ## ts, tod, day
             ## add for speed too if in the data set
             speed.vars <- grep( pattern=spd.pattern,x=ic.names ,perl=TRUE,value=TRUE,invert=FALSE)
             if(length(speed.vars)>0){
                 shouldbe <- shouldbe + (wim.lanes) # one speed measurement for each lane
+                atleast  <- atleast  + (wim.lanes) # one speed measurement for each lane
             }
 
-            if(dim(df.merged)[2]<shouldbe){
+            if(dim(df.merged)[2]<shouldbe ){
                 print(paste('pairing for',paired.vdsid,year,'missing some variables, expected',shouldbe,'got',dim(df.merged)[2]))
                 print(names(df.merged))
-                next
+                if(dim(df.merged)[2]<atleast ){
+                    print(paste('pairing for',paired.vdsid,year,'missing less than minimum acceptable variables, require',atleast,'got',dim(df.merged)[2]))
+                    next
+                }
             }
             print(paste('processing',paired.vdsid,year))
             ready.wimids[length(ready.wimids)+1]=wim.ids[wii,]
