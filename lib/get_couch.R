@@ -35,9 +35,9 @@ get.vds.wim.pairs <- function(year,trackingdb='vdsdata%2ftracking'){
   df.pairs
 }
 
-get.RData.view <- function(vdsid,year){
-  docs <- couch.allDocs(trackingdb
-                        , query=list(
+get.RData.view <- function(vdsid,year,trackingdb='vdsdata%2ftracking'){
+    docs <- couch.allDocs(trackingdb
+                          , query=list(
                             'startkey'=paste('%5b%22',year,'%22,%22',vdsid,'%22%5d',sep='')
                             ,'endkey' =paste('%5b%22',year,'%22,%22',vdsid,'%22,%5b%5d%5d',sep='')
                             ,'reduce'='false')
