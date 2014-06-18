@@ -56,3 +56,76 @@ couch.record.unmet.conditions <- function(district,year,vdsid,condition){
   problem[condition] <- 'unmet'
   couch.set.state(year,vdsid,doc=problem,local=TRUE)
 }
+
+
+evaluate.paired.data <- function(df,wim.lanes,vds.lanes){
+    paired.data.names <- names(df)
+
+    ## fixing an ugly hack done earlier for speed.
+
+    ## sift through the names, keep what I need, discard (?) what I don't
+
+    ## wim data, needs to have wim.lanes worth of info
+
+    wim.var.pattern <-
+        "(heavyheavy|_weight|_axle|_len|_speed)"
+    ## "(heavyheavy|_weight|_axle|_len|_speed|_all_veh_speed)"
+
+    wim.vars <- grep(pattern=wim.var.pattern,x=paired.data.names
+                     ,perl=TRUE,value=TRUE)
+    other.vars <- grep(pattern=wim.var.pattern,x=paired.data.names
+                       ,perl=TRUE,value=TRUE,invert=TRUE)
+    lanes.vars <- c()
+    for(lane in 1:wim.lanes){
+        lane.pattern <- paste("r",lane,sep='')
+        lane.vars <- grep(pattern=lane.pattern,x=wim.vars
+                          ,perl=TRUE,value=TRUE)
+        lanes.vars <- c(lanes.vars,lane.vars)
+    }
+    wim.vars.lanes <- lanes.vars
+
+
+    vds.var.pattern <- "(^nl|^nr\\d|^ol|^or\\d)"
+    vds.vars <- grep(pattern=vds.var.pattern,x=paired.data.names
+                     ,perl=TRUE,value=TRUE)
+    other.vars <- grep(pattern=vds.var.pattern,x=other.vars
+                       ,perl=TRUE,value=TRUE,invert=TRUE)
+
+    ## expect_that(sort(c(other.vars
+    ##                    ,vds.vars,wim.vars))
+    ##             ,equals(sort(paired.data.names)))
+    ## passed in testing
+
+    ## reset
+    lanes.vars <- c()
+
+    ## need to process lanes right and left lane separately right lane
+    ## is numbered from the right as r1 to r(n-1).  The left lane is
+    ## always numbered l1.  If a site has one lane, that lane, by
+    ## definition, is r1.  If a site has two lanes, the lanes are r1
+    ## and l1, again, by definition.  If a site has three lanes, (n=3)
+    ## then the left lane is l1, and the other lanes are numbered r1
+    ## and r2, AKA r(n-1)
+
+    ## so special case is n=1 (right lane only)
+    right.lanes <- vds.lanes
+    if(vds.lanes>1){
+        ## there *is* a left lane for all cases when n>1
+        right.lanes <- vds.lanes-1
+        lane.pattern <- "l1"
+        lane.vars <- grep(pattern=lane.pattern,x=vds.vars
+                          ,perl=TRUE,value=TRUE)
+        lanes.vars <- lane.vars
+    }
+    for(lane in 1:right.lanes){
+        ## in the case when vds.lanes==1, right.lanes also == 1
+        lane.pattern <- paste("r",lane,sep='')
+        lane.vars <- grep(pattern=lane.pattern,x=vds.vars
+                          ,perl=TRUE,value=TRUE)
+        lanes.vars <- c(lanes.vars,lane.vars)
+    }
+    vds.vars.lanes <- lanes.vars
+
+    pared.df <- df[,c(vds.vars.lanes,wim.vars.lanes,other.vars)]
+    pared.df
+}
