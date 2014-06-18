@@ -1,5 +1,5 @@
 library('testthat')
-source('../lib/paired.Rdata.R')
+source('../lib/paired.Rdata.R',chdir=TRUE)
 
 test_that("load.wim.pair.data() will return a big data frame", {
 
