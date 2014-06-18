@@ -6,7 +6,7 @@ test_that("get.wim.vds.pairs() will get all pairs for a given year", {
     year <- 2010
     w.v.p <- get.vds.wim.pairs(year)
     expect_that(is.data.frame(w.v.p), is_true())
-    expect_that(dim(w.v.p),equals(c(87,5)))
+    expect_that(dim(w.v.p),equals(c(86,5)))
     ## was going to check year == 2010, but why bother
 
     w.v.p <- get.vds.wim.pairs(2014)
