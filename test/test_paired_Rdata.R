@@ -20,6 +20,7 @@ test_that("load.wim.pair.data() will return a big data frame", {
     bigdata <- load.wim.pair.data(wim.ids,vds.nvars=vds.nvars,year=year)
 
     expect_that(is.data.frame(bigdata), is_true())
+    expect_that(dim(bigdata),equals(c(34897,38)))
 
 
 })
