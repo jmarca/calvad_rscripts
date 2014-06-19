@@ -61,21 +61,24 @@ load.wim.pair.data <- function(wim.ids,vds.nvars,year=0,localcouch=TRUE){
             df.trimmed <- evaluate.paired.data(df.merged
                                                ,wim.lanes=wim.lanes
                                                ,vds.lanes=vds.lanes)
+            rm(df.merged)  ## actually, this prevents bugs
+
+            df.trimmed$vds_id <- paired.vdsid
 
             ready.wimids[length(ready.wimids)+1]=wim.ids[wii,]
 
             if(length(bigdata)==0){
-                bigdata <-  df.merged
+                bigdata <-  df.trimmed
             }else{
                 ## here I need to make sure all WIM-VDS sites have similar lanes
                 ## the concern is a site with *fewer* lanes than the vds site
-                ic.names <- names(df.merged)
+                ic.names <- names(df.trimmed)
                 bigdata.names <- names(bigdata)
                 ## keep the larger of the two
                 common.names <- intersect(ic.names,bigdata.names)
                 bigdata <- bigdata[,common.names]
-                df.merged <- df.merged[,common.names]
-                bigdata <- rbind( bigdata, df.merged )
+                df.trimmed <- df.trimmed[,common.names]
+                bigdata <- rbind( bigdata, df.trimmed )
             }
         }
     }
