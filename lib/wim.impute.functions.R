@@ -248,7 +248,7 @@ fill.wim.gaps <- function(df.wim
            ts="tod",splinetime=6,
            lags =new.cnt.vs,leads=new.cnt.vs,sqrts=c(new.cnt.vs,axle.vs),
            cs="day",intercs=TRUE,emburn=c(2,200),
-           bounds = pos.bds, max.resample=10,empri = 0.05 *nrow(df.wim))
+           bounds = pos.bds, max.resample=10) ## ,empri = 0.05 *nrow(df.wim))
 
   ##  replace the 2 axles I subtracted
   df.truckamelia.b$imputations[[1]][,axle.vs] <- df.truckamelia.b$imputations[[1]][,axle.vs] + 2
