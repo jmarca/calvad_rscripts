@@ -159,7 +159,10 @@ find.complete.weeks.wim.gaps <- function(df.wim){
 }
 
 
-fill.wim.gaps <- function(df.wim,count.pattern = "^(truck|heavyheavy)",mean.pattern="_(weight|axle|len|speed)", mean.exclude.pattern="^(mean)"){
+fill.wim.gaps <- function(df.wim
+                         ,count.pattern='^(not_heavyheavy|heavyheavy|count_all_veh_speed)'
+                         ,mean.pattern="_(weight|axle|len|speed)"
+                         ,mean.exclude.pattern="^(mean)"){
 
   ## run amelia on the wim data alone
 
@@ -242,6 +245,9 @@ fill.wim.gaps <- function(df.wim,count.pattern = "^(truck|heavyheavy)",mean.patt
   ## generate the position of each count variable
   pos.count <- (1:length(ic.names))[is.element(ic.names, mean.vars)]
   pos.bds <- rbind(pos.bds,cbind(pos.count,0,M))
+
+  print("bounds:")
+  print(pos.bds)
 
 
   ## Impute some but not all of the variables.  I want to impute the
