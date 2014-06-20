@@ -162,7 +162,8 @@ find.complete.weeks.wim.gaps <- function(df.wim){
 fill.wim.gaps <- function(df.wim
                          ,count.pattern='^(not_heavyheavy|heavyheavy|count_all_veh_speed)'
                          ,mean.pattern="_(weight|axle|len|speed)"
-                         ,mean.exclude.pattern="^(mean)"){
+                         ,mean.exclude.pattern="^(mean)"
+                         ,plotfile=""){
 
   ## run amelia on the wim data alone
 
