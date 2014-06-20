@@ -172,9 +172,6 @@ fill.wim.gaps <- function(df.wim
   ## weight, speed, and axles
   ##
   ic.names <- names(df.wim)
-  ## keep standard deviation data from the data
-  sd.vars <-   grep( pattern="sd(\\.|_)[r|l]\\d+$",x=ic.names,perl=TRUE,value=TRUE)
-  ic.names <-  grep( pattern="sd(\\.|_)[r|l]\\d+$",x=ic.names,perl=TRUE,value=TRUE,invert=TRUE)
 
   # want to parameterize count variables
 
@@ -195,11 +192,85 @@ fill.wim.gaps <- function(df.wim
 
   mean.vars <- grep( pattern=mean.exclude.pattern,x=mean.vars ,perl=TRUE,value=TRUE,invert=TRUE)
 
+  M <- 10000000000  #arbitrary bignum for max limits
 
-  M <- 10000000000  #arbitrary bignum
+  ## now build up all the final variables for the amelia call
+
+  ## first get all the names in the data frame
+  ic.names <- names(df.wim)
+
+  ## make sure there are not dupes
+
+  ## the count variables
+  new.cnt.vs <- intersect(count.vars,ic.names)
+
+  ## generate the position of each count variable
+  pos.count <- (1:length(ic.names))[is.element(ic.names, c(new.cnt.vs))]
+
+  ## for the count variables,
+  ## make a max allowed value of 110% of observed values and a min value of 0
+  max.val <- max(df.wim[,new.cnt.vs],na.rm=TRUE)
+  pos.bds <- cbind(pos.count,0,1.10*max.val)
+
+  ## for axles, we need to limit at 2 axles? to M? to 10?
+  axle.vs <- grep(pattern="axle",x=mean.vars,perl=TRUE,value=TRUE)
+  pos.axle <- (1:length(ic.names))[is.element(ic.names, c(axle.vs))]
+  pos.bds <- rbind(pos.bds,cbind(pos.axle,0,10))
+
+  ## hackity hack
+  ## I can't get the axles to stay above 2, so, force it
+  df.wim[,axle.vs] <- df.wim[,axle.vs] - 2
 
 
-  ## trying to switch from trucks and others to portions of trucks.  I
+  ## for other variables, make a looser bound of zero to M
+  ## this fairly loose bound
+  ## generate the position of each count variable
+  other.mean.vars <- grep(pattern="axle",x=mean.vars,perl=TRUE,value=TRUE,invert=TRUE)
+  pos.count <- (1:length(ic.names))[is.element(ic.names, other.mean.vars)]
+  pos.bds <- rbind(pos.bds,cbind(pos.count,0,M))
+
+  print("bounds:")
+  print(pos.bds)
+
+  ## Impute some but not all of the variables.  I want to impute the
+  ## mean vars, but not nasty vars, sd vars, the truck counts, and any
+  ## other variables that weren't selected by the count var passed
+  ## pattern.
+
+  ## so instead of listing each, figure out which aren't
+
+  exclude.as.id.vars <- setdiff(ic.names,c(mean.vars,new.cnt.vs,'tod','day'))
+
+  print(paste("excluded:",  paste(exclude.as.id.vars,collapse=' ')))
+
+  df.truckamelia.b <-
+    amelia(df.wim,idvars=exclude.as.id.vars,
+           ts="tod",splinetime=6,
+           lags =new.cnt.vs,leads=new.cnt.vs,sqrts=c(new.cnt.vs,axle.vs),
+           cs="day",intercs=TRUE,emburn=c(2,200),
+           bounds = pos.bds, max.resample=10,empri = 0.05 *nrow(df.wim))
+
+  ##  replace the 2 axles I subtracted
+  df.truckamelia.b$imputations[[1]][,axle.vs] <- df.truckamelia.b$imputations[[1]][,axle.vs] + 2
+  df.truckamelia.b$imputations[[2]][,axle.vs] <- df.truckamelia.b$imputations[[2]][,axle.vs] + 2
+  df.truckamelia.b$imputations[[3]][,axle.vs] <- df.truckamelia.b$imputations[[3]][,axle.vs] + 2
+  df.truckamelia.b$imputations[[4]][,axle.vs] <- df.truckamelia.b$imputations[[4]][,axle.vs] + 2
+  df.truckamelia.b$imputations[[5]][,axle.vs] <- df.truckamelia.b$imputations[[5]][,axle.vs] + 2
+
+  df.truckamelia.b
+}
+
+
+## this totally won't run, but I like the little lane.types hack so
+## I'm keeping it around.  What it does is if I have some count
+## variables that are trucks, like say heavy.heavy.trucks, then you
+## can also figure out not_heavy.heavy.trucks, and if you have
+## overweight trucks, you can figure out not overweight trucks, etc.
+## Not used anymore, as I didn't have any reason to track things like
+## over weight or over long trucks, etc
+
+truck.proportions <- function(df.wim){
+      ## trying to switch from trucks and others to portions of trucks.  I
   ## don't rmemeber if this works well or not in the imputation.
 
   not.truck.vs <- grep( pattern='^truck_',x=count.vars,perl=TRUE,value=TRUE,invert=TRUE)
@@ -222,61 +293,4 @@ fill.wim.gaps <- function(df.wim
     }
   }
 
-  ## now build up all the final variables for the amelia call
-
-  ## first get all the names in the data frame
-  ic.names <- names(df.wim)
-
-  ##make sure there are not dupes
-
-  ## the count variables
-  new.cnt.vs <- intersect(new.cnt.vs,ic.names)
-
-  ## generate the position of each count variable
-  pos.count <- (1:length(ic.names))[is.element(ic.names, c(new.cnt.vs))]
-
-  ## for the count variables,
-  ## make a max allowed value of 110% of observed values and a min value of 0
-  max.val <- max(df.wim[,new.cnt.vs],na.rm=TRUE)
-  pos.bds <- cbind(pos.count,0,1.10*max.val)
-
-  ## for other variables, make a looser bound of zero to M
-  ## this fairly loose bound
-  ## generate the position of each count variable
-  pos.count <- (1:length(ic.names))[is.element(ic.names, mean.vars)]
-  pos.bds <- rbind(pos.bds,cbind(pos.count,0,M))
-
-  print("bounds:")
-  print(pos.bds)
-
-
-  ## Impute some but not all of the variables.  I want to impute the
-  ## mean vars, but not nasty vars, sd vars, the truck counts, and any
-  ## other variables that weren't selected by the count var passed
-  ## pattern.
-
-  ## so instead of listing each, figure out which aren't
-
-  exclude.as.id.vars <- setdiff(ic.names,c(mean.vars,new.cnt.vs,'tod','day'))
-
-  print(paste("excluded:",  paste(exclude.as.id.vars,collapse=' ')))
-
-
-
-  ## df.truckamelia.b <-
-  ##   amelia(df.wim,idvars=c(id.vars,sd.vars,nasty.vars,truck.count.cols),
-  ##          ts="tod",splinetime=6,
-  ##          lags =lag.cols,leads=lag.cols,sqrts=lag.cols,
-  ##          cs="day",intercs=TRUE,emburn=c(2,50),
-  ##          bounds = pos.bds, max.resample=500,empri = 0.025 *nrow(df.wim))
-
-
-  df.truckamelia.b <-
-    amelia(df.wim,idvars=exclude.as.id.vars,
-           ts="tod",splinetime=6,
-           lags =new.cnt.vs,leads=new.cnt.vs,sqrts=new.cnt.vs,
-           cs="day",intercs=TRUE,emburn=c(2,200),
-           bounds = pos.bds, max.resample=10,empri = 0.05 *nrow(df.wim))
-
-  df.truckamelia.b
 }
