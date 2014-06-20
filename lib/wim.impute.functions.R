@@ -250,16 +250,37 @@ fill.wim.gaps <- function(df.wim
            cs="day",intercs=TRUE,emburn=c(2,200),
            bounds = pos.bds, max.resample=10) ## ,empri = 0.05 *nrow(df.wim))
 
-  ##  replace the 2 axles I subtracted
-  df.truckamelia.b$imputations[[1]][,axle.vs] <- df.truckamelia.b$imputations[[1]][,axle.vs] + 2
-  df.truckamelia.b$imputations[[2]][,axle.vs] <- df.truckamelia.b$imputations[[2]][,axle.vs] + 2
-  df.truckamelia.b$imputations[[3]][,axle.vs] <- df.truckamelia.b$imputations[[3]][,axle.vs] + 2
-  df.truckamelia.b$imputations[[4]][,axle.vs] <- df.truckamelia.b$imputations[[4]][,axle.vs] + 2
-  df.truckamelia.b$imputations[[5]][,axle.vs] <- df.truckamelia.b$imputations[[5]][,axle.vs] + 2
+  ## make plots if requested
 
+  if(plotfile!=''){
+      plotfile <- fixup.plotfile.name(plotfile)
+      png(file = plotfile,
+          width=1600,
+          height=1600,
+          bg="transparent",
+          pointsize=24)
+      plot(df.truckamelia.b,compare=TRUE,overimpute=TRUE,ask=FALSE)
+  }
+  ##  replace the 2 axles I subtracted
+  for(i in 1:5){
+      df.truckamelia.b$imputations[[i]][,axle.vs] <- df.truckamelia.b$imputations[[i]][,axle.vs] + 2
+  }
   df.truckamelia.b
 }
 
+fixup.plotfile.name <- function(plotfile){
+    if(! grepl("%03d",x=plotfile)[1]){
+        ## need to add a little numbering thing
+        if(length(grepl(".png$",x=plotfile))==0){
+            ## tack on at the end
+            plotfile <- paste(plotfile,"%03d.png",sep="_")
+        }else{
+            ## swap in for png bit
+            plotfile <- gsub("(\\.png)","%03d\\1",plotfile)
+        }
+    }
+    plotfile
+}
 
 ## this totally won't run, but I like the little lane.types hack so
 ## I'm keeping it around.  What it does is if I have some count
