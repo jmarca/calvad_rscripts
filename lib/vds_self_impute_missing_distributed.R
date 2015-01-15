@@ -11,8 +11,8 @@ library('RCurl')
 library('RJSONIO')
 
 source("vds.processing.functions.R")
-source('./components/jmarca-rstats_couch_utils/couchUtils.R')
-source('./components/jmarca-rstats_remote_files/remoteFiles.R')
+source('../node_modules/rstats_couch_utils/couchUtils.R')
+source('../node_modules/rstats_remote_files/remoteFiles.R')
 server <- "http://calvad.ctmlabs.net"
 vds.service <- 'vdsdata'
 wim.service <- 'wimdata'

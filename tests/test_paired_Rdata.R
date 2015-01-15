@@ -1,5 +1,5 @@
 library('testthat')
-source('../lib/paired.Rdata.R')
+source('../lib/paired.Rdata.R',chdir=TRUE)
 
 test_that("load.wim.pair.data() will return a big data frame", {
 
@@ -12,24 +12,15 @@ test_that("load.wim.pair.data() will return a big data frame", {
     vds.id <- 1108541
     ## loaded this site in R cursor, got
     vds.nvars <- c("nl1", "nr3", "nr2", "nr1")
-    lanes = length(vds.nvars)
     wim.ids <- data.frame(wim_id=c(37,87)
                          ,direction=c('S','S')
                          ,lanes=c(4,4)
                          ,distance=c(74135.4,23462.9))
 
-    bigdata <- load.wim.pair.data(wim.ids,vds.nvars=vds.nvars,lanes=lanes,year=year)
+    bigdata <- load.wim.pair.data(wim.ids,vds.nvars=vds.nvars,year=year)
 
-    expect_that(is.data.frame(w.v.p), is_true())
-    expect_that(dim(w.v.p),equals(c(87,5)))
-    ## was going to check year == 2010, but why bother
+    expect_that(is.data.frame(bigdata), is_true())
+    expect_that(dim(bigdata),equals(c(34897,38)))
 
-    w.v.p <- get.vds.wim.pairs(2014)
-    expect_that(is.data.frame(w.v.p), is_true())
-    expect_that(dim(w.v.p),equals(c(0,0)))
-
-    w.v.p <- get.vds.wim.pairs(2007)
-    expect_that(is.data.frame(w.v.p), is_true())
-    expect_that(dim(w.v.p),equals(c(78,5)))
 
 })

@@ -1,4 +1,3 @@
-##source('./components/jmarca-rstats_couch_utils/couchUtils.R')
 source('./utils.R')
 source('./wim.impute.functions.R')
 source('./wim.aggregate.fixed.R')
@@ -52,6 +51,8 @@ post.impute.plots <- function(wim.site,year,wim.path='/data/backup/wim'){
 }
 
 
+## must modularize this more
+
 process.wim.site <- function(wim.site,year,preplot=TRUE,postplot=TRUE,impute=TRUE,wim.path='/data/backup/wim/'){
 
     returnval <- 0
@@ -59,8 +60,15 @@ process.wim.site <- function(wim.site,year,preplot=TRUE,postplot=TRUE,impute=TRU
         print('nothing to do here, preplot, postplot, and impute all false')
         return()
     }
-    directions <- list()
+
     print(paste('starting to process  wim site ',wim.site))
+
+    ## two cases.  One, I'm redoing work and can just skip to the
+    ## impute step.  Two, I need to hit the db directly.  Figure it
+    ## out by checking if I can load the data from the file
+
+    directions <- get.wim.directions(wim.site)
+
     df.wim <- load.wim.data.straight(wim.site,year)
     ## only continue if I have real data
     if(dim(df.wim)[1]==0){
@@ -139,121 +147,7 @@ process.wim.site <- function(wim.site,year,preplot=TRUE,postplot=TRUE,impute=TRU
 
         ## gc()
         if(preplot){
-            file.pattern <- paste(wim.site,direction,year,'agg.redo',sep='_')
-
-            file.path <- paste(paste('images/',direction,'/',sep=''),file.pattern,sep='')
-
-            png(file = paste(file.path,'%03d.png',sep='_'), width=900, height=600, bg="transparent",pointsize=18)
-
-            plotvars <- grep('not_heavyheavy_',x=names(local.df.wim.agg),perl=TRUE,value=TRUE)
-            f <- formula(paste('I(', paste(plotvars,collapse='+' ),') ~ tod | day'))
-            a <- xyplot(f
-                        ,data=local.df.wim.agg
-                        ,main=paste("Scatterplot non-heavy heavy duty truck counts",year," by time of day at site",wim.site,direction,"\nRevised method, pre-imputation")
-                        ,strip=strip.function.a
-                        ,xlab="Hour of the day"
-                        ,ylab="Non HHD truck counts per hour"
-                        ,panel=pf
-                        ,auto.key=TRUE)
-            print(a)
-            plotvars <- grep('^heavyheavy_',x=names(local.df.wim.agg),perl=TRUE,value=TRUE)
-            f <- formula(paste('I(', paste(plotvars,collapse='+' ),') ~ tod | day'))
-            a <- xyplot(f
-                        ,data=local.df.wim.agg
-                        ,main=paste("Scatterplot heavy heavy duty truck counts",year," by time of day at site",wim.site,direction,"\nRevised method, pre-imputation")
-                        ,strip=strip.function.a
-                        ,xlab="Hour of the day"
-                        ,ylab="HHD truck counts per hour"
-                        ,panel=pf
-                        ,auto.key=TRUE)
-            print(a)
-
-            plotvars <- grep('^count_all',x=names(local.df.wim.agg),perl=TRUE,value=TRUE)
-            f <- formula(paste('I(', paste(plotvars,collapse='+' ),') ~ tod | day'))
-            a <- xyplot(f
-                        ,data=local.df.wim.agg
-                        ,main=paste("Scatterplot counts from summary reports,",year,"  by time of day at site",wim.site,direction,"\nRevised method, pre-imputation")
-                        ,strip=strip.function.a
-                        ,xlab="Hour of the day"
-                        ,ylab="Hourly vehicle counts, all classes"
-                        ,panel=pf
-                        ,auto.key=TRUE)
-            print(a)
-
-            splotvars <- grep('^wgt',x=names(local.df.wim.agg),perl=TRUE,value=TRUE)
-            f <- formula(paste('I( (', paste(splotvars,collapse='+' ),') / (', paste(plotvars,collapse='+' ),')) ~ tod | day'))
-            a <- xyplot(f
-                        ,data=local.df.wim.agg
-                        ,main=paste("Scatterplot mean speeds from summary reports,",year," by time of day at site",wim.site,direction,"\nRevised method, pre-imputation")
-                        ,strip=strip.function.a
-                        ,xlab="Hour of the day"
-                        ,ylab="Hourly mean speeds"
-                        ,panel=pf
-                        ,auto.key=TRUE)
-            print(a)
-
-            ## add plots of data over time
-
-            plotvars <- grep('not_heavyheavy_',x=names(local.df.wim.agg),perl=TRUE,value=TRUE)
-            f <- formula(paste('I(', paste(plotvars,collapse='+' ),') ~ ts'))
-            a <- xyplot(f
-                        ,data=local.df.wim.agg
-                        ,main=paste("Scatterplot non-heavy heavy duty truck counts",year," over time at site",wim.site,direction,"\nRevised method, pre-imputation")
-                        ,strip=strip.function.a
-                        ,xlab="Date"
-                        ,ylab="non HHD truck counts per hour"
-                        ,auto.key=TRUE)
-            print(a)
-
-            plotvars <- grep('^heavyheavy_',x=names(local.df.wim.agg),perl=TRUE,value=TRUE)
-            f <- formula(paste('I(', paste(plotvars,collapse='+' ),') ~ ts'))
-            a <- xyplot(f
-                        ,data=local.df.wim.agg
-                        ,main=paste("Scatterplot heavy heavy duty truck counts",year," over time at site",wim.site,direction,"\nRevised method, pre-imputation")
-                        ,strip=strip.function.a
-                        ,xlab="Date"
-                        ,ylab="HHD truck counts per hour"
-                        ,auto.key=TRUE)
-            print(a)
-
-            plotvars <- grep('^count_all',x=names(local.df.wim.agg),perl=TRUE,value=TRUE)
-            f <- formula(paste('I(', paste(plotvars,collapse='+' ),') ~ ts'))
-            a <- xyplot(f
-                        ,data=local.df.wim.agg
-                        ,main=paste("Scatterplot counts from summary reports,",year," over time at site",wim.site,direction,"\nRevised method, pre-imputation")
-                        ,strip=strip.function.a
-                        ,xlab="Date"
-                        ,ylab="Hourly vehicle counts, all classes"
-                        ,auto.key=TRUE)
-            print(a)
-
-            splotvars <- grep('^wgt',x=names(local.df.wim.agg),perl=TRUE,value=TRUE)
-            f <- formula(paste('I( (', paste(splotvars,collapse='+' ),') / (', paste(plotvars,collapse='+' ),')) ~ ts'))
-            a <- xyplot(f
-                        ,data=local.df.wim.agg
-                        ,main=paste("Scatterplot mean speeds from summary reports,",year," over time at site",wim.site,direction,"\nRevised method, pre-imputation")
-                        ,strip=strip.function.a
-                        ,xlab="Date"
-                        ,ylab="Hourly mean speeds"
-                        ,auto.key=TRUE)
-            print(a)
-
-            dev.off()
-            if(!impute){
-                rm (local.df.wim.agg)
-                gc()
-            }
-
-            files.to.attach <- dir(file.path,pattern=paste("^",file.pattern,sep=''),full.names=TRUE)
-
-            for(f2a in files.to.attach){
-                couch.attach(trackingdb
-                             ,cdb.wimid
-                             ,f2a
-                             ,local=TRUE
-                             )
-            }
-
+            preplot(wim.id,direction)
         }
         if(impute){
 
@@ -313,4 +207,129 @@ process.wim.site <- function(wim.site,year,preplot=TRUE,postplot=TRUE,impute=TRU
     }
 
     returnval
+}
+
+
+preplot <- function(wim.site,direction,year,df.wim,imagepath="images/"){
+
+    file.pattern <- paste(wim.site,direction,year,'agg.redo',sep='_')
+
+    file.path <- paste(paste(imagepath,direction,'/',sep=''),file.pattern,sep='')
+
+    png(file = paste(file.path,'%03d.png',sep='_'), width=900, height=600, bg="transparent",pointsize=18)
+
+    plotvars <- grep('not_heavyheavy_',x=names(df.wim),perl=TRUE,value=TRUE)
+    f <- formula(paste('I(', paste(plotvars,collapse='+' ),') ~ tod | day'))
+    a <- xyplot(f
+               ,data=df.wim
+               ,main=paste("Scatterplot non-heavy heavy duty truck counts",year," by time of day at site",wim.site,direction,"\nRevised method, pre-imputation")
+               ,strip=strip.function.a
+               ,xlab="Hour of the day"
+               ,ylab="Non HHD truck counts per hour"
+               ,panel=pf
+               ,auto.key=TRUE)
+    print(a)
+    plotvars <- grep('^heavyheavy_',x=names(df.wim),perl=TRUE,value=TRUE)
+    f <- formula(paste('I(', paste(plotvars,collapse='+' ),') ~ tod | day'))
+    a <- xyplot(f
+               ,data=df.wim
+               ,main=paste("Scatterplot heavy heavy duty truck counts",year," by time of day at site",wim.site,direction,"\nRevised method, pre-imputation")
+               ,strip=strip.function.a
+               ,xlab="Hour of the day"
+               ,ylab="HHD truck counts per hour"
+               ,panel=pf
+               ,auto.key=TRUE)
+    print(a)
+
+    plotvars <- grep('^count_all',x=names(df.wim),perl=TRUE,value=TRUE)
+    f <- formula(paste('I(', paste(plotvars,collapse='+' ),') ~ tod | day'))
+    a <- xyplot(f
+               ,data=df.wim
+               ,main=paste("Scatterplot counts from summary reports,",year,"  by time of day at site",wim.site,direction,"\nRevised method, pre-imputation")
+               ,strip=strip.function.a
+               ,xlab="Hour of the day"
+               ,ylab="Hourly vehicle counts, all classes"
+               ,panel=pf
+               ,auto.key=TRUE)
+    print(a)
+
+    splotvars <- grep('^wgt',x=names(df.wim),perl=TRUE,value=TRUE)
+    f <- formula(paste('I( (', paste(splotvars,collapse='+' ),') / (', paste(plotvars,collapse='+' ),')) ~ tod | day'))
+    a <- xyplot(f
+               ,data=df.wim
+               ,main=paste("Scatterplot mean speeds from summary reports,",year," by time of day at site",wim.site,direction,"\nRevised method, pre-imputation")
+               ,strip=strip.function.a
+               ,xlab="Hour of the day"
+               ,ylab="Hourly mean speeds"
+               ,panel=pf
+               ,auto.key=TRUE)
+    print(a)
+
+    ## add plots of data over time
+
+    plotvars <- grep('not_heavyheavy_',x=names(df.wim),perl=TRUE,value=TRUE)
+    f <- formula(paste('I(', paste(plotvars,collapse='+' ),') ~ ts'))
+    a <- xyplot(f
+               ,data=df.wim
+               ,main=paste("Scatterplot non-heavy heavy duty truck counts",year," over time at site",wim.site,direction,"\nRevised method, pre-imputation")
+               ,strip=strip.function.a
+               ,xlab="Date"
+               ,ylab="non HHD truck counts per hour"
+               ,auto.key=TRUE)
+    print(a)
+
+    plotvars <- grep('^heavyheavy_',x=names(df.wim),perl=TRUE,value=TRUE)
+    f <- formula(paste('I(', paste(plotvars,collapse='+' ),') ~ ts'))
+    a <- xyplot(f
+               ,data=df.wim
+               ,main=paste("Scatterplot heavy heavy duty truck counts",year," over time at site",wim.site,direction,"\nRevised method, pre-imputation")
+               ,strip=strip.function.a
+               ,xlab="Date"
+               ,ylab="HHD truck counts per hour"
+               ,auto.key=TRUE)
+    print(a)
+
+    plotvars <- grep('^count_all',x=names(df.wim),perl=TRUE,value=TRUE)
+    f <- formula(paste('I(', paste(plotvars,collapse='+' ),') ~ ts'))
+    a <- xyplot(f
+               ,data=df.wim
+               ,main=paste("Scatterplot counts from summary reports,",year," over time at site",wim.site,direction,"\nRevised method, pre-imputation")
+               ,strip=strip.function.a
+               ,xlab="Date"
+               ,ylab="Hourly vehicle counts, all classes"
+               ,auto.key=TRUE)
+    print(a)
+
+    splotvars <- grep('^wgt',x=names(df.wim),perl=TRUE,value=TRUE)
+    f <- formula(paste('I( (', paste(splotvars,collapse='+' ),') / (', paste(plotvars,collapse='+' ),')) ~ ts'))
+    a <- xyplot(f
+               ,data=df.wim
+               ,main=paste("Scatterplot mean speeds from summary reports,",year," over time at site",wim.site,direction,"\nRevised method, pre-imputation")
+               ,strip=strip.function.a
+               ,xlab="Date"
+               ,ylab="Hourly mean speeds"
+               ,auto.key=TRUE)
+    print(a)
+
+    dev.off()
+
+}
+
+upload.plots.couchdb <- function(wim.site
+                                 ,direction
+                                 ,year
+                                 ,imagepath
+                                 ,trackingdb
+                                 ,local=TRUE){
+
+    file.pattern <- paste(wim.site,direction,year,'.*png',sep='_')
+    file.path <- paste(paste(imagepath,direction,'/',sep=''),sep='')
+    files.to.attach <- dir(file.path,pattern=paste("^",file.pattern,sep=''),full.names=TRUE)
+    for(f2a in files.to.attach){
+        couch.attach(trackingdb
+                    ,cdb.wimid
+                    ,f2a
+                    ,local=local
+                     )
+    }
 }

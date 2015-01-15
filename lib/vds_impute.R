@@ -2,9 +2,6 @@ source("utils.R")
 source("load.pems.raw.file.R")
 source("vds.processing.functions.R")
 source("vds.aggregate.R")
-## expects that somewhere you've already called
-## source('components/jmarca/rstats_couch_utils/master/couchUtils.R')
-
 
 
 junk.shot <- function(vds.id,f,fname,seconds,year,df){

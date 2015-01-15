@@ -235,6 +235,9 @@ get.wim.site.2 <- function(wim.siteno,start.time='2007-01-01',end.time='2008-01-
   df
 }
 
+get.wim.site.extremes <- function(wim.siteno,start.time='2007-01-01',end.time='2008-01-01'){
+}
+
 
 get.wim.status <- function(wim.site){
   ## it is important to ignore bad data
