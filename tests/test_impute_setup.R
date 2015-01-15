@@ -20,7 +20,7 @@ test_that("load.wim.pair.data() will return a big data frame", {
     expect_that(dim(df.vds.zoo),equals(c(8604,11)))
 
     df.vds <- unzoo.incantation(df.vds.zoo)
-    expect_that(dim(df.vds.zoo),equals(c(8604,11)))
+    expect_that(dim(df.vds.zoo),equals(c(8604,11)),'df.vds.zoo is sized properly')
 
     rm(df.vds.zoo)
     df.vds[,'vds_id'] <- vdsid
@@ -72,4 +72,4 @@ test_that("load.wim.pair.data() will return a big data frame", {
     toobig <-  !( bigdata[,occ.vars]<1 | is.na(bigdata[,occ.vars]) )
     bigdata[,occ.vars][toobig] <- 1
 
-}
+})

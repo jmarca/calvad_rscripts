@@ -1,6 +1,6 @@
 source('get_couch.R')
 
-load.wim.pair.data <- function(wim.ids,vds.nvars,year=0,localcouch=TRUE){
+load.wim.pair.data <- function(wim.ids,vds.nvars,year=0,localcouch=TRUE,do.couch.set.state=FALSE){
     vds.lanes <- length(vds.nvars)
     wim.vds.pairs <- get.vds.wim.pairs(year)
     if(dim(wim.vds.pairs)[1]==0) {
@@ -39,33 +39,36 @@ load.wim.pair.data <- function(wim.ids,vds.nvars,year=0,localcouch=TRUE){
         ## function, called lapply
 
         for(paired.vdsid in paired.vdsids){
-            if(paired.vdsid %in% checked.already) { next }
+            if(paired.vdsid %in% checked.already) { next() }
             checked.already <- c(checked.already,paired.vdsid)
 
             paired.RData <- get.RData.view(paired.vdsid,year)
-            if(length(paired.RData)==0) { next }
+            if(length(paired.RData)==0) { next() }
             result <- couch.get.attachment(trackingdb
                                            ,paired.vdsid
                                            ,paired.RData
                                            ,local=localcouch)
             if(result != "df.merged"){
                 print (paste(paired.vdsid,paired.RData,'not df.merged'))
-                next
+                next()
             }
             if(dim(df.merged)[1] < 100){
                 print(paste('pairing for',paired.vdsid,paired.RData,'pretty empty'))
-                next
+                next()
             }
 
             ## trim off some variables
             df.trimmed <- evaluate.paired.data(df.merged
                                                ,wim.lanes=wim.lanes
                                                ,vds.lanes=vds.lanes)
-            rm(df.merged)  ## actually, this prevents bugs
+            rm(df.merged,pos=1)  ## actually, this prevents bugs
+            ## pos=1 is needed because df.merged is loaded into .GlobalEnv
+            ## by the couchdb fetch code
 
             df.trimmed$vds_id <- paired.vdsid
 
-            ready.wimids[length(ready.wimids)+1]=wim.ids[wii,]
+            print(wim.ids[wii,])
+            ready.wimids[[length(ready.wimids)+1]]=wim.ids[wii,]
 
             if(length(bigdata)==0){
                 bigdata <-  df.trimmed
@@ -82,12 +85,12 @@ load.wim.pair.data <- function(wim.ids,vds.nvars,year=0,localcouch=TRUE){
             }
         }
     }
-    if(length(ready.wimids)>0){
+    if(length(ready.wimids)>0 && do.couch.set.state){
         ready.wimids <- unique(ready.wimids)
-        ## couch.set.state(year
-        ##                 ,vds.id
-        ##                 ,list('wim_neighbors_ready'=ready.wimids)
-        ##                 ,local=localcouch)
+        couch.set.state(year
+                        ,vds.id
+                        ,list('wim_neighbors_ready'=ready.wimids)
+                        ,local=localcouch)
     }
 
     bigdata
