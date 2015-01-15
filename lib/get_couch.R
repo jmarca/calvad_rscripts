@@ -1,5 +1,5 @@
 ## some specialized scripts to get things from couchdb
-source('../components/jmarca-rstats_couch_utils/couchUtils.R')
+source('../node_modules/rstats_couch_utils/couchUtils.R')
 
 get.vds.wim.pairs <- function(year,trackingdb='vdsdata%2ftracking'){
   docs <- couch.allDocs(trackingdb
