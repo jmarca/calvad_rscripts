@@ -272,12 +272,12 @@ fill.wim.gaps <- function(df.wim
 fixup.plotfile.name <- function(plotfile){
     if(! grepl("%03d",x=plotfile)[1]){
         ## need to add a little numbering thing
-        if(length(grepl(".png$",x=plotfile))==0){
+        if(! any(grepl(".png$",x=plotfile))){
             ## tack on at the end
             plotfile <- paste(plotfile,"%03d.png",sep="_")
         }else{
             ## swap in for png bit
-            plotfile <- gsub("(\\.png)","%03d\\1",plotfile)
+            plotfile <- gsub("(\\.png)","_%03d\\1",plotfile)
         }
     }
     plotfile

@@ -3,28 +3,27 @@ source('../lib/paired.Rdata.R',chdir=TRUE)
 
 library(testthat)
 
-## must run this somewhere you can load vds data
 test_that("fixup.plotfile.name will work properly", {
 
     filename <- ""
-    expect_that(fixup.plotfile.name(filename),equals(filename))
+    expect_that(fixup.plotfile.name(filename),equals("_%03d.png"))
 
     filename <- "file"
     expect_that(fixup.plotfile.name(filename)
-               ,equals(paste(filename,"%03d.png",sep="")))
+               ,equals(paste(filename,"_%03d.png",sep="")))
 
 
     filename <- "the/file"
     expect_that(fixup.plotfile.name(filename)
-               ,equals(paste(filename,"%03d.png",sep="")))
+               ,equals(paste(filename,"_%03d.png",sep="")))
 
     filename <- "the/file.png"
     expect_that(fixup.plotfile.name(filename)
-               ,equals("the/file%03.png"))
+               ,equals("the/file_%03d.png"))
 
 
     filename <- "the/file_%03d.png"
     expect_that(fixup.plotfile.name(filename)
                ,equals(filename))
 
-}
+})
