@@ -320,7 +320,7 @@ preplot <- function(wim.site,direction,year,df.wim,imagepath="images/"){
     print(a)
 
     dev.off()
-
+    upload.plots.couchdb(wim.site,direction,year,imagepath)
 }
 
 upload.plots.couchdb <- function(wim.site
