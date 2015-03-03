@@ -55,10 +55,12 @@ post.impute.plots <- function(wim.site,year,wim.path='/data/backup/wim'){
 
 process.wim.site <- function(wim.site,year,preplot=TRUE,postplot=TRUE,impute=TRUE,wim.path='/data/backup/wim/'){
 
+    print(paste('wim path is ',wim.path))
+
     returnval <- 0
     if(!preplot & !postplot & !impute){
         print('nothing to do here, preplot, postplot, and impute all false')
-        return()
+        return(0)
     }
 
     print(paste('starting to process  wim site ',wim.site))
@@ -72,9 +74,11 @@ process.wim.site <- function(wim.site,year,preplot=TRUE,postplot=TRUE,impute=TRU
     df.wim <- load.wim.data.straight(wim.site,year)
     ## only continue if I have real data
     if(dim(df.wim)[1]==0){
+        print(paste('problem, dim df.wim is',dim(df.wim)))
         couch.set.state(year=year,detector.id=paste('wim',wim.site,sep='.'),doc=list('imputed'='no wim data in database'))
-        return()
+        return(0)
     }
+
     df.wim.split <- split(df.wim, df.wim$direction)
     directions <- names(df.wim.split)
     df.wim.speed <- get.wim.speed.from.sql(wim.site,seconds,year)
@@ -84,6 +88,7 @@ process.wim.site <- function(wim.site,year,preplot=TRUE,postplot=TRUE,impute=TRU
 
     df.wim.dir <- list()
     for(direction in directions){
+        print(paste('processing direction',direction))
         ## direction <- names(df.wim.split)[1]
         cdb.wimid <- paste('wim',wim.site,direction,sep='.')
         if(length(df.wim.split[[direction]]$ts)<100){
@@ -147,7 +152,7 @@ process.wim.site <- function(wim.site,year,preplot=TRUE,postplot=TRUE,impute=TRU
 
         ## gc()
         if(preplot){
-            preplot(wim.id,direction)
+            preplot(wim.site,direction,year,local.df.wim.agg)
         }
         if(impute){
 
@@ -168,11 +173,14 @@ process.wim.site <- function(wim.site,year,preplot=TRUE,postplot=TRUE,impute=TRU
             savepath <- paste(savepath,direction,sep='/')
             if(!file.exists(savepath)){dir.create(savepath)}
             filepath <- paste(savepath,'wim.agg.RData',sep='/')
+            print(filepath)
 
             db.legal.names  <- gsub("\\.", "_", names(local.df.wim.agg))
 
             names(local.df.wim.agg) <- db.legal.names
             save(local.df.wim.agg,file=filepath,compress='xz')
+            print(paste('saved to',filepath))
+
             print('amelia run')
 
             r <- try(
