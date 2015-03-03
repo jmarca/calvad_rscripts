@@ -220,7 +220,7 @@ fill.wim.gaps <- function(df.wim
 
   ## hackity hack
   ## I can't get the axles to stay above 2, so, force it
-  df.wim[,axle.vs] <- df.wim[,axle.vs] - 2
+######  df.wim[,axle.vs] <- df.wim[,axle.vs] - 2
 
 
   ## for other variables, make a looser bound of zero to M
@@ -262,10 +262,10 @@ fill.wim.gaps <- function(df.wim
           pointsize=24)
       plot(df.truckamelia.b,compare=TRUE,overimpute=TRUE,ask=FALSE)
   }
-  ##  replace the 2 axles I subtracted
-  for(i in 1:5){
-      df.truckamelia.b$imputations[[i]][,axle.vs] <- df.truckamelia.b$imputations[[i]][,axle.vs] + 2
-  }
+####  replace the 2 axles I subtracted
+#### for(i in 1:5){
+####     df.truckamelia.b$imputations[[i]][,axle.vs] <- df.truckamelia.b$imputations[[i]][,axle.vs] + 2
+  ## }
   df.truckamelia.b
 }
 
