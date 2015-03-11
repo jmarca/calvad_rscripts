@@ -61,11 +61,11 @@ sanity.check <- function(data,ts,year=0,vdsid='missing'){
     if(return.val){ ## still going good, do some more checks
         lanes <- longway.guess.lanes(data)
         n.idx <- vds.lane.numbers(lanes,c("n"))
-        if(! length(data$nl1) > 0){
+        if(lanes > 1 && ! length(data$nl1) > 0){
             problem['rawdata'] <- paste('do not have counts in left lane','in raw vds file')
             return.val <- FALSE
         } else {
-            if(! length(data$ol1) > 0 ){
+            if(lanes>1 && ! length(data$ol1) > 0 ){
                 problem['rawdata'] <- paste('do not have occupancies in left lane','in raw vds file')
                 return.val <- FALSE
             } else {
@@ -79,7 +79,10 @@ sanity.check <- function(data,ts,year=0,vdsid='missing'){
         }
     }
     if(return.val){ ## check that we're not stuck on zero
-        return.val <- max(data$nl1,na.rm=TRUE)>0
+        ## possible bug
+        ## return.val <- max(data$nl1,na.rm=TRUE)>0
+        return.val <- max(data[n.idx],na.rm=TRUE)>0
+
         if(!return.val){
             problem['rawdata'] <- paste('left lane max count is zero','in raw vds file')
         }
