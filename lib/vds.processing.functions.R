@@ -29,7 +29,7 @@ sanity.check <- function(data,ts,year=0,vdsid='missing'){
             }
             if( ( is.element(paste("nl",lane), names.vds ) & ! is.element(paste("ol",lane), names.vds ) ) |
                ( is.element(paste("ol",lane), names.vds ) & ! is.element(paste("nl",lane), names.vds ) ) ){
-                problem['rawdata'] <- paste('do not have both occupancy and counts for lane',paste("nr",lane),'in raw vds file')
+                problem['rawdata'] <- paste('do not have both occupancy and counts for lane',paste("nl",lane),'in raw vds file')
                 return.val <- FALSE
             }
 
