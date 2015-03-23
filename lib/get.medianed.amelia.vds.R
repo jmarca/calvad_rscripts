@@ -152,7 +152,7 @@ get.zooed.vds.amelia <- function(vdsid,serverfile='none',path='none',remote=TRUE
   medianed.aggregate.df(df.vds.amelia.c)
 }
 
-get.and.plot.vds.amelia <- function(pair,year,cdb.wimid=NULL,doplots=TRUE,remote=TRUE,path){
+get.and.plot.vds.amelia <- function(pair,year,cdb.wimid=NULL,doplots=TRUE,remote=TRUE,path,force.plot=FALSE){
   ## load the imputed file for this site, year
   df.vds.zoo <- get.zooed.vds.amelia(pair,year=year,path=path,remote=remote)
   if(is.null(df.vds.zoo)){
@@ -173,17 +173,17 @@ get.and.plot.vds.amelia <- function(pair,year,cdb.wimid=NULL,doplots=TRUE,remote
   df.vds.zoo$day   <- ts.lt$wday
 
   if(doplots){
-    plot.zooed.vds.data(df.vds.zoo,pair,year)
+    plot.zooed.vds.data(df.vds.zoo,pair,year,force.plot=force.plot)
   }
   df.vds.zoo
 }
 
-plot.zooed.vds.data <- function(df.vds.zoo,vdsid,year,fileprefix=NULL,subhead='\npost imputation'){
+plot.zooed.vds.data <- function(df.vds.zoo,vdsid,year,fileprefix=NULL,subhead='\npost imputation',force.plot=FALSE){
 
   ## temporary variable for the diagnostic plots
   ## wish I could spawn this as a separate job
   df.merged <- unzoo.incantation(df.vds.zoo)
-  plot.vds.data(df.merged,vdsid,year,fileprefix,subhead)
+  plot.vds.data(df.merged,vdsid,year,fileprefix,subhead,force.plot=force.plot)
   rm(df.merged)
   gc()
   TRUE
@@ -199,11 +199,13 @@ check.for.plot.attachment <- function(vdsid,year,fileprefix=NULL,subhead='\npost
   return (couch.has.attachment(trackingdb,vdsid,fourthfile))
 }
 
-plot.vds.data  <- function(df.merged,vdsid,year,fileprefix=NULL,subhead='\npost imputation'){
-  have.plot <- check.for.plot.attachment(vdsid,year,fileprefix,subhead)
-  if(have.plot){
-    return (1)
-  }
+plot.vds.data  <- function(df.merged,vdsid,year,fileprefix=NULL,subhead='\npost imputation',force.plot=FALSE){
+    if(!force.plot){
+        have.plot <- check.for.plot.attachment(vdsid,year,fileprefix,subhead)
+        if(have.plot){
+            return (1)
+        }
+    }
   print('need to make plots')
   varnames <- names(df.merged)
   ## make some diagnostic plots
