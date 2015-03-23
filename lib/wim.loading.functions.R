@@ -375,7 +375,7 @@ wim.recode.lanes <- function(df){
 
 pretty.thistogram <- function(x,main="Histogram",xlab="",ylab=""){
   ## get rid of NA values
-  x <- x[!is.na(x)]
+  x <- x[!is.na(x),]
   truehist( x, xlab=xlab,main=main )
                                         # calculate density estimation
   d <- density( x )
