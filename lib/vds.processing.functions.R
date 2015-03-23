@@ -69,7 +69,7 @@ sanity.check <- function(data,ts,year=0,vdsid='missing'){
                 problem['rawdata'] <- paste('do not have occupancies in left lane','in raw vds file')
                 return.val <- FALSE
             } else {
-                mean.ns <- sapply(data[n.idx],mean,na.rm=TRUE)
+                mean.ns <- sapply(data[,n.idx],mean,na.rm=TRUE)
                 bad.lanes <-  length(n.idx[( mean.ns <0.0001)])
                 if(! bad.lanes == 0 ){
                     problem['rawdata'] <- paste('mean volumes too low in some lanes:',paste(n.idx[( mean.ns <0.0001)],mean.ns[( mean.ns <0.0001)],sep=':',collapse=', '),'in raw vds file',collapse=' ')
