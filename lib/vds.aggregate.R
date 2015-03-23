@@ -48,7 +48,7 @@ vds.aggregate <- function(df,ts,lanes=0,seconds){
     ## information, but the flip side is imputing every 30 seconds and
     ## that is not possible.
 
-    full.hours[!keep]<-NA
+    full.hours[!keep,]<-NA
     full.hours$periods.sum <- aggregate.combined$periods.sum
     df.mi.input <- unzoo.incantation(full.hours)
     df.mi.input['obs_count'] <- df.mi.input['periods.sum']
