@@ -200,6 +200,7 @@ check.for.plot.attachment <- function(vdsid,year,fileprefix=NULL,subhead='\npost
 }
 
 plot.vds.data  <- function(df.merged,vdsid,year,fileprefix=NULL,subhead='\npost imputation',force.plot=FALSE){
+    console.log(paste('force plot is',force.plot))
     if(!force.plot){
         have.plot <- check.for.plot.attachment(vdsid,year,fileprefix,subhead)
         if(have.plot){
