@@ -57,6 +57,13 @@ vds.aggregate <- function(df,ts,lanes=0,seconds){
     ## I son't want periods.ave
     df.mi.input['periods.ave']<- NULL
 
+    ## merge with the complete list of times
+    ## this makes sure all times steps have a value
+    len <- length(df.mi.input$ts)
+    irritating.ts <- seq(df.mi.input$ts[1],df.mi.input$ts[len],by=seconds)
+    ts.all.df <- data.frame(ts=irritating.ts)
+    mm <- merge(df.mi.input,ts.all.df,all=TRUE)
+    df.mi.input <- mm
   }
   df.mi.input
 }
