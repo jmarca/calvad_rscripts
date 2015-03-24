@@ -99,5 +99,5 @@ make.amelia.output.file <- function(path,fname,seconds,year){
   paste(path,'/',fname,'.',seconds,'.imputed.RData',sep='')
 }
 make.amelia.output.pattern <- function(fname,year){
-  paste(fname,'.*imputed.RData',sep='')
+  paste(fname,'.*',year,'.*imputed.RData',sep='')
 }
