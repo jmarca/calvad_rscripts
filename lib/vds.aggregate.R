@@ -63,6 +63,9 @@ vds.aggregate <- function(df,ts,lanes=0,seconds){
     irritating.ts <- seq(df.mi.input$ts[1],df.mi.input$ts[len],by=seconds)
     ts.all.df <- data.frame(ts=irritating.ts)
     mm <- merge(df.mi.input,ts.all.df,all=TRUE)
+    ts.lt <- as.POSIXlt(mm$ts)
+    mm$tod   <- ts.lt$hour + (ts.lt$min/60)
+    mm$day   <- ts.lt$wday
     df.mi.input <- mm
   }
   df.mi.input
