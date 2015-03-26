@@ -1,58 +1,62 @@
-library('Zelig')
+## library('Zelig')
 
 
-### find wim gaps discussion:
-## An alternate approach would be to check out the hourly values, if
-## there is a gap in an hour than mark the day as missing??
-
-## no.
-
-## The ultimate goal here (at this time) is to be able to model a
-## short term and long term time series model.  That is, to make a
-## model of truck counts over a day, and then make a model of truck
-## counts over weeks and months.
-
-## I think that perhaps the best approach is to model interarrival
-## times as a negative poisson whose parameter varies by time of day.
-## So that is the model, a smoothly varying negative poisson
-## parameter.
-
-## and then for long term variations, make model weekly truck counts
-## as a time series.  But missing days are a problem, eh?  Do the same
-## thing as below, first check days and insert missing or 0, then
-## check weeks insert missing if any day inthe week is missing.
-
-
+#' find wim gaps
+#'
+#' An alternate approach would be to check out the hourly values, if
+#' there is a gap in an hour than mark the day as missing??
+#'
+#' no.
+#'
+#' The ultimate goal here (at this time) is to be able to model a
+#' short term and long term time series model.  That is, to make a
+#' model of truck counts over a day, and then make a model of truck
+#' counts over weeks and months.
+#'
+#' I think that perhaps the best approach is to model interarrival
+#' times as a negative poisson whose parameter varies by time of day.
+#' So that is the model, a smoothly varying negative poisson
+#' parameter.
+#' and then for long term variations, make model weekly truck counts
+#' as a time series.  But missing days are a problem, eh?  Do the same
+#' thing as below, first check days and insert missing or 0, then
+#' check weeks insert missing if any day inthe week is missing.
+#'
+#' this function is passed raw df.wim, which is probably aggregated
+#' up to hourly from the individual observations.
+#'
+#' the problem this function solves is that missing observations in
+#' an hour aren't indicative of truly missing data.  It just might
+#' be the case that there weren't any trucks that hour.  However,
+#' because we are counting by aggregating individual observations of
+#' trucks, the aggregation step will insert NA instead of zero if
+#' there aren't any vehicles observed in that time period.
+#'
+#' So what we do here is to aggregate the data passed to us up to
+#' daily counts.  Then if there are NAs in a day, and if the
+#' majority of the hours in the day are NA, then the data can be
+#' left NA.  However if just one or two hours in the day are NA, the
+#' probably those NAs can be recoded to be zero.
+#'
+#' After doing this on a few stations, now I'm not so sure.  A day
+#' with a few non-missing hours might be better handled if those
+#' hours were set to zero rather than imputed, but that should work
+#' itself out.  Hmm, no it won't.  If unobserved should be zero but
+#' is coded as missing, then there will be no hard zeros in the
+#' observation set, so the imputation will be off some.
+#'
+#' So that is what I am after here.  Find those parts of the day
+#' that are NA that should be zero, because the whole day is
+#' ordinary.  Days that have really low counts if you ignore NA
+#' should be left alone.
+#'
+#' @param df.wim the WIM data frame
+#' @param count.pattern the pattern to look for count type variables, defaults to  "^(truck|heavyheavy)"
+#' @return the modified dataframe, with bad sensor days left with
+#' truck counts at NA, and good sensor days with no data given counts
+#' of zero rather than NA
+#' @export
 find.wim.gaps <- function(df.wim,count.pattern = "^(truck|heavyheavy)"){
-
-  ## this function is passed raw df.wim, which is probably aggregated
-  ## up to hourly from the individual observations.
-
-  ## the problem this function solves is that missing observations in
-  ## an hour aren't indicative of truly missing data.  It just might
-  ## be the case that there weren't any trucks that hour.  However,
-  ## because we are counting by aggregating individual observations of
-  ## trucks, the aggregation step will insert NA instead of zero if
-  ## there aren't any vehicles observed in that time period.
-
-  ## So what we do here is to aggregate the data passed to us up to
-  ## daily counts.  Then if there are NAs in a day, and if the
-  ## majority of the hours in the day are NA, then the data can be
-  ## left NA.  However if just one or two hours in the day are NA, the
-  ## probably those NAs can be recoded to be zero.
-
-  ## After doing this on a few stations, now I'm not so sure.  A day
-  ## with a few non-missing hours might be better handled if those
-  ## hours were set to zero rather than imputed, but that should work
-  ## itself out.  Hmm, no it won't.  If unobserved should be zero but
-  ## is coded as missing, then there will be no hard zeros in the
-  ## observation set, so the imputation will be off some.
-  ##
-
-  ## So that is what I am after here.  Find those parts of the day
-  ## that are NA that should be zero, because the whole day is
-  ## ordinary.  Days that have really low counts if you ignore NA
-  ## should be left alone.
 
   ## First, aggregate up to a day using zoo
 
@@ -134,7 +138,22 @@ find.wim.gaps <- function(df.wim,count.pattern = "^(truck|heavyheavy)"){
 }
 
 
-make.wim.events <- function(df,year,wim.site,fname,path) {
+#' Make WIM events
+#'
+#' block out the good periods and bad periods in time
+#'
+#' Will create the events by calling \code{\link{summarize.events}}
+#' first, and then save those events by calling
+#' \code{\link{save.events.file}}
+#'
+#' @param df the WIM dataframe
+#' @param year the year of data
+#' @param wim.site the WIM site id
+#' @param fname the file name to save data to
+#' @param path the path where you want to stick fname
+#' @param con a database connection to use for valid dbnames
+#' @return the output of call to \code{\link{save.events.file}}
+make.wim.events <- function(df,year,wim.site,fname,path,con) {
 
   truck.vars <- grep( pattern="^truck",x=names(df),perl=TRUE,value=TRUE)
   truck.lane.r1 <- grep (pattern="_r1$",x=truck.vars,perl=TRUE,value=TRUE)
@@ -142,14 +161,9 @@ make.wim.events <- function(df,year,wim.site,fname,path) {
   events <- summarize.events(df,year,good.periods,wim.site,df$ts,'wim')
 
   save.events.file(path,fname,year,events)
-
 }
 
 
-## I need to do some exploratory work in the time series classes and
-## functions to see what is what.  After I do that I can tack this
-## stuff.  The thing is, I don't really know if any of these trends
-## are real, so I can't tackle them yet.
 
 find.complete.weeks.wim.gaps <- function(df.wim){
   ## aggregate up to a week, if missing, then leave missing.  if not, then not, set to zero
@@ -158,7 +172,27 @@ find.complete.weeks.wim.gaps <- function(df.wim){
   df.wim
 }
 
-
+#' fill WIM gaps
+#'
+#' run Amelia to fill in missing values in the WIM observations
+#'
+#' @param df.wim the WIM dataframe, typically not the raw obs but
+#' rather aggregated up to one hour of observation data
+#' @param count.pattern the regex to use to identify count variables
+#' @param mean.pattern the regex to use to identify mean type
+#' variables (not count variables, need to be handled differently by
+#' Amelia).  These aren't really mean values, usually.  Rather they
+#' are summed values like axle weight that in the end get divided by
+#' the count to produce a mean.  But because they aren't really
+#' counted values, they behave better in Amelia than pure counts.
+#' @param mean.exclude.pattern the regex to use to exclude variables
+#' from the Amelia run.  The default is ^mean because you really don't
+#' want to include actual mean values in an amelia run
+#' @param plotfile the name of a plotfile, I guess.  If not
+#' emptystring (the default) then the standard Amelia plot will be run
+#' and saved to this file.
+#' @return the output of running amelia
+#'
 fill.wim.gaps <- function(df.wim
                          ,count.pattern='^(not_heavyheavy|heavyheavy|count_all_veh_speed)'
                          ,mean.pattern="_(weight|axle|len|speed)"
@@ -269,6 +303,14 @@ fill.wim.gaps <- function(df.wim
   df.truckamelia.b
 }
 
+#' fixup plotfile name
+#'
+#' This will take in a string, and mess with it to make it work right,
+#' with that number pattern thing and ending in png
+#'
+#' @param plotfile the original name to plot to
+#' @return the fixed plotfile name, suitable for general use with
+#' multiple plots, etc
 fixup.plotfile.name <- function(plotfile){
     if(! grepl("%03d",x=plotfile)[1]){
         ## need to add a little numbering thing
