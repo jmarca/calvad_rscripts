@@ -339,11 +339,16 @@ upload.plots.couchdb <- function(wim.site
                                  ,year
                                  ,imagepath
                                  ,trackingdb
-                                 ,local=TRUE){
+                                ,local=TRUE
+                                ,files.to.attach=list()){
 
-    file.pattern <- paste(wim.site,direction,year,'.*png',sep='_')
-    file.path <- paste(paste(imagepath,direction,'/',sep=''),sep='')
-    files.to.attach <- dir(file.path,pattern=paste("^",file.pattern,sep=''),full.names=TRUE)
+    if(length(files.to.attach) ==  0){
+        file.pattern <- paste(wim.site,direction,year,'.*png',sep='_')
+        file.path <- paste(paste(imagepath,direction,'/',sep=''),sep='')
+        files.to.attach <- dir(file.path,
+                               pattern=paste("^",file.pattern,sep=''),
+                               full.names=TRUE)
+    }
     for(f2a in files.to.attach){
         couch.attach(trackingdb
                     ,cdb.wimid

@@ -60,31 +60,91 @@ unget.amelia.vds.file <- function(vdsid,path='/',year,server='http://calvad.ctml
   return()
 }
 
-tempfix.borkborkbork <- function(df){
-  summing.zoo.combiner(df)
+## tempfix.borkborkbork <- function(df){
+##   summing.zoo.combiner(df)
+## }
+## summing.zoo.combiner <- function(df){
+##   ## use zoo to combine a mean of occupancy, sums of volumes
+##   varnames <- names(df)
+##   varnames <- grep( pattern="^ts",x=varnames,perl=TRUE,inv=TRUE,value=TRUE)
+
+##   df.z <- zooreg(df[,varnames]
+##                  ,order.by=as.numeric(df$ts))
+
+##   hour=3600
+##     print('make it an hour')
+##   df.z$tick <- 1
+##     df.z <-  aggregate(df.z,
+##                        as.numeric(time(df.z)) -
+##                        as.numeric(time(df.z)) %% hour,
+##                        sum, na.rm=TRUE)
+##   names.occ <- grep( pattern="(^o(l|r)\\d+$)",x=names(df.z),perl=TRUE)
+##   df.z[,names.occ] <-  df.z[,names.occ] / df.z[,'tick']
+##   df.z$tick <- NULL
+##   unzoo.incantation(df.z)
+## }
+
+medianed.aggregate.df <- function(df_combined,op=median){
+    print(paste('use sqldf to aggregate imputations'))
+
+    varnames <- names(df_combined)
+    varnames <- grep( pattern="^ts",x=varnames,perl=TRUE,inv=TRUE,value=TRUE)
+
+
+    n.names <- grep(pattern="^n(l|r)\\d+",x=varnames,perl=TRUE,value=TRUE)
+    o.names <- grep(pattern="^o(l|r)\\d+",x=varnames,perl=TRUE,value=TRUE)
+
+    other.names <- grep(pattern="^(n|o)(l|r)\\d+",x=varnames,inv=TRUE,perl=TRUE,value=TRUE)
+
+    ## use sqldf...so much faster than zoo, aggregate
+
+    sqlstatement <- paste("select ts,",
+                          paste('median(',varnames,') as ',varnames,sep=' ',collapse=','),
+                          'from df_combined group by ts',
+                          sep=' ',collapse=' '
+                          )
+
+    ## aggregate the multiple imputations, resulting in one value per
+    ## time step
+    print(sqlstatement)
+    temp_df <- sqldf(sqlstatement,drv="SQLite")
+    attr(temp_df$ts,'tzone') <- 'UTC'
+
+
+    ## aggregate up to one hour
+    hour <-  3600 ## seconds per hour
+    temp_df$hourly <- as.numeric(temp_df$ts) - as.numeric(temp_df$ts) %% hour
+
+    temp_df$tick <- 1 ## a value to sum up # of records per hour, to
+                      ## compute averages of occupancy (because summed
+                      ## occupancy is meaningless!)
+
+
+    sqlstatement2 <- paste("select min(ts) as ts,",
+                           paste('sum(',c(varnames,'tick'),') as ',c(varnames,'tick'),sep=' ',collapse=','),
+                           ',tod,day',
+                           'from temp_df group by hourly',
+                           sep=' ',collapse=' '
+                           )
+
+    ## generate the hourly summation
+    df_hourly <- sqldf(sqlstatement2,drv="SQLite")
+
+    ## divide out the number of intervals summed to create average
+    ## occupancy per hour
+
+    df_hourly[,o.names] <- df_hourly[,o.names]/df_hourly[,'tick']
+
+    ## assign the correct timezone again
+    attr(df_hourly$ts,'tzone') <- 'UTC'
+
+    df_hourly$tick <- NULL
+
+    ## all done, return value
+    df_hourly
 }
-summing.zoo.combiner <- function(df){
-  ## use zoo to combine a mean of occupancy, sums of volumes
-  varnames <- names(df)
-  varnames <- grep( pattern="^ts",x=varnames,perl=TRUE,inv=TRUE,value=TRUE)
 
-  df.z <- zooreg(df[,varnames]
-                 ,order.by=as.numeric(df$ts))
-
-  hour=3600
-    print('make it an hour')
-  df.z$tick <- 1
-    df.z <-  aggregate(df.z,
-                       as.numeric(time(df.z)) -
-                       as.numeric(time(df.z)) %% hour,
-                       sum, na.rm=TRUE)
-  names.occ <- grep( pattern="(^o(l|r)\\d+$)",x=names(df.z),perl=TRUE)
-  df.z[,names.occ] <-  df.z[,names.occ] / df.z[,'tick']
-  df.z$tick <- NULL
-  unzoo.incantation(df.z)
-}
-
-medianed.aggregate.df <- function(df.combined,op=median){
+medianed.aggregate.df.oldway <- function(df.combined,op=median){
   print('use zoo to combine a value')
   varnames <- names(df.combined)
   varnames <- grep( pattern="^ts",x=varnames,perl=TRUE,inv=TRUE,value=TRUE)
@@ -103,26 +163,26 @@ medianed.aggregate.df <- function(df.combined,op=median){
                      as.numeric(time(df.z)) %% hour,
                      sum, na.rm=TRUE)
   names.occ <- grep( pattern="(^o(l|r)\\d+$)",x=names(df.z),perl=TRUE)
+
   df.z[,names.occ] <-  df.z[,names.occ] / df.z[,'tick']
   df.z$tick <- NULL
   df.z
 }
 
 condense.amelia.output.into.zoo <- function(df.amelia,op=median){
+    ## as with the with WIM data, using median
 
-  ## as with the with WIM data, using median
-  df.amelia.c <- df.amelia$imputations[[1]]
-  if(length(df.amelia$imputations) >1){
-    for(i in 2:length(df.amelia$imputations)){
-      df.amelia.c <- rbind(df.amelia.c,df.amelia$imputations[[i]])
+    df.c <- NULL
+    for(i in 1:length(df.vds.agg.imputed$imputations)){
+        df.c <- rbind(df.c,df.vds.agg.imputed$imputations[[i]])
     }
-  }
-  df.zoo <- medianed.aggregate.df(df.amelia.c,op)
-  df.zoo
+
+    df.agg <- medianed.aggregate.df(df.c,op)
+    df.agg
 }
 
-get.zooed.vds.amelia <- function(vdsid,serverfile='none',path='none',remote=TRUE,year){
-    print(paste('in get.zooed.vds.amelia, remote is',remote))
+get.aggregated.vds.amelia <- function(vdsid,serverfile='none',path='none',remote=TRUE,year){
+    print(paste('in get.aggregated.vds.amelia, remote is',remote))
     df.vds.agg.imputed <- list()
     if(path=='none'){
         path <- district.from.vdsid(vdsid)
@@ -154,28 +214,24 @@ get.zooed.vds.amelia <- function(vdsid,serverfile='none',path='none',remote=TRUE
 
 get.and.plot.vds.amelia <- function(pair,year,cdb.wimid=NULL,doplots=TRUE,remote=TRUE,path,force.plot=FALSE){
   ## load the imputed file for this site, year
-  df.vds.zoo <- get.zooed.vds.amelia(pair,year=year,path=path,remote=remote)
-  if(is.null(df.vds.zoo)){
+  df.vds.agg <- get.aggregated.vds.amelia(pair,year=year,path=path,remote=remote)
+  if(is.null(df.vds.agg)){
       return (NULL)
   }
   ## prior to binding, weed out excessive flows
-  varnames <- names(df.vds.zoo)
+  varnames <- names(df.vds.agg)
   flowvars <- grep('^n(r|l)\\d',x=varnames,perl=TRUE,value=TRUE)
   for(lane in flowvars){
-    idx <- df.vds.zoo[,lane] > 2500
-    df.vds.zoo[idx,lane] <- 2500
+    idx <- df.vds.agg[,lane] > 2500
+    df.vds.agg[idx,lane] <- 2500
   }
 
   couch.set.state(year,pair,doc=list('occupancy_averaged'=1))
-  ts.ts <- unclass(time(df.vds.zoo))+ISOdatetime(1970,1,1,0,0,0,tz='UTC')
-  ts.lt <- as.POSIXlt(ts.ts)
-  df.vds.zoo$tod   <- ts.lt$hour + (ts.lt$min/60)
-  df.vds.zoo$day   <- ts.lt$wday
 
   if(doplots){
-    plot.zooed.vds.data(df.vds.zoo,pair,year,force.plot=force.plot)
+    plot.vds.data(df.vds.agg,pair,year,force.plot=force.plot)
   }
-  df.vds.zoo
+  df.vds.agg
 }
 
 plot.zooed.vds.data <- function(df.vds.zoo,vdsid,year,fileprefix=NULL,subhead='\npost imputation',force.plot=FALSE){
