@@ -1,5 +1,20 @@
-library('Zelig')
-dump.tsdf.to.DB.file <- function(vds.id,df,target.file,...){
+## library('Zelig')
+
+#' dump tsdf to a database file via write.csv
+#'
+#' Convenience function that will organize volume, occupancy, and
+#' speed (perhaps) data into tidy CSV output.  It will also make sure
+#' that the variable names (the header row) are okay with whatever
+#' database is stashed in "con"
+#'
+#' @param vds.id  the vds id
+#' @param df the dataframe with time series data
+#' @param con the database connection (formerly a global variable!)
+#' @param target.file the destination file for the dump op
+#' @param ... additional arguments to write.csv
+#' @return The result of the call to write.csv
+#' @export
+dump.tsdf.to.DB.file <- function(vds.id,df,con,target.file,...){
   vds.lanes <- 1
   names.vds <- names(df)
   while(is.element(paste("nr",vds.lanes,sep=''),names.vds)){
@@ -18,15 +33,40 @@ dump.tsdf.to.DB.file <- function(vds.id,df,target.file,...){
   dump$sd_vol <- NA
   dump$sd_occ <- NA
   dump$sd_spd <- NA
-  db.legal.names  <- make.db.names(con,names(dump),unique=TRUE,allow.keywords=FALSE)
+  db.legal.names  <- make.db.names(con,names(dump),
+                                   unique=TRUE,allow.keywords=FALSE)
   names(dump) <- db.legal.names
   ## fs write
   write.csv(dump,file=target.file,row.names = FALSE,...)
 }
 
+#' Make vds wim imputed name
+#'
+#' Convenience function that will generate a standard name for a
+#' vds-wim imputation file.  This is important so that all of the
+#' files are named the same way
+#'
+#' @param wim  the wim site id
+#' @param vds  the vds id
+#' @param year the year of the data
+#' @return a string name
+#' @export
 make.vds.wim.imputed.name <- function(wim,vds,year){
   paste('wim',wim,'vds',vds,'imputed',year,'RData',sep='.')
 }
+
+
+#' Save imputed combined file
+#'
+#' An imputed combined file is passed in as amelia output, and saved
+#'
+#' @param aout Amelia output
+#' @param path the root directory to save into
+#' @param wim  the wim site id
+#' @param vds  the vds id
+#' @param year the year of the data
+#' @return nothing at all
+#' @export
 save.imputed.combined <- function(aout,path,wim,vds,year){
   fname <- make.vds.wim.imputed.name(wim,vds,year)
   print(fname)
@@ -37,6 +77,18 @@ save.imputed.combined <- function(aout,path,wim,vds,year){
     save(aout,file=paste(path,fname,sep='/'),compress='gzip')
   }
 }
+
+#' Check for imputed combined file
+#'
+#' Will check to see if the imputation is already done, by checking to
+#' see if an imputed combined file has already been saved
+#'
+#' @param path the root directory to save into
+#' @param wim  the wim site id
+#' @param vds  the vds id
+#' @param year the year of the data
+#' @return TRUE or FALSE.  TRUE if the file exists, or FALSE if not
+#' @export
 check.imputed.combined<- function(path,wim,vds,year){
   result = FALSE
   for (vdsi in 1:length(vds)){
@@ -52,6 +104,19 @@ check.imputed.combined<- function(path,wim,vds,year){
   result
 }
 
+#' Load imputed combined file
+#'
+#' Will load up the Amelia output done previously with wim vds combo.
+#'
+#' Because it is possible to combine multiple vds detectors here, the
+#' code loads up all of the vds files associated with the WIM site.
+#'
+#' @param path the root directory to save into
+#' @param wim  the wim site id
+#' @param vds  the vds ids, as a list or vector
+#' @param year the year of the data
+#' @return the combined results of all the multiple imputations as a dataframe
+#' @export
 load.imputed.combined <- function(path,wim,vds,year){
 
   ## vds could be an array, or it might not, collapse handles that
@@ -84,19 +149,45 @@ load.imputed.combined <- function(path,wim,vds,year){
   alldata
 }
 
-load.imputed.combined.prefetch <- function(path,pattern='wim.*reduced.*vds.*imputed.*RData',recursive=FALSE) {
 
-  ## this version creates an array of the directory to check each time
-  ## if the directory files change, this isn't appropriate, but
-  ## otherwise it should be faster than the above.  Call with a
-  ## pattern and a path, and it will load up the file names of all
-  ## files in the path (recursive is an option) matching the pattern
+
+#' Load imputed combined file, prefetch version
+#'
+#' Will load up the Amelia output done previously with wim vds combo.
+#'
+#' this version creates an array of the directory to check each time.
+#' If the directory files change, this isn't appropriate, but
+#' otherwise it should be faster than the above because results are
+#' precached.
+#'
+#' See, the thing is that I pull up these imputed combined files a lot
+#' for each subsequent impute, so having them handy is fast.  On the
+#' other hand, nowadays I invoke a completely new R call for each
+#' imputation run, obviating the need and efficiency of this call.  So
+#' whatever.  Still faster, as all possible matches are loaded in one
+#' pass through the dir command, rather than one pass per file to be
+#' loaded.
+#'
+#' @param path the root directory to save into
+#' @param pattern The pattern to use to locate wim vds imputed
+#' combined files.  defaults to 'wim.*reduced.*vds.*imputed.*RData'
+#' and you probably shouldn't mess with this
+#' @param recursive whether or not to recurse down the directory tree
+#' from path.  Passed along to the dir argument; defaults to FALSE
+#' @return A function that can be called with vds and year to get the
+#' appropriate imputed combined file from the precached list of files
+#' @export
+load.imputed.combined.prefetch <- function(path,pattern='wim.*reduced.*vds.*imputed.*RData',recursive=FALSE) {
 
 
   existing.files <- dir(path, pattern=pattern, full.names=TRUE, ignore.case=TRUE, recurs=recursive)
 
   ## return a function that can be called that searches from this list
 
+  #' A closure function that will use the prefeched directory reading results
+  #' @param vds  the vds ids, as a list or vector
+  #' @param year the year of the data
+  #' @return the combined results of all the multiple imputations as a dataframe
   callback <- function(vds,year){
 
     ## vds could be an array, or it might not, collapse handles that
