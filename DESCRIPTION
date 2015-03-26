@@ -1,4 +1,4 @@
-Package: calvad_rscripts
+Package: calvadrscripts
 Title: collection of R scripts for CalVAD
 Version: 1.0.1
 Authors@R: as.person(c("James Marca <jmarca@translab.its.uci.edu> [aut, cre]"))
@@ -7,3 +7,10 @@ Depends: R (>= 3.1.1)
 License: GPLv2
 LazyData: true
 Suggests: testthat
+Imports: sqldf,
+    lattice,
+    zoo,
+    Amelia,
+    RCurl,
+    RJSONIO,
+    RPostgreSQL
