@@ -78,6 +78,26 @@ save.imputed.combined <- function(aout,path,wim,vds,year){
   }
 }
 
+#' Insert the detector id as a new column in all data
+#'
+#'  You are merging two vds sites, and you have to be able to
+#' extricate the two after the fact.  So add another id variable for
+#' the vdsid
+#'
+#' @param df the aout data to identify
+#' @param id the id value to insert in every record
+#' @param colname the column name to give the new id column data.
+#' Defaults to 'vds_id'
+#' @return the modified dataframe
+add.detector.id <- function (df,id,colname='vds_id'){
+  if(length(names(df)[names(df)==colname]) == 0){
+    df[,colname] <- id
+  }
+  df
+}
+
+
+
 #' Check for imputed combined file
 #'
 #' Will check to see if the imputation is already done, by checking to
