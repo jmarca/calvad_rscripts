@@ -2,13 +2,14 @@ source('./utils.R')
 
 sanity.check <- function(data,ts,year=0,vdsid='missing'){
     problem <- list()
-
+    print ('check dimensions')
   return.val <- dim(data)[2] > 0  ## catch empty data right away
 
     if(!return.val){
         problem['rawdata'] <- 'no rows of data in raw vds file'
     }
     if(return.val){
+        print ('check exists right hand lane data')
         return.val <- is.element("nr1",names(data))    ## sometimes get random interior lanes
         if(!return.val){
             problem['rawdata'] <- 'have data, but not right hand lane? in raw vds file'
@@ -19,6 +20,9 @@ sanity.check <- function(data,ts,year=0,vdsid='missing'){
         names.vds <- names(data)
         max.lanes <- 8
         lane <- 0
+
+        print ('check n and o are always paired')
+
         ## first check that both n and o are always there together
         while( return.val & lane < max.lanes ){
             lane <- lane + 1
@@ -37,21 +41,25 @@ sanity.check <- function(data,ts,year=0,vdsid='missing'){
     }
     if(return.val){
         ## now check if there *is* a speed value, that there is an n and o value
+
         lane <- 0
         while( return.val & lane < max.lanes ){
             lane <- lane + 1
             if( is.element(paste("sr",lane), names.vds ) & (! is.element(paste("nr",lane), names.vds ) & ! is.element(paste("or",lane), names.vds ) ) ){
                 problem['rawdata'] <- paste('have a speed value, but not both occupancy and counts for lane',paste("nr",lane),'in raw vds file')
+                print(problem['rawdata'])
                 return.val <- FALSE
             }
             if( is.element(paste("sl",lane), names.vds ) & (! is.element(paste("nl",lane), names.vds ) & ! is.element(paste("ol",lane), names.vds ) ) ){
                 problem['rawdata'] <- paste('have a speed value, but not both occupancy and counts for lane',paste("nr",lane),'in raw vds file')
+                print(problem['rawdata'])
                 return.val <- FALSE
             }
         }
     }
     if(return.val){
-        ## finally, can't do any imputation unless you have at least a month of data
+        ## can't do any imputation unless you have at least a month of data
+        print('check for 4 weeks between first obs, last obs')
         difference <- difftime(ts[length(ts)],ts[1],units='weeks')
         if(difference < 4){
             problem['rawdata'] <- paste('need more than 4 weeks of data, have only',difference,'weeks','in raw vds file')
@@ -61,18 +69,31 @@ sanity.check <- function(data,ts,year=0,vdsid='missing'){
     if(return.val){ ## still going good, do some more checks
         lanes <- longway.guess.lanes(data)
         n.idx <- vds.lane.numbers(lanes,c("n"))
+        print('check that if there is a left lane, that there is volume data')
         if(lanes > 1 && ! length(data$nl1) > 0){
             problem['rawdata'] <- paste('do not have counts in left lane','in raw vds file')
             return.val <- FALSE
         } else {
+            print('check that if there is a left lane, that there is occupancy data')
             if(lanes>1 && ! length(data$ol1) > 0 ){
                 problem['rawdata'] <- paste('do not have occupancies in left lane','in raw vds file')
                 return.val <- FALSE
             } else {
-                mean.ns <- sapply(data[,n.idx],mean,na.rm=TRUE)
-                bad.lanes <-  length(n.idx[( mean.ns <0.0001)])
-                if(! bad.lanes == 0 ){
-                    problem['rawdata'] <- paste('mean volumes too low in some lanes:',paste(n.idx[( mean.ns <0.0001)],mean.ns[( mean.ns <0.0001)],sep=':',collapse=', '),'in raw vds file',collapse=' ')
+                print('check that mean volumnes are sufficiently above zero in all lanes')
+                bad.lanes <- 'okay'
+                for(i in 1:length(n.idx)){
+                    print(paste(n.idx[i]))
+                    mean.bug <- mean(data[,n.idx[i]],na.rm=TRUE)
+                    print(mean.bug)
+                    if(mean.bug < 0.0001){
+                        bad.lanes = n.idx[i]
+                        break
+                    }
+                }
+
+                if(bad.lanes != 'okay'){
+                    print ('problm')
+                    problem['rawdata'] <- paste('mean volumes too low in lane:',bad.lanes,'in raw vds file')
                     return.val <- FALSE
                 }
             }
@@ -81,14 +102,16 @@ sanity.check <- function(data,ts,year=0,vdsid='missing'){
     if(return.val){ ## check that we're not stuck on zero
         ## possible bug
         ## return.val <- max(data$nl1,na.rm=TRUE)>0
-        return.val <- max(data[n.idx],na.rm=TRUE)>0
+        print('check max count value >0 ')
+        return.val <- max(data[,n.idx],na.rm=TRUE)>0
 
         if(!return.val){
-            problem['rawdata'] <- paste('left lane max count is zero','in raw vds file')
+            problem['rawdata'] <- paste('max count is zero','in raw vds file')
         }
     }
     if(return.val){ ## check for 4 weeks of raw data
-        return.val <- length(data[!is.na(data[1]),1]) > 2*60*24*7*4 # 4 weeks * 2 obs/min * 60 min/hr * 24 hr/day * 7 days/week
+        print('check that have at least 4 weeks of non-null observations')
+        return.val <- length(data[!is.na(data[,n.idx[1]]),1]) > 2*60*24*7*4 # 4 weeks * 2 obs/min * 60 min/hr * 24 hr/day * 7 days/week
         if(!return.val){
             weeks.data <- length(data[!is.na(data[1]),1]) / 2*60*24*7
             problem['rawdata'] <- paste('need at least 4 weeks of raw data total.  Have only',weeks.data,'in raw vds file')
@@ -96,11 +119,13 @@ sanity.check <- function(data,ts,year=0,vdsid='missing'){
     }
     if(!return.val){
         ## save to couchdb
+        print('set state  not okay in couchdb')
         if(year != 0 & vdsid != 'missing' ){
             couch.set.state(year,vdsid,doc=problem,local=TRUE)
         }
 
     }
+    print('done with sanity check')
     return.val
 }
 
