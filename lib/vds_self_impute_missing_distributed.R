@@ -4,12 +4,12 @@
 ### but it is likely out of date
 
 source("load.pems.raw.file.R")
-library('zoo')
-library('Hmisc')
-library('Amelia')
-library('lattice')
-library('RCurl')
-library('RJSONIO')
+##library('zoo')
+####library('Hmisc')
+##library('Amelia')
+##library('lattice')
+##library('RCurl')
+##library('RJSONIO')
 
 source("vds.processing.functions.R")
 source('../node_modules/rstats_couch_utils/couchUtils.R')
@@ -29,7 +29,7 @@ couch.check.is.raw.imputed <- function(year,vdsid){
   return (result)
 }
 
-library('RPostgreSQL')
+## library('RPostgreSQL')
 m <- dbDriver("PostgreSQL")
 ## requires environment variables be set externally
 psqlenv = Sys.getenv(c("PSQL_HOST", "PSQL_USER", "PSQL_PASS"))
