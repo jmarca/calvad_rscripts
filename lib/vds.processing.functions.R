@@ -1,5 +1,24 @@
 source('./utils.R')
 
+#' sanity check
+#'
+#' make sure the data is worth processing
+#'
+#' This is a collection of checks that weed out most (but not all) of
+#' the reasons why Amelia will stop working.  I try to be
+#' conservative.  For example, I check only that the average count be
+#' at least 0.0001, which is pretty small.  But I'd rather pass along
+#' here and crash in Amelia than stop out a file that can actually be
+#' used.
+#'
+#' @param data the dataframe containing the data
+#' @param ts the timestamp sequence for each record in data
+#' @param year the year of the data
+#' @param vdsid the detector's id
+#' @return TRUE if the data is good to go, FALSE if not
+#'
+#' Side effect, will store the reason for data rejection to CouchDB,
+#' and also will dump test results to the log file
 sanity.check <- function(data,ts,year=0,vdsid='missing'){
     problem <- list()
     print ('check dimensions')
@@ -129,7 +148,16 @@ sanity.check <- function(data,ts,year=0,vdsid='missing'){
     return.val
 }
 
-
+#' longway guess lanes
+#'
+#' guess the number of lanes, based on the data in hand
+#'
+#' On *could* look up the number of lanes from the metadata, but that
+#' is dumb because it is often wrong and we have the data right here.
+#' Just look at each record to see how many lanes of data there are.
+#'
+#' @param data the data for the year
+#' @return the number of lanes for this VDS site
 longway.guess.lanes <- function(data){
     vds.lanes <- 1
     nms <-  names(data);
@@ -144,13 +172,26 @@ longway.guess.lanes <- function(data){
     vds.lanes
 }
 
+#' recode lanes
+#'
+#' This will rename the lanes in my special way, that is better for
+#' imputing missing values
+#'
+#' recode to be right lane (r1), right lane but one (r2), r3, ... and then
+#' left lane (l1)
+#'
+#' call ONLY after calling trim empty lanes
+#'
+#' @param df the data
+#' @return new names for the lanes, based on the above logic.
+#'
+#' Will rename speed (s), count (n) and occupancy (o) columns
+#'
 recode.lanes <- function(df){
                                         # run this only after you've
                                         # run trim empty lanes
 
   ##
-  ## recode to be right lane (r1), right lane but one (r2), r3, ... and then
-  ## left lane (l1)
   ##
   lanes <- longway.guess.lanes(df)
   names.vds <- names(df)
@@ -225,6 +266,16 @@ db.ready.dump <- function(imputations.list,vds.id,path='.'){
   }
 }
 
+#' verify imputation was okay
+#'
+#' deprecated, I guess.  Unused any any event
+#'
+#' @param fname
+#' @param path
+#' @param year
+#' @param seconds
+#' @param df.vds.agg.imputed
+#' @return TRUE if okay, FALSE if not okay
 verify.imputation.was.okay <- function(fname,path,year,seconds,df.vds.agg.imputed=NA){
   amelia.dump.file <- make.amelia.output.pattern(fname,year)
   done.file <- dir(path, pattern=amelia.dump.file,
@@ -247,6 +298,29 @@ verify.imputation.was.okay <- function(fname,path,year,seconds,df.vds.agg.impute
   okay
 }
 
+#' verify db dump
+#'
+#' rather horrid little script with a difficult purpose.
+#'
+#' as far as I can tell, the idea is that if the output file saved
+#' okay, then write out a different version that can be easily
+#' ingested into a database of some sort as a "dat' file using the
+#' function db.ready.dump
+#'
+#' But if the file write wasn't okay, and/or if the imputed data does
+#' not have multipleimputations and if the imputed data result code
+#' does not equal 1, then do not write out the data as a dat file
+#'
+#' @param fname
+#' @param path
+#' @param year
+#' @param seconds
+#' @parm df.vds.agg.imputed optional, if empty, then this will be read
+#' from the file data you just passed in.  If not empty, then the file
+#' will be checked to make sure it ihas a reasonable, nonzero size,
+#' but otherwise will not be read.
+#' @return not sure what.  just falls off the end
+#'
 verify.db.dump <- function(fname,path,year,seconds,df.vds.agg.imputed=NA){
   vds.id <-  get.vdsid.from.filename(fname)
   target.file <- make.db.dump.output.file(path,vds.id,year)
@@ -293,10 +367,21 @@ get.vdsid.from.filename <- function(filename){
 }
 
 
+#' impute aggregate
+#'
+#' this function will take an amelia output object, and then return
+#' a data frame with the imputed data aggregated up to one hour
+#' (3600 seconds)
+#'
+#' deprecated until it is redone, but I think I hae a copy elsewhere
+#' that is much faster
+#'
+#' @param aout the amelia output object
+#' @param hour what an hour is.  number of seconds defaults to 3600,
+#' but hey, if you want a different aggregate you can use something
+#' else
+#' @return the aggregated data as a dataframe
 impute.aggregate <- function(aout,hour=3600){
-  ## this function will take an amelia output object, and then return
-  ## a data frame with the imputed data aggregated up to one hour
-  ## (3600 seconds)
   lanes <- longway.guess.lanes(aout$imputations[[1]])
   print(paste('in impute.aggregate, with lanes=',lanes))
   n.idx <- c(vds.lane.numbers(lanes,c("n")),'obs_count')
@@ -362,7 +447,20 @@ impute.aggregate <- function(aout,hour=3600){
   aggimp
 }
 
-
+#' hourly aggregate VDS site data for a year
+#'
+#' pretty much unused, but it will read in down to raw CSV data, and
+#' will dump out hourly data as a csv file
+#'
+#' @param fname the file name.  Just the name
+#' @param f the full path to the data, above
+#' @param path  yes, this is lame but it is old unued and not worth refactoring at the moment
+#' @param year the year
+#' @param vds.id the id of the VDS detector
+#' @return whatever
+#'
+#' sideeffect is to save an hourly CSV file to the right path
+#'
 hourly.agg.VDS.site <- function(fname,f,path,year,vds.id){
   ## aggregate non-missing data
   ## return 1 if properly aggregated, return 0 if not
@@ -446,18 +544,49 @@ hourly.agg.VDS.site <- function(fname,f,path,year,vds.id){
   save.events.file(path,fname,year,events)
 }
 
+#' save events file
+#'
+#' write out the events dataframe to a file using CSV
+#'
+#' @param path the path where you want to stick fname
+#' @param fname the file name to save data to
+#' @param year the year of data
+#' @param events the dataframe containing the events data
+#' @return the output of call to \code{\link{save.events.file}}
 save.events.file <- function(path,fname,year,events){
   filename <- paste(path,'/',fname,'.',year,'dataevents.csv',sep='')
   ## save those ts to a csv for importing into a database
   write.csv(events,file=filename,row.names = FALSE)
 }
 
+#' load a broken events file
+#'
+#' pass in a file name (fully qualified) and it will be read as csv and convereted to a proper events dataframe
+#'
+#' for use fixing old broken files
+#'
+#' @param f filename
+#' @return dataframe with events, timeseries, detector id
 load.broken.events.file <- function (f) {
   events <- read.csv(file=f,stringsAsFactors=FALSE)
   ts <- as.POSIXct(strptime(events$ts,"%Y-%m-%d %H:%M:%S",tz='GMT'))
   data.frame(ts=ts,detector_id=events$detector_id, event=events$event,stringsAsFactors=FALSE)
 }
 
+#' Fix lame events in a dataframe
+#'
+#' This function will correct for the fact that sql can't do self
+#' joins to compute start and end times.  I recently learned a way
+#' around this, but anyway...  This code just makes sure that I have
+#' thestart and the end time for each event.  It just shifts index by
+#' one, and computes right now here.
+#'
+#' Splitting this out like this let me fix old files way back when
+#'
+#' @param events the dataframe holding the event rows
+#' @param year the year of the data
+#' @return a new dataframe with the event lists corected.
+#'
 fix.lame.events.df <- function(events,year){
   ## I made a mistake.  SQL **HATES** doing self joins to compute start and end times
   ## fix that mistake here
@@ -469,7 +598,26 @@ fix.lame.events.df <- function(events,year){
   events
 }
 
-summarize.events <- function(df.agg,year,good.periods,detector.id,ts,detector.type='vdsid'){
+#' Summarize  events
+#'
+#' block out the good periods and bad periods in time
+#'
+#' Will create the events by calling \code{\link{summarize.events}}
+#' first, and then save those events by calling
+#' \code{\link{save.events.file}}
+#'
+#' @param df.agg the aggregated dataframe
+#' @param year the year of data
+#' @param good.periods an index identifying which rows of df.agg
+#' represent "good" periods of data
+#' @param detector.id the detector's id
+#' @param detector.type the type of the detector, defaults to vdsid,
+#' other likely possibility is 'wim'
+#' @param con a database connection to use for valid dbnames
+#' @return a dataframe contining rows indicating whether a section of
+#' time was observed or imputed, suitable for stashing in a file or
+#' database
+summarize.events <- function(df.agg,year,good.periods,detector.id,ts,detector.type='vdsid',con){
   ## fiddle about with events and save those too.  easier in R than sql
   ## create factors for each of the good periods
   events <- data.frame()
@@ -494,11 +642,15 @@ summarize.events <- function(df.agg,year,good.periods,detector.id,ts,detector.ty
     snow <- other$goodbad[1:(length(other$goodbad)-1)]
     zeros <- (slough +  snow) == 0
     event.index <- c(1,(2:length(other$ts))[zeros])
-    events <- data.frame(ts = other$ts[event.index], detector_id=paste(detector.type,detector.id,sep='_'))
+    events <- data.frame(ts = other$ts[event.index],
+                         detector_id=paste(detector.type,detector.id,sep='_'))
     events$event[other$goodbad[event.index]==-1] <- 'imputed'
     events$event[other$goodbad[event.index]==1] <- 'observed'
   }
-  db.legal.names  <- make.db.names(con,names(events),unique=TRUE,allow.keywords=FALSE)
+  db.legal.names  <- make.db.names(con,
+                                   names(events),
+                                   unique=TRUE,
+                                   allow.keywords=FALSE)
   names(events) <- db.legal.names
   events <- fix.lame.events.df(events,year)
   ## correct that last event end time.
