@@ -1,6 +1,7 @@
 ## source('process.raw.pems.file.R')
 ## this script will impute hourly missing data for pems files
 
+### but it is likely out of date
 
 source("load.pems.raw.file.R")
 library('zoo')
@@ -35,7 +36,6 @@ psqlenv = Sys.getenv(c("PSQL_HOST", "PSQL_USER", "PSQL_PASS"))
 
 con <-  dbConnect(m
                   ,user=psqlenv[2]
-                  ,password=psqlenv[3]
                   ,host=psqlenv[1]
                   ,dbname="spatialvds")
 
