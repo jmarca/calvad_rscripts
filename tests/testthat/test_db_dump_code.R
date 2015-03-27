@@ -22,6 +22,7 @@ test_that("dump code works okay",{
     expect_that(res,equals('df.vds.agg.imputed'))
 
     tmd <- tempdir()
+
     verify.db.dump('1211682_ML_2012.120.imputed.RData',
                    path=tmd,
                    2012,120,df.vds.agg.imputed=df.vds.agg.imputed,

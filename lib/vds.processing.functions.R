@@ -321,7 +321,7 @@ verify.db.dump <- function(fname,path,year,seconds,df.vds.agg.imputed=NA,con){
         }
         db.ready.dump(aout.agg,vds.id,path,con=con)
     }else{
-        print(paste('not writing dat file to',target.file,'as it already exists')
+        print(paste('not writing dat file to',target.file,'as it already exists'))
     }
 }
 
