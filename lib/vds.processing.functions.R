@@ -1,5 +1,4 @@
 source('./utils.R')
-source('./get.medianed.amelia.vds.R')
 
 #' sanity check
 #'
@@ -215,24 +214,33 @@ db.ready.dump <- function(imps,vds.id,path='.',con){
     target.file <- make.db.dump.output.file(path,vds.id,year)
     dump.file.size <- file.info(target.file)$size
 
-    imps$vds_id <- vds.id
-    imps$sd_vol <- NA
-    imps$sd_occ <- NA
-    imps$sd_spd <- NA
+    ## do this to get the order the same as last time
+    dump <- data.frame(vds_id=vds.id,
+                       ts=imps$ts,
+                       obs_count=imps$obs_count,
+                       imputation=imps$imputation,
+                       vol=imps$vol,
+                       occ=imps$occ,
+                       spd=imps$spd
+                       )
+    dump$sd_vol <- NA
+    dump$sd_occ <- NA
+    dump$sd_spd <- NA
 
-    db.legal.names  <- make.db.names(con,names(imps),
+    db.legal.names  <- make.db.names(con,names(dump),
                                      unique=TRUE,
                                      allow.keywords=FALSE)
-    names(imps) <- db.legal.names
+    names(dump) <- db.legal.names
     ## fs write
 
     ## need to append, not overwrite the target file for each imputation
 
     if(is.na(dump.file.size)){
-        write.csv(imps,file=target.file,row.names = FALSE,col.names=TRUE,append=FALSE)
-        dump.file.size <- file.info(target.file)$size
+        write.csv(dump,file=target.file,row.names = FALSE,
+                  col.names=TRUE,append=FALSE)
     }else{
-        write.csv(imps,file=target.file,row.names = FALSE,col.names=FALSE,append=TRUE)
+        write.csv(dump,file=target.file,row.names = FALSE,
+                  col.names=FALSE,append=TRUE)
     }
 }
 
@@ -286,30 +294,35 @@ verify.imputation.was.okay <- function(fname,path,year,seconds,df.vds.agg.impute
 #' @param path
 #' @param year
 #' @param seconds
+#' @param con
 #' @parm df.vds.agg.imputed optional, if empty, then this will be read
 #' from the file data you just passed in.  If not empty, then the file
 #' will be checked to make sure it ihas a reasonable, nonzero size,
 #' but otherwise will not be read.
 #' @return not sure what.  just falls off the end
 #'
-verify.db.dump <- function(fname,path,year,seconds,df.vds.agg.imputed=NA){
-  vds.id <-  get.vdsid.from.filename(fname)
-  target.file <- make.db.dump.output.file(path,vds.id,year)
-  load.result='okay'
-  if(is.na(file.info(target.file)$size)){
-    ## no ticket, no pass
-    ## load the fname, get the amelia output, dump it
-    if(is.na(df.vds.agg.imputed)){
-      df.vds.agg.imputed <- get.vds.file(vds.id,path,year)
-    }
+verify.db.dump <- function(fname,path,year,seconds,df.vds.agg.imputed=NA,con){
+    vds.id <-  get.vdsid.from.filename(fname)
+    target.file <- make.db.dump.output.file(path,vds.id,year)
+    load.result='okay'
+    if(is.na(file.info(target.file)$size)){
+        ## no ticket, no pass
+        ## load the fname, get the amelia output, dump it
+        if(is.na(df.vds.agg.imputed)){
+            df.vds.agg.imputed <- get.vds.file(vds.id,path,year)
+        }
 
-    aout.agg <- data.frame(vds_id=vds.id)
-    ## only go if df.vds.agg.imputed is sane
-    if(load.result!='reject' & ( length(df.vds.agg.imputed$imputations)>1 & df.vds.agg.imputed$code==1)){
-        aout.agg <- condense.amelia.output(df.vds.agg.imputed)
+        aout.agg <- data.frame(vds_id=vds.id)
+        ## only go if df.vds.agg.imputed is sane
+        if(load.result!='reject' &
+           ( length(df.vds.agg.imputed$imputations)>1 &
+                df.vds.agg.imputed$code==1)){
+            aout.agg <- impute.aggregate(df.vds.agg.imputed)
+        }
+        db.ready.dump(aout.agg,vds.id,path,con=con)
+    }else{
+        print(paste('not writing dat file to',target.file,'as it already exists')
     }
-    db.ready.dump(aout.agg,vds.id,path)
-  }
 }
 
 
@@ -417,6 +430,8 @@ impute.aggregate <- function(aout,hour=3600){
     ## fix up speed if needed
     if(!is.na(s.idx[1])){
         df.agg$spd <- df.agg$spd / df.agg$vol
+    }else{
+        df.agg$spd <- NA
     }
     df.agg$tick <- NULL
     df.agg

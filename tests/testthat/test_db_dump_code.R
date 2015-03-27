@@ -1,4 +1,4 @@
-source('../../lib/vds.processing.functions.R',chdir=TRUE)
+source('./lib/vds.processing.functions.R',chdir=TRUE)
 
 
 library('RPostgreSQL')
@@ -16,14 +16,16 @@ library(testthat)
 
 test_that("dump code works okay",{
 
-    file <- './tests/testthat/files/1211682_ML_2012.120.imputed.RData'
+    file <- './files/1211682_ML_2012.120.imputed.RData'
+
     res <- load(file)
     expect_that(res,equals('df.vds.agg.imputed'))
 
     tmd <- tempdir()
     verify.db.dump('1211682_ML_2012.120.imputed.RData',
                    path=tmd,
-                   2012,120,df.vds.agg.imputed=df.vds.agg.imputed
+                   2012,120,df.vds.agg.imputed=df.vds.agg.imputed,
+                   con
                    )
 
     impsagg <- impute.aggregate(df.vds.agg.imputed)
