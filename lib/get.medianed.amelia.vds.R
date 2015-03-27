@@ -119,7 +119,7 @@ medianed.aggregate.df <- function(df_combined,op=median){
     ## aggregate the multiple imputations, resulting in one value per
     ## time step
     print(sqlstatement)
-    temp_df <- sqldf(sqlstatement,drv="SQLite")
+    temp_df <- sqldf::sqldf(sqlstatement,drv="SQLite")
     attr(temp_df$ts,'tzone') <- 'UTC'
 
 
@@ -133,14 +133,14 @@ medianed.aggregate.df <- function(df_combined,op=median){
 
 
     sqlstatement2 <- paste("select min(ts) as ts,",
-                           paste('sum(',c(varnames,'tick'),') as ',c(varnames,'tick'),sep=' ',collapse=','),
+                           paste('total(',c(varnames,'tick'),') as ',c(varnames,'tick'),sep=' ',collapse=','),
                            ',tod,day',
                            'from temp_df group by hourly',
                            sep=' ',collapse=' '
                            )
 
     ## generate the hourly summation
-    df_hourly <- sqldf(sqlstatement2,drv="SQLite")
+    df_hourly <- sqldf::sqldf(sqlstatement2,drv="SQLite")
 
     ## divide out the number of intervals summed to create average
     ## occupancy per hour
@@ -181,18 +181,22 @@ medianed.aggregate.df <- function(df_combined,op=median){
 ##   df.z
 ## }
 
-condense.amelia.output.into.zoo <- function(df.amelia,op=median){
+condense.amelia.output <- function(aout,op=median){
     ## as with the with WIM data, using median
 
     df.c <- NULL
-    for(i in 1:length(df.vds.agg.imputed$imputations)){
-        df.c <- rbind(df.c,df.vds.agg.imputed$imputations[[i]])
+    for(i in 1:length(aout$imputations)){
+        df.c <- rbind(df.c,aout$imputations[[i]])
     }
 
     df.agg <- medianed.aggregate.df(df.c,op)
     df.agg
 }
-
+## alias for backwards
+condense.amelia.output.into.zoo <- function(aout,op){
+    print('old way of accessing condense.amelia.output')
+    condense.amelia.output(aout,opp)
+}
 get.aggregated.vds.amelia <- function(vdsid,serverfile='none',path='none',remote=TRUE,year){
     print(paste('in get.aggregated.vds.amelia, remote is',remote))
     df.vds.agg.imputed <- list()
@@ -213,15 +217,7 @@ get.aggregated.vds.amelia <- function(vdsid,serverfile='none',path='none',remote
     print("amelia run for vds not good")
     return(NULL)
   }
-  ## as with the with WIM data, using median
-    print('stack the imputations')
-  df.vds.amelia.c <- df.vds.agg.imputed$imputations[[1]]
-  if(length(df.vds.agg.imputed$imputations) >1){
-    for(i in 2:length(df.vds.agg.imputed$imputations)){
-      df.vds.amelia.c <- rbind(df.vds.amelia.c,df.vds.agg.imputed$imputations[[i]])
-    }
-  }
-  medianed.aggregate.df(df.vds.amelia.c)
+    condense.amelia.output(df.vds.agg.imputed)
 }
 
 get.and.plot.vds.amelia <- function(pair,year,cdb.wimid=NULL,doplots=TRUE,remote=TRUE,path,force.plot=FALSE){
