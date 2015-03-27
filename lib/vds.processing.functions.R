@@ -1,4 +1,5 @@
 source('./utils.R')
+source('./get.medianed.amelia.vds.R')
 
 #' sanity check
 #'
@@ -210,61 +211,31 @@ recode.lanes <- function(df){
   df
 }
 
-db.ready.dump <- function(imputations.list,vds.id,path='.'){
-  lanes <- longway.guess.lanes(imputations.list[[1]])
-  target.file <- make.db.dump.output.file(path,vds.id,year)
-  dump.file.size <- file.info(target.file)$size
-  for(imps in 1:(length(imputations.list))){
-    imp <- imputations.list[[imps]]
+db.ready.dump <- function(imps,vds.id,path='.',con){
+    target.file <- make.db.dump.output.file(path,vds.id,year)
+    dump.file.size <- file.info(target.file)$size
 
-    names.vds <- names(imp)
-    n.idx <- vds.lane.numbers(lanes,c("n"))
-    o.idx <- vds.lane.numbers(lanes,c("o"))
-    s.idx <- vds.lane.numbers(lanes,c("s"))
-    s.idx <- names(imputations.list[[1]])[is.element( names(imputations.list[[1]]),s.idx)]
-    ## if there are not speeds, then s.idx[1] is NA
+    imps$vds_id <- vds.id
+    imps$sd_vol <- NA
+    imps$sd_occ <- NA
+    imps$sd_spd <- NA
 
-    dump <- data.frame(vds_id=vds.id,ts=imp$ts)
-    dump$obs_count <-  imp$obs_count
-    dump$imputation <- imps
-    if(lanes==1){
-      dump$vol <-  imp[,n.idx]
-      dump$occ <-  imp[,o.idx]
-    }else{
-      dump$vol <-  apply(imp[,n.idx], 1, sum)
-      dump$occ <-   apply(imp[,o.idx], 1, mean)
-    }
-
-    if(is.na(s.idx[1])){
-      dump$spd <- NA
-    }else{
-      ## I just relearned that * is element by element multiplication
-      weighted <- as.matrix(imp[,n.idx]) * as.matrix(imp[,s.idx])
-      if(lanes==1){
-        dump$spd <- weighted / dump$vol
-      }else{
-        dump$spd <- apply(weighted, 1, sum) / dump$vol
-      }
-    }
-
-    dump$sd_vol <- NA
-    dump$sd_occ <- NA
-    dump$sd_spd <- NA
-
-    db.legal.names  <- make.db.names(con,names(dump),unique=TRUE,allow.keywords=FALSE)
-    names(dump) <- db.legal.names
+    db.legal.names  <- make.db.names(con,names(imps),
+                                     unique=TRUE,
+                                     allow.keywords=FALSE)
+    names(imps) <- db.legal.names
     ## fs write
 
     ## need to append, not overwrite the target file for each imputation
 
     if(is.na(dump.file.size)){
-      write.csv(dump,file=target.file,row.names = FALSE,col.names=TRUE,append=FALSE)
-      dump.file.size <- file.info(target.file)$size
+        write.csv(imps,file=target.file,row.names = FALSE,col.names=TRUE,append=FALSE)
+        dump.file.size <- file.info(target.file)$size
     }else{
-      write.csv(dump,file=target.file,row.names = FALSE,col.names=FALSE,append=TRUE)
+        write.csv(imps,file=target.file,row.names = FALSE,col.names=FALSE,append=TRUE)
     }
-  }
 }
+
 
 #' verify imputation was okay
 #'
@@ -335,7 +306,7 @@ verify.db.dump <- function(fname,path,year,seconds,df.vds.agg.imputed=NA){
     aout.agg <- data.frame(vds_id=vds.id)
     ## only go if df.vds.agg.imputed is sane
     if(load.result!='reject' & ( length(df.vds.agg.imputed$imputations)>1 & df.vds.agg.imputed$code==1)){
-      aout.agg <- medianed.aggregate.df(df.vds.agg.imputed)
+        aout.agg <- condense.amelia.output(df.vds.agg.imputed)
     }
     db.ready.dump(aout.agg,vds.id,path)
   }
@@ -373,8 +344,13 @@ get.vdsid.from.filename <- function(filename){
 #' a data frame with the imputed data aggregated up to one hour
 #' (3600 seconds)
 #'
-#' deprecated until it is redone, but I think I hae a copy elsewhere
-#' that is much faster
+#' It does not combine imputations.  Rather, the short period
+#' imputations are bunched up to one hour, but the various imputations
+#' themselves are left all independent.
+#'
+#' This probably is mathematically different from first merging at the
+#' lower time period finding the predicted median, then aggregating up
+#' to an hour.
 #'
 #' @param aout the amelia output object
 #' @param hour what an hour is.  number of seconds defaults to 3600,
@@ -383,71 +359,68 @@ get.vdsid.from.filename <- function(filename){
 #' @return the aggregated data as a dataframe
 impute.aggregate <- function(aout,hour=3600){
     print('should not be in vds.processing.functions::impute.aggregate')
-    quit(save='no', status=1)
-##   lanes <- longway.guess.lanes(aout$imputations[[1]])
-##   print(paste('in impute.aggregate, with lanes=',lanes))
-##   n.idx <- c(vds.lane.numbers(lanes,c("n")),'obs_count')
-##   n.idx.only <- vds.lane.numbers(lanes,c("n"))
-##   o.idx <- vds.lane.numbers(lanes,c("o"))
-##   s.idx <- vds.lane.numbers(lanes,c("s"))
-##   s.idx <- names(aout$imputations[[1]])[is.element( names(aout$imputations[[1]]),s.idx)]
-##   ## if there are not speeds, then s.idx[1] is NA
-##   aggimp = list()
-##   for(imps in 1:(length(aout$imputations))){
-##     imp <- aout$imputations[[imps]]
-##     ## I don't really care about seconds in the original, as long as
-##     ## it is true that it is less than 3600, as the ts is already in
-##     ## the amelia output, and I just want to aggregate up.
-##     ##
 
-##     df.zoo.n <- zooreg(imp[,n.idx],order.by=imp$ts)
-##     df.zoo.n <-  aggregate(df.zoo.n,
-##                            as.numeric(time(df.zoo.n)) -
-##                            as.numeric(time(df.zoo.n)) %% hour,
-##                            sum, na.rm=TRUE)
+    lanes <- longway.guess.lanes(aout$imputations[[1]])
+    print(paste('in impute.aggregate, with lanes=',lanes))
+    n.idx <- vds.lane.numbers(lanes,c("n"))
+    o.idx <- vds.lane.numbers(lanes,c("o"))
+    s.idx <- vds.lane.numbers(lanes,c("s"))
+    s.idx <- names(aout$imputations[[1]])[is.element(
+        names(aout$imputations[[1]]),
+        s.idx)]
+    ## if there are not speeds, then s.idx[1] is NA
+    allimp <- NULL
+    for(i in 1:(length(aout$imputations))){
+        aout$imputations[[i]][,'imputation']=i
+        allimp <- rbind(allimp,aout$imputations[[i]])
+    }
 
-##     df.zoo.o <- zooreg(imp[,o.idx],order.by=imp$ts)
-##     df.zoo.o <-  aggregate(df.zoo.o,
-##                            as.numeric(time(df.zoo.o)) -
-##                            as.numeric(time(df.zoo.o)) %% hour,
-##                            sum, ## mean,
-##                            na.rm=TRUE)
+    ## aggregate
+    print(paste('aggregate using sqldf'))
+    allimp$timeslot <- as.numeric(allimp$ts) - as.numeric(allimp$ts) %% hour
+    allimp$tick <- 1
+    all.names <- c(n.idx,o.idx,s.idx,'tick')
 
-##     ## more cut and paste and tweak programming
-##     if(! is.na(s.idx[1]) ){
-##       ## speed is in the dataset.  Weight by vehicle count
-##       df.weighted.s = data.frame(imp[,n.idx.only])
-##       df.weighted.s[,s.idx] <- imp[,s.idx] * imp[,n.idx.only]
-##       names(df.weighted.s) = c(n.idx.only,s.idx)
-##       df.zoo.s <- zooreg(df.weighted.s,order.by=imp$ts)
-##       df.zoo.s <-  aggregate(df.zoo.s,
-##                              as.numeric(time(df.zoo.s)) -
-##                              as.numeric(time(df.zoo.s)) %% hour,
-##                              sum, na.rm=TRUE)
-##       ## for(i in 1:(length(s.idx))){
-##       ##   df.zoo.s[,s.idx[i]] <- df.zoo.s[,s.idx[i]]/df.zoo.s[,n.idx.only[i]]
-##       ## }
-##       df.zoo.o <- merge( df.zoo.o,df.zoo.s[,s.idx] )
-##       names(df.zoo.o) <- c(o.idx,s.idx)
-##     }
-##     ## merge sets n and o (plus s)
-##     aggregate.combined <- merge( df.zoo.n,df.zoo.o, suffixes = c("sum", "sumave"))
+    select <- paste("select min(ts) as ts,imputation,",
+                    "total(tick) as tick,",
+                    "total(obs_count) as obs_count,",
+                    "total(",
+                    paste(n.idx,sep=' ',collapse='+'),
+                    ") as vol,",
+                    "total( (",
+                    paste(o.idx,sep=' ',collapse='+'),
+                    ")/", lanes," ) as occ"
+                    )
+    speed_select <- ""
 
-##     if(! is.na(s.idx[1]) ){
-##       names(aggregate.combined) <- c(n.idx,o.idx,s.idx)
-##     }else{
-##       names(aggregate.combined) <- c(n.idx,o.idx)
-##     }
+    if(!is.na(s.idx[1])){
 
-##     df.agg <- data.frame(coredata(aggregate.combined[,names(aggregate.combined)]))
-##     df.agg$ts <- unclass(time(aggregate.combined))+ISOdatetime(1970,1,1,0,0,0,tz='UTC')
-##     ts.lt <- as.POSIXlt(df.agg$ts)
-##     df.agg$tod   <- ts.lt$hour + (ts.lt$min/60)
-##     df.agg$day   <- ts.lt$wday
-##     aggimp[[imps]] <- df.agg
-##   }
-##   aggimp
-## }
+        speed_select <- paste(
+            ",total( (",
+            paste(s.idx,n.idx,sep='*',collapse='+'),
+            ") ) as spd"
+            )
+    }
+
+    from_clause <- 'from allimp group by timeslot, imputation'
+
+    sqlstatement <- paste(select,speed_select,from_clause)
+
+    print(sqlstatement)
+    df.agg <- sqldf::sqldf(sqlstatement,drv="SQLite")
+    ## fix time
+    attr(df.agg$ts,'tzone') <- 'UTC'
+
+    ## fix the occ
+    df.agg[,'occ'] <- df.agg[,'occ']/df.agg[,'tick']
+
+    ## fix up speed if needed
+    if(!is.na(s.idx[1])){
+        df.agg$spd <- df.agg$spd / df.agg$vol
+    }
+    df.agg$tick <- NULL
+    df.agg
+}
 
 #' hourly aggregate VDS site data for a year
 #'
@@ -625,9 +598,9 @@ summarize.events <- function(df.agg,year,good.periods,detector.id,ts,detector.ty
   events <- data.frame()
   if(length(good.periods[good.periods])==0){
     ## save something and be done
-    events <- data.frame(ts=ts[1],endts=ts[length(ts)],
-                         detector_id=paste(detector.type,detector.id,sep='_'),
-                         event='imputed');
+      events <- data.frame(ts=ts[1],endts=ts[length(ts)],
+                           detector_id=paste(detector.type,detector.id,sep='_'),
+                           event='imputed');
   }
   else   if(length(good.periods[!good.periods])==0){
     ## all good
