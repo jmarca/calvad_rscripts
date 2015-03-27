@@ -85,10 +85,8 @@ make.truck.plots <- function(df,year,site,dir,cdb.id,imputed=TRUE){
   dev.off()
 
   files.to.attach <- dir(savepath,pattern=paste("^",file.pattern,sep=''),full.names=TRUE)
-  for(f2a in files.to.attach){
-    couch.attach(trackingdb,cdb.id,f2a)
-  }
 
+  files.to.attach
 }
 
 make.truck.plots.by.lane <- function(df,year,site,dir,cdb.id,imputed=TRUE){
