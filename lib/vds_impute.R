@@ -18,7 +18,24 @@ junk.shot <- function(vds.id,f,fname,seconds,year,df){
     ## write.csv(dump,file=target.file,row.names = FALSE,col.names=TRUE,append=FALSE)
 }
 
-self.agg.impute.VDS.site.no.plots <- function(fname,f,path,year,seconds,goodfactor=2,maxiter=100){
+#' self aggregate and impute VDS data with no plotting
+#'
+#' This function loads raw data, aggregates it to some number of
+#' seconds (a parameter passed in) then uses Amelia to impute missing
+#' values.  No diagnostic plots are run.  Do those after.
+#'
+#' @param fname
+#' @param f
+#' @param path
+#' @param year
+#' @param seconds  probably 120 these days
+#' @param goodfactor defaults to 2
+#' @param maxiter defaults to 100, currently using 20 as experiece
+#' shows that if it goes past 20, it isn't going to converge at 100 or
+#' 200 either, usually.
+#' @param con a database connection to postgresql
+#' @return a string indicating what failed or success
+self.agg.impute.VDS.site.no.plots <- function(fname,f,path,year,seconds,goodfactor=2,maxiter=100,con){
     ## aggregate, then impute
     vds.id <-  get.vdsid.from.filename(fname)
 
@@ -113,7 +130,7 @@ self.agg.impute.VDS.site.no.plots <- function(fname,f,path,year,seconds,goodfact
                 savepath <- get.save.path(f)
                 target.file <-  make.amelia.output.file(savepath,fname,seconds,year)
                 save(df.vds.agg.imputed,file=target.file,compress='xz')
-                verify.db.dump(fname,path,year,seconds,df.vds.agg.imputed)
+                verify.db.dump(fname,path,year,seconds,df.vds.agg.imputed,con)
                 store.amelia.chains(df.vds.agg.imputed,year,vds.id,'vdsraw',maxiter=maxiter)
                 returnval <- 1
             }else{
