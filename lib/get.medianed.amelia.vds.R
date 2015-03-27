@@ -1,4 +1,3 @@
-library('zoo')
 source('./utils.R')
 
 get.amelia.vds.file <- function(vdsid,path='/',year,server='http://calvad.ctmlabs.net',serverfile='none'){
@@ -84,6 +83,19 @@ unget.amelia.vds.file <- function(vdsid,path='/',year,server='http://calvad.ctml
 ##   unzoo.incantation(df.z)
 ## }
 
+#' medianed aggregate df  Generate a hourly aggregate of the impuation results
+#'
+#' @param df_combined the mulitple imputations, rbind into a single dataframe
+#' @param op defaults to median, but you can also try mean.  This is
+#' how the multiple imputations are merged into a single imputation
+#' result
+#'
+#' @return a dataframe holding one entry per hour, with the multiple
+#' imputations aggregated according to \code{op} according to whatever
+#' time step the amelia run was done, and then aggregated up to one
+#' hour by summing the counts and averaging the occupancies
+#'
+#' Speeds are ignored because speed never works out so far
 medianed.aggregate.df <- function(df_combined,op=median){
     print(paste('use sqldf to aggregate imputations'))
 
@@ -144,30 +156,30 @@ medianed.aggregate.df <- function(df_combined,op=median){
     df_hourly
 }
 
-medianed.aggregate.df.oldway <- function(df.combined,op=median){
-  print('use zoo to combine a value')
-  varnames <- names(df.combined)
-  varnames <- grep( pattern="^ts",x=varnames,perl=TRUE,inv=TRUE,value=TRUE)
+## medianed.aggregate.df.oldway <- function(df.combined,op=median){
+##   print('use zoo to combine a value')
+##   varnames <- names(df.combined)
+##   varnames <- grep( pattern="^ts",x=varnames,perl=TRUE,inv=TRUE,value=TRUE)
 
-  df.z <- zooreg(df.combined[,varnames]
-                       ,order.by=as.numeric(df.combined$ts))
+##   df.z <- zooreg(df.combined[,varnames]
+##                        ,order.by=as.numeric(df.combined$ts))
 
-  ## using median not mean because median is resistant to extreme outliers
-  df.z <- aggregate(df.z, identity, op, na.rm=TRUE )
-  hour=3600
-  print(table(df.z$tod))
-  print('make it an hour')
-  df.z$tick <- 1
-  df.z <-  aggregate(df.z,
-                     as.numeric(time(df.z)) -
-                     as.numeric(time(df.z)) %% hour,
-                     sum, na.rm=TRUE)
-  names.occ <- grep( pattern="(^o(l|r)\\d+$)",x=names(df.z),perl=TRUE)
+##   ## using median not mean because median is resistant to extreme outliers
+##   df.z <- aggregate(df.z, identity, op, na.rm=TRUE )
+##   hour=3600
+##   print(table(df.z$tod))
+##   print('make it an hour')
+##   df.z$tick <- 1
+##   df.z <-  aggregate(df.z,
+##                      as.numeric(time(df.z)) -
+##                      as.numeric(time(df.z)) %% hour,
+##                      sum, na.rm=TRUE)
+##   names.occ <- grep( pattern="(^o(l|r)\\d+$)",x=names(df.z),perl=TRUE)
 
-  df.z[,names.occ] <-  df.z[,names.occ] / df.z[,'tick']
-  df.z$tick <- NULL
-  df.z
-}
+##   df.z[,names.occ] <-  df.z[,names.occ] / df.z[,'tick']
+##   df.z$tick <- NULL
+##   df.z
+## }
 
 condense.amelia.output.into.zoo <- function(df.amelia,op=median){
     ## as with the with WIM data, using median
@@ -234,16 +246,16 @@ get.and.plot.vds.amelia <- function(pair,year,cdb.wimid=NULL,doplots=TRUE,remote
   df.vds.agg
 }
 
-plot.zooed.vds.data <- function(df.vds.zoo,vdsid,year,fileprefix=NULL,subhead='\npost imputation',force.plot=FALSE){
+## plot.zooed.vds.data <- function(df.vds.zoo,vdsid,year,fileprefix=NULL,subhead='\npost imputation',force.plot=FALSE){
 
-  ## temporary variable for the diagnostic plots
-  ## wish I could spawn this as a separate job
-  df.merged <- unzoo.incantation(df.vds.zoo)
-  plot.vds.data(df.merged,vdsid,year,fileprefix,subhead,force.plot=force.plot)
-  rm(df.merged)
-  gc()
-  TRUE
-}
+##   ## temporary variable for the diagnostic plots
+##   ## wish I could spawn this as a separate job
+##   df.merged <- unzoo.incantation(df.vds.zoo)
+##   plot.vds.data(df.merged,vdsid,year,fileprefix,subhead,force.plot=force.plot)
+##   rm(df.merged)
+##   gc()
+##   TRUE
+## }
 
 check.for.plot.attachment <- function(vdsid,year,fileprefix=NULL,subhead='\npost imputation'){
   imagefileprefix <- paste(vdsid,year,sep='_')

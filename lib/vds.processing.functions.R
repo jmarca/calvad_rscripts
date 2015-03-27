@@ -335,7 +335,7 @@ verify.db.dump <- function(fname,path,year,seconds,df.vds.agg.imputed=NA){
     aout.agg <- data.frame(vds_id=vds.id)
     ## only go if df.vds.agg.imputed is sane
     if(load.result!='reject' & ( length(df.vds.agg.imputed$imputations)>1 & df.vds.agg.imputed$code==1)){
-      aout.agg <- impute.aggregate(df.vds.agg.imputed)
+      aout.agg <- medianed.aggregate.df(df.vds.agg.imputed)
     }
     db.ready.dump(aout.agg,vds.id,path)
   }
@@ -382,70 +382,72 @@ get.vdsid.from.filename <- function(filename){
 #' else
 #' @return the aggregated data as a dataframe
 impute.aggregate <- function(aout,hour=3600){
-  lanes <- longway.guess.lanes(aout$imputations[[1]])
-  print(paste('in impute.aggregate, with lanes=',lanes))
-  n.idx <- c(vds.lane.numbers(lanes,c("n")),'obs_count')
-  n.idx.only <- vds.lane.numbers(lanes,c("n"))
-  o.idx <- vds.lane.numbers(lanes,c("o"))
-  s.idx <- vds.lane.numbers(lanes,c("s"))
-  s.idx <- names(aout$imputations[[1]])[is.element( names(aout$imputations[[1]]),s.idx)]
-  ## if there are not speeds, then s.idx[1] is NA
-  aggimp = list()
-  for(imps in 1:(length(aout$imputations))){
-    imp <- aout$imputations[[imps]]
-    ## I don't really care about seconds in the original, as long as
-    ## it is true that it is less than 3600, as the ts is already in
-    ## the amelia output, and I just want to aggregate up.
-    ##
+    print('should not be in vds.processing.functions::impute.aggregate')
+    quit(save='no', status=1)
+##   lanes <- longway.guess.lanes(aout$imputations[[1]])
+##   print(paste('in impute.aggregate, with lanes=',lanes))
+##   n.idx <- c(vds.lane.numbers(lanes,c("n")),'obs_count')
+##   n.idx.only <- vds.lane.numbers(lanes,c("n"))
+##   o.idx <- vds.lane.numbers(lanes,c("o"))
+##   s.idx <- vds.lane.numbers(lanes,c("s"))
+##   s.idx <- names(aout$imputations[[1]])[is.element( names(aout$imputations[[1]]),s.idx)]
+##   ## if there are not speeds, then s.idx[1] is NA
+##   aggimp = list()
+##   for(imps in 1:(length(aout$imputations))){
+##     imp <- aout$imputations[[imps]]
+##     ## I don't really care about seconds in the original, as long as
+##     ## it is true that it is less than 3600, as the ts is already in
+##     ## the amelia output, and I just want to aggregate up.
+##     ##
 
-    df.zoo.n <- zooreg(imp[,n.idx],order.by=imp$ts)
-    df.zoo.n <-  aggregate(df.zoo.n,
-                           as.numeric(time(df.zoo.n)) -
-                           as.numeric(time(df.zoo.n)) %% hour,
-                           sum, na.rm=TRUE)
+##     df.zoo.n <- zooreg(imp[,n.idx],order.by=imp$ts)
+##     df.zoo.n <-  aggregate(df.zoo.n,
+##                            as.numeric(time(df.zoo.n)) -
+##                            as.numeric(time(df.zoo.n)) %% hour,
+##                            sum, na.rm=TRUE)
 
-    df.zoo.o <- zooreg(imp[,o.idx],order.by=imp$ts)
-    df.zoo.o <-  aggregate(df.zoo.o,
-                           as.numeric(time(df.zoo.o)) -
-                           as.numeric(time(df.zoo.o)) %% hour,
-                           sum, ## mean,
-                           na.rm=TRUE)
+##     df.zoo.o <- zooreg(imp[,o.idx],order.by=imp$ts)
+##     df.zoo.o <-  aggregate(df.zoo.o,
+##                            as.numeric(time(df.zoo.o)) -
+##                            as.numeric(time(df.zoo.o)) %% hour,
+##                            sum, ## mean,
+##                            na.rm=TRUE)
 
-    ## more cut and paste and tweak programming
-    if(! is.na(s.idx[1]) ){
-      ## speed is in the dataset.  Weight by vehicle count
-      df.weighted.s = data.frame(imp[,n.idx.only])
-      df.weighted.s[,s.idx] <- imp[,s.idx] * imp[,n.idx.only]
-      names(df.weighted.s) = c(n.idx.only,s.idx)
-      df.zoo.s <- zooreg(df.weighted.s,order.by=imp$ts)
-      df.zoo.s <-  aggregate(df.zoo.s,
-                             as.numeric(time(df.zoo.s)) -
-                             as.numeric(time(df.zoo.s)) %% hour,
-                             sum, na.rm=TRUE)
-      ## for(i in 1:(length(s.idx))){
-      ##   df.zoo.s[,s.idx[i]] <- df.zoo.s[,s.idx[i]]/df.zoo.s[,n.idx.only[i]]
-      ## }
-      df.zoo.o <- merge( df.zoo.o,df.zoo.s[,s.idx] )
-      names(df.zoo.o) <- c(o.idx,s.idx)
-    }
-    ## merge sets n and o (plus s)
-    aggregate.combined <- merge( df.zoo.n,df.zoo.o, suffixes = c("sum", "sumave"))
+##     ## more cut and paste and tweak programming
+##     if(! is.na(s.idx[1]) ){
+##       ## speed is in the dataset.  Weight by vehicle count
+##       df.weighted.s = data.frame(imp[,n.idx.only])
+##       df.weighted.s[,s.idx] <- imp[,s.idx] * imp[,n.idx.only]
+##       names(df.weighted.s) = c(n.idx.only,s.idx)
+##       df.zoo.s <- zooreg(df.weighted.s,order.by=imp$ts)
+##       df.zoo.s <-  aggregate(df.zoo.s,
+##                              as.numeric(time(df.zoo.s)) -
+##                              as.numeric(time(df.zoo.s)) %% hour,
+##                              sum, na.rm=TRUE)
+##       ## for(i in 1:(length(s.idx))){
+##       ##   df.zoo.s[,s.idx[i]] <- df.zoo.s[,s.idx[i]]/df.zoo.s[,n.idx.only[i]]
+##       ## }
+##       df.zoo.o <- merge( df.zoo.o,df.zoo.s[,s.idx] )
+##       names(df.zoo.o) <- c(o.idx,s.idx)
+##     }
+##     ## merge sets n and o (plus s)
+##     aggregate.combined <- merge( df.zoo.n,df.zoo.o, suffixes = c("sum", "sumave"))
 
-    if(! is.na(s.idx[1]) ){
-      names(aggregate.combined) <- c(n.idx,o.idx,s.idx)
-    }else{
-      names(aggregate.combined) <- c(n.idx,o.idx)
-    }
+##     if(! is.na(s.idx[1]) ){
+##       names(aggregate.combined) <- c(n.idx,o.idx,s.idx)
+##     }else{
+##       names(aggregate.combined) <- c(n.idx,o.idx)
+##     }
 
-    df.agg <- data.frame(coredata(aggregate.combined[,names(aggregate.combined)]))
-    df.agg$ts <- unclass(time(aggregate.combined))+ISOdatetime(1970,1,1,0,0,0,tz='UTC')
-    ts.lt <- as.POSIXlt(df.agg$ts)
-    df.agg$tod   <- ts.lt$hour + (ts.lt$min/60)
-    df.agg$day   <- ts.lt$wday
-    aggimp[[imps]] <- df.agg
-  }
-  aggimp
-}
+##     df.agg <- data.frame(coredata(aggregate.combined[,names(aggregate.combined)]))
+##     df.agg$ts <- unclass(time(aggregate.combined))+ISOdatetime(1970,1,1,0,0,0,tz='UTC')
+##     ts.lt <- as.POSIXlt(df.agg$ts)
+##     df.agg$tod   <- ts.lt$hour + (ts.lt$min/60)
+##     df.agg$day   <- ts.lt$wday
+##     aggimp[[imps]] <- df.agg
+##   }
+##   aggimp
+## }
 
 #' hourly aggregate VDS site data for a year
 #'
