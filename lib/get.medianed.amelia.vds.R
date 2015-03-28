@@ -1,6 +1,26 @@
 source('./utils.R')
 
-get.amelia.vds.file <- function(vdsid,path='/',year,server='http://calvad.ctmlabs.net',serverfile='none'){
+#' get amelia vds file
+#'
+#' go grab the output of amelia for this detector from the file server
+#'
+#' currently a little out of date, review the code before using.
+#' Also, obviously, it needs a server running at the other end
+#'
+#' @param vdsid the VDS id
+#' @param path the root path to ping the web service.  Use it if there
+#' is some sort of path like, say, /vile/file/server for the thing
+#' @param year
+#' @param server defaults to http://lysithia.its.uci.edu
+#' @param serverfile the already cached server file, if any.  If
+#' 'none' (the default) then an initial hit to the server will be done
+#' to find the file's REST path, and also ascertain whether that file
+#' exists.
+#' @return either 'todo' indicating that the file is not on the
+#' server, 'rejected' and some files if the remote fetch failed, or a
+#' dataframe containing the amelia output
+get.amelia.vds.file <- function(vdsid,path='/',year,server='http://lysithia.its.uci.edu'
+                               ,serverfile='none'){
   df.vds.agg.imputed <- list()
   files = c(serverfile)
   if(serverfile == 'none'){
@@ -30,6 +50,22 @@ get.amelia.vds.file <- function(vdsid,path='/',year,server='http://calvad.ctmlab
   df.vds.agg.imputed
 }
 
+#' get Amelia VDS file from the local file system
+#'
+#' Rather than hitting a remote server, just get the Amelia output
+#' from the local file system.  Use this if everything is running on
+#' one machine, ya?
+#'
+#' @param vdsid the VDS id
+#' @param path the root path of where the Amelia files are stashed
+#' @param year the year of the data
+#' @param server yeah well, cruft
+#' @param serverfile more cruft The thing is, you can just slot in
+#' this file in place of the other one above and use the same function
+#' call, just these last two parameters will get ignored.
+#' @return either 'todo' indicating that the file is not on this
+#' machine or not yet done, or a dataframe containing the amelia
+#' output
 get.amelia.vds.file.local <- function(vdsid,path='/',year,server,serverfile){
   df.vds.agg.imputed <- list()
 
@@ -46,6 +82,18 @@ get.amelia.vds.file.local <- function(vdsid,path='/',year,server,serverfile){
 
 }
 
+#' unget Amelia VDS output file
+#'
+#' So you need this because you can get lots of files laying around
+#' filling up your hard drive.  This call will unmap any temp files
+#' generated in the prior call
+#'
+#' @param vdsid the VDS id
+#' @param path the root path to ping the web service.  Use it if there
+#' is some sort of path like, say, /vile/file/server for the thing
+#' @param year
+#' @param server defaults to http://lysithia.its.uci.edu
+#' @return nothing at all
 unget.amelia.vds.file <- function(vdsid,path='/',year,server='http://calvad.ctmlabs.net'){
 
   path <- toupper(path)
@@ -101,7 +149,7 @@ medianed.aggregate.df <- function(df_combined,op=median){
 
     varnames <- names(df_combined)
     varnames <- grep( pattern="^ts",x=varnames,perl=TRUE,inv=TRUE,value=TRUE)
-
+    varnames <- setdiff(varnames,c('tod','day'))
 
     n.names <- grep(pattern="^n(l|r)\\d+",x=varnames,perl=TRUE,value=TRUE)
     o.names <- grep(pattern="^o(l|r)\\d+",x=varnames,perl=TRUE,value=TRUE)
@@ -131,14 +179,12 @@ medianed.aggregate.df <- function(df_combined,op=median){
                       ## compute averages of occupancy (because summed
                       ## occupancy is meaningless!)
 
-
     sqlstatement2 <- paste("select min(ts) as ts,",
                            paste('total(',c(varnames,'tick'),') as ',c(varnames,'tick'),sep=' ',collapse=','),
-                           ',tod,day',
                            'from temp_df group by hourly',
                            sep=' ',collapse=' '
                            )
-
+    print(sqlstatement2)
     ## generate the hourly summation
     df_hourly <- sqldf::sqldf(sqlstatement2,drv="SQLite")
 
@@ -151,6 +197,10 @@ medianed.aggregate.df <- function(df_combined,op=median){
     attr(df_hourly$ts,'tzone') <- 'UTC'
 
     df_hourly$tick <- NULL
+
+    ts.lt <- as.POSIXlt(df_hourly$ts)
+    df_hourly$tod   <- ts.lt$hour + (ts.lt$min/60)
+    df_hourly$day   <- ts.lt$wday
 
     ## all done, return value
     df_hourly
@@ -181,6 +231,19 @@ medianed.aggregate.df <- function(df_combined,op=median){
 ##   df.z
 ## }
 
+#' Condense Amelia output
+#'
+#' This combines the "imputations" part of the Amelia output object
+#' into a single dataframe, with all the data first rbind-ed together,
+#' and then combined into a single record per timestamp using whatever
+#' op requested (defaults to median, which is resistant to possible
+#' outliers that occasionally result from the imputation process)
+#'
+#' @param aout the Amelia output
+#' @param op usually median or mean.  With the new way, it is pretty
+#' much ignored for now and you're stuck with median.
+#' @return a dataframe containing the aggregated results of the Amelia
+#' imputations, combined one per timestamp with median.
 condense.amelia.output <- function(aout,op=median){
     ## as with the with WIM data, using median
 
@@ -193,11 +256,52 @@ condense.amelia.output <- function(aout,op=median){
     df.agg
 }
 ## alias for backwards
+
+#' Condense Amelia output
+#'
+#' old way of calling condense.amelia.output
+#'
+#' This combines the "imputations" part of the Amelia output object
+#' into a single dataframe, with all the data first rbind-ed together,
+#' and then combined into a single record per timestamp using whatever
+#' op requested (defaults to median, which is resistant to possible
+#' outliers that occasionally result from the imputation process)
+#'
+#' @param aout the Amelia output
+#' @param op usually median or mean.  With the new way, it is pretty
+#' much ignored for now and you're stuck with median.
+#' @return a dataframe containing the aggregated results of the Amelia
+#' imputations, combined one per timestamp with median.
 condense.amelia.output.into.zoo <- function(aout,op){
     print('old way of accessing condense.amelia.output')
     condense.amelia.output(aout,opp)
 }
-get.aggregated.vds.amelia <- function(vdsid,serverfile='none',path='none',remote=TRUE,year){
+
+#' Get aggregated VDS Amelia file
+#'
+#' Yet another way to call the above stack!
+#'
+#' This is a bit of a wrapper.  It will either hit the local or the
+#' remote server to get the raw Amelia output, and then will run that
+#' output through the aggregation function above, producing a
+#' dataframe with just one observation/impuation per timestamp
+#'
+#' @param vdsid the VDS id
+#' @param serverfile a cached list of the server's files
+#' @param path either 'none', the remote server's service path, or the
+#' local file system's root directory for Amelia output
+#' @param remote default is TRUE, meaning hit a remote server, or
+#' FALSE meaning hit the local server
+#' @param server defaults to http://lysithia.its.uci.edu
+#' @param year
+#' @return the condensed, aggregated Amelia imputation results as a
+#' dataframe
+get.aggregated.vds.amelia <- function(vdsid,
+                                      serverfile='none',
+                                      path='none',
+                                      remote=TRUE,
+                                      server='http://lysithia.its.uci.edu',
+                                      year){
     print(paste('in get.aggregated.vds.amelia, remote is',remote))
     df.vds.agg.imputed <- list()
     if(path=='none'){
@@ -220,26 +324,75 @@ get.aggregated.vds.amelia <- function(vdsid,serverfile='none',path='none',remote
     condense.amelia.output(df.vds.agg.imputed)
 }
 
-get.and.plot.vds.amelia <- function(pair,year,cdb.wimid=NULL,doplots=TRUE,remote=TRUE,path,force.plot=FALSE){
-  ## load the imputed file for this site, year
-  df.vds.agg <- get.aggregated.vds.amelia(pair,year=year,path=path,remote=remote)
-  if(is.null(df.vds.agg)){
-      return (NULL)
-  }
-  ## prior to binding, weed out excessive flows
-  varnames <- names(df.vds.agg)
-  flowvars <- grep('^n(r|l)\\d',x=varnames,perl=TRUE,value=TRUE)
-  for(lane in flowvars){
-    idx <- df.vds.agg[,lane] > 2500
-    df.vds.agg[idx,lane] <- 2500
-  }
 
-  couch.set.state(year,pair,doc=list('occupancy_averaged'=1))
+#' Get and plot VDS Amelia file
+#'
+#' Same as call to get.aggregated.vds.amelia, but then it will plot
+#' the output results.
+#'
+#' Which now that I think about it is sort of stupid, because really I
+#' probably also want to be able to trigger the native Amelia object
+#' plot functions.
+#'
+#' @param pair the VDS id or the wim id or the vds wim pair, I guess
+#' @param year
+#' @param doplots default is TRUE, set to FALSE if you want to skip
+#' plotting, but then, why are you running this if you don't want
+#' plots.
+#' @param remote default is TRUE, meaning hit a remote server, or
+#' FALSE meaning hit the local server
+#' @param server defaults to http://lysithia.its.uci.edu
+#' @param path either 'none', the remote server's service path, or the
+#' local file system's root directory for Amelia output
+#' @param force.plot defaults to FALSE, if TRUE will replot even if
+#' the plot appears to exist already
+#' @return the condensed, aggregated Amelia imputation results as a
+#' dataframe
+#'
+#' And plots get made and saved
+#'
+get.and.plot.vds.amelia <- function(pair,year,doplots=TRUE,
+                                    remote=TRUE,
+                                    server='http://lysithia.its.uci.edu',
+                                    path,
+                                    force.plot=FALSE){
+    ## load the imputed file for this site, year
+    aout <- NULL
+    if(remote){
+        aout <- get.amelia.vds.file(vdsid=pair,year=year,path=path,server=server)
+    }else{
+        aout <- get.amelia.vds.file.local(vdsid=pair,year=year,path=path)
+    }
+    if(is.null(aout)){
+        return (NULL)
+    }
 
-  if(doplots){
-    plot.vds.data(df.vds.agg,pair,year,force.plot=force.plot)
-  }
-  df.vds.agg
+    if(doplots){
+
+        ## do the amelia default plot functions
+        trigger.amelia.plots(aout,pair,year,force.plot=force.plot)
+    }
+
+    df.vds.agg <- condense.amelia.output(aout)
+
+    ## prior to binding, weed out excessive flows
+    varnames <- names(df.vds.agg)
+    flowvars <- grep('^n(r|l)\\d',x=varnames,perl=TRUE,value=TRUE)
+    for(lane in flowvars){
+        idx <- df.vds.agg[,lane] > 2500
+        if(length(idx[idx])>0){
+            df.vds.agg[idx,lane] <- 2500
+            print(paste('Hey, got excessive flows for ',pair,year))
+        }
+    }
+
+    ## cruft, but may as well keep it up
+    couch.set.state(year,pair,doc=list('occupancy_averaged'=1))
+
+    if(doplots){
+        plot.vds.data(df.vds.agg,pair,year,force.plot=force.plot)
+    }
+    df.vds.agg
 }
 
 ## plot.zooed.vds.data <- function(df.vds.zoo,vdsid,year,fileprefix=NULL,subhead='\npost imputation',force.plot=FALSE){
@@ -263,7 +416,171 @@ check.for.plot.attachment <- function(vdsid,year,fileprefix=NULL,subhead='\npost
   return (couch.has.attachment(trackingdb,vdsid,fourthfile))
 }
 
+#' Plot VDS data and save the resulting plots to the files system and
+#' CouchDB tracking database
+#'
+#' This is more or less a generic function to plot data either before
+#' or after running Amelia.  It only works for VDS data of course, but
+#' it doesn't care if imputations have been done or not, so indicate
+#' so by including a note in the fileprefix parameter
+#'
+#'
+#' @param df.merged the dataframe to plot
+#' @param vdsid the VDS id
+#' @param year
+#' @param fileprefix helps name the output file, and also to find it.
+#' By default the plot file will be named via the pattern
+#'
+#'     imagefileprefix <- paste(vdsid,year,sep='_')
+#'
+#' But if you include the fileprefix parameter, then the image file
+#' naming will have the pattern
+#'
+#'     imagefileprefix <- paste(vdsid,year,fileprefix,sep='_')
+#'
+#' So you can add something like "imputed" to the file name to
+#' differentiate the imputed plots from the input data plots.
+#' @param subhead Written on the plot
+#' @param force.plot defaults to FALSE.  If FALSE, and a file exists
+#' @return TRUE if all goes well, something else if not.  Really you
+#' run this for the side effect of generating plots that get dumped to
+#' the file system and then saved to the couchdb tracking database.
 plot.vds.data  <- function(df.merged,vdsid,year,fileprefix=NULL,subhead='\npost imputation',force.plot=FALSE){
+    if(!force.plot){
+        have.plot <- check.for.plot.attachment(vdsid,year,fileprefix,subhead)
+        if(have.plot){
+            return (1)
+        }
+    }
+  print('need to make plots')
+  varnames <- names(df.merged)
+  ## make some diagnostic plots
+  ## set up a reconfigured dataframe
+    plotvars <- grep('^(n|o)(r|l)\\d+',x=varnames,perl=TRUE,value=TRUE)
+    n.idx <- grep('^n',x=plotvars,perl=TRUE,value=TRUE)
+    o.idx <- grep('^o',x=plotvars,perl=TRUE,value=TRUE)
+
+    recoded <- recode.df.vds( df.merged,plotvars )
+
+  numlanes <- length(levels(as.factor(recode$lane)))
+  plotheight = 300 * numlanes
+
+  savepath <- 'images'
+  if(!file.exists(savepath)){dir.create(savepath)}
+  savepath <- paste(savepath,vdsid,sep='/')
+  if(!file.exists(savepath)){dir.create(savepath)}
+
+  imagefileprefix <- paste(vdsid,year,sep='_')
+  if(!is.null(fileprefix)){
+    imagefileprefix <- paste(vdsid,year,fileprefix,sep='_')
+  }
+
+  imagefilename <- paste(savepath,paste(imagefileprefix,'%03d.png',sep='_'),sep='/')
+
+  print(paste('plotting to',imagefilename))
+
+  png(file = imagefilename, width=900, height=plotheight, bg="transparent",pointsize=24)
+
+  plotvars <- grep('^n',x=varnames,perl=TRUE,value=TRUE)
+  f <- formula(paste( paste(plotvars,collapse='+' ),' ~ tod | day'))
+  strip.function.a <- strip.custom(which.given=1,factor.levels=day.of.week, strip.levels = TRUE )
+  strip.function.b <- strip.custom(which.given=2,factor.levels=lane.defs[1:length(plotvars)], strip.levels = TRUE )
+  a <- xyplot( n ~ tod | day + lane, data=recode
+              ,main=paste("Scatterplot volume in each lane, by time of day and day of week, for ",year," at site",vdsid,subhead),
+              ,strip = function(...){
+                strip.function.a(...)
+                strip.function.b(...)
+              }
+              ,ylab=list(label='hourly volume, by lane', cex=2)
+              ,xlab=list(label='time of day', cex=2)
+              ,type='p' ## or 'l
+              ,pch='*'
+              ,scales=list(cex=1.8)
+              ,par.settings=simpleTheme(lty=1:length(plotvars),lwd=3)
+              ,panel=pf
+              ,auto.key = list(
+                 space='bottom',
+                 points = TRUE, lines = FALSE,columns=length(plotvars),padding.text=10,cex=2
+                 )
+              )
+  print(a)
+
+  plotvars <- grep('^o(r|l)\\d',x=varnames,perl=TRUE,value=TRUE)
+  f <- formula(paste( paste(plotvars,collapse='+' ),' ~ tod | day'))
+  a <- xyplot( o ~ tod | day + lane, data=recode
+              ,main=paste("Scatterplot occupancy in each lane, by time of day and day of week, for ",year," at site",vdsid,subhead)
+              ,strip = function(...){
+                strip.function.a(...)
+                strip.function.b(...)
+              }
+              ,ylab=list(label='hourly occupancy, by lane', cex=2)
+              ,xlab=list(label='time of day', cex=2)
+              ,type='p' ## or 'l'
+              ,pch='*'
+              ,scales=list(cex=1.8)
+              ,par.settings=simpleTheme(lty=1:length(plotvars),lwd=3)
+              ,panel=pf
+              ,auto.key = list(
+                 space='bottom',
+                 points = TRUE, lines = FALSE,columns=length(plotvars),padding.text=10,cex=2
+                 )
+              )
+
+  print(a)
+
+
+  a <- xyplot(n ~ o | day + lane, data=recode
+              ,main=paste("Scatterplot hourly volume vs occupancy per lane, by day of week, for ",year," at site",vdsid,subhead)
+              ,strip = function(...){
+                strip.function.a(...)
+                strip.function.b(...)
+              }
+              ,ylab=list(label='hourly volume', cex=2)
+              ,xlab=list(label='hourly occupancy', cex=2)
+              ,type='p' ## or 'l'
+              ,pch='*'
+              ,scales=list(cex=1.8)
+              ,par.settings=simpleTheme(lty=1:length(plotvars),lwd=3)
+              ,panel=pf
+              ,auto.key = list(
+                 space='bottom',
+                 points = TRUE, lines = FALSE,columns=length(plotvars),padding.text=10,cex=2
+                 )
+              )
+
+  print(a)
+
+  strip.function.b <- strip.custom(which.given=1,factor.levels=lane.defs[1:length(plotvars)], strip.levels = TRUE )
+
+  a <- xyplot(n ~ ts | lane, data=recode
+              ,main=paste("Scatterplot hourly volume vs time, per lane, for ",year," at site",vdsid,subhead)
+              ,strip = function(...){
+                strip.function.b(...)
+              }
+              ,ylab=list(label='hourly volume', cex=2)
+              ,xlab=list(label='date', cex=2)
+              ,type='p' ## or 'l'
+              ,scales=list(cex=1.8)
+              ,par.settings=simpleTheme(lty=1:length(plotvars),lwd=3)
+              ,auto.key = list(
+                 space='bottom',
+                 points = TRUE, lines = FALSE,columns=length(plotvars),padding.text=10,cex=2
+                 )
+              )
+  print(a)
+
+  dev.off()
+
+  files.to.attach <- dir(savepath,pattern=paste(imagefileprefix,'0',sep='_'),full.names=TRUE)
+  for(f2a in files.to.attach){
+    couch.attach(trackingdb,vdsid,f2a)
+  }
+  rm(recode)
+  gc()
+  TRUE
+}
+
+plot.vds.data.oldway  <- function(df.merged,vdsid,year,fileprefix=NULL,subhead='\npost imputation',force.plot=FALSE){
     if(!force.plot){
         have.plot <- check.for.plot.attachment(vdsid,year,fileprefix,subhead)
         if(have.plot){
@@ -408,4 +725,50 @@ plot.vds.data  <- function(df.merged,vdsid,year,fileprefix=NULL,subhead='\npost 
   rm(recode)
   gc()
   TRUE
+}
+
+#' Recode VDS dataframe for plotting
+#'
+#'
+#' @param df the dataframe
+#' @param plotvars will be extracted fromthe ususal suspects if not
+#' present
+#' @return will return a new dataframe recoded for easy plotting
+recode.df.vds <- function( df ){
+    varnames <- names(df)
+    plotvars <- grep('^(n|o)(r|l)\\d+',x=varnames,perl=TRUE,value=TRUE)
+    n.idx <- grep('^n',x=plotvars,perl=TRUE,value=TRUE)
+    o.idx <- grep('^o',x=plotvars,perl=TRUE,value=TRUE)
+
+    melt_1 <- melt(data=df,
+                   measure.vars=n.idx,
+                   id.vars=c('ts','tod','day','obs_count'),
+                   variable.name='lane',
+                   value.name='volume')
+    melt_1$lane <- as.factor(substr(melt_1$lane,2,3))
+
+    melt_2 <- melt(data=df,
+                   measure.vars=o.idx,
+                   id.vars=c('ts','tod','day','obs_count'),
+                   variable.name='lane',
+                   value.name='occupancy')
+
+    melt_2$lane <- as.factor(substr(melt_2$lane,2,3))
+
+    melded <- merge(x=melt_1,y=melt_2,all=TRUE)
+    melded
+}
+
+recode.df.vds.oldway <- function( df,plotvars ){
+    recod_df <- NULL
+    for(nlane in plotvars){
+        lane <- substr(nlane,2,3)
+        olane <- paste('o',lane,sep='')
+        keepvars <- c(nlane,olane,'tod','day','ts')
+        subset <- data.frame(df[,keepvars])
+        subset$lane <- lane
+        names(subset) <- c('n','o','tod','day','ts','lane')
+        recod_df <- rbind(recod_df,subset)
+    }
+    recod_df
 }
