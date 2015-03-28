@@ -114,3 +114,47 @@ oldway
   96   97   98   99  100  101
    7    6    3    3    3    1
 >
+
+
+,"obs_count"
+
+sp <- ggplot(twerked.df, aes(x=ts, y=volume)) + geom_point(shape=1)
+
+sp + facet_grid(day ~ .)
+
+sp + facet_wrap( ~ tod, ncol=4)
+
+
+twerked.df$day <- factor(twerked.df$day,
+                         labels=c('Su','Mo','Tu','We','Th','Fr','Sa'))
+
+twerked.df$lane <- factor(twerked.df$lane,
+                          levels=c('l1','r3','r2','r1'),
+                          labels=c('left','lane2','lane3','right'))
+
+sp <- ggplot(twerked.df, aes(x=ts, y=volume, color=day))
+
+sp + geom_point(shape=1) + facet_wrap( ~ tod, ncol=4)
+
+sp + geom_point(shap=1) + facet_wrap(~lane,ncol=2)+scale_colour_hue("day")
+
+(sp <- qplot(ts, volume, data=twerked.df, colour=day))
+
+sp+scale_color_hue()
+
+
+sp <- qplot(ts, volume, data=twerked.df, colour=occupancy)
+
+sp+scale_color_gradientn(colours = rainbow(5))+geom_point(alpha=occupancy)+ facet_wrap(~lane,ncol=2)
+
+p <- ggplot(twerked.df)
+
+p + geom_point(aes(x = ts, y = volume, alpha=occupancy, color=day))+ facet_wrap(~lane,ncol=2)
+
+p + geom_point(aes(x = ts, y = volume, color=day),alpha=0.6)+ facet_wrap(~lane,ncol=2)
+
+p + geom_point(aes(x = ts, y = volume,  color=occupancy),alpha=0.6)+ facet_wrap(~lane,ncol=2)+scale_color_gradient()
+
+library(scales) # for muted
+
+p + geom_point(aes(x = ts, y = volume,  color=occupancy),alpha=0.8)+ facet_wrap(~lane,ncol=2)+scale_color_gradient2(midpoint=0.3,high=muted("blue"), low=muted("red"))
