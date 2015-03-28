@@ -244,7 +244,6 @@ db.ready.dump <- function(imps,vds.id,path='.',con){
     }
 }
 
-
 #' verify imputation was okay
 #'
 #' deprecated, I guess.  Unused any any event
@@ -444,7 +443,8 @@ impute.aggregate <- function(aout,hour=3600){
 #'
 #' @param fname the file name.  Just the name
 #' @param f the full path to the data, above
-#' @param path  yes, this is lame but it is old unued and not worth refactoring at the moment
+#' @param path path to the files yes, this is lame but it is old
+#' unused and not worth refactoring at the moment
 #' @param year the year
 #' @param vds.id the id of the VDS detector
 #' @return whatever
