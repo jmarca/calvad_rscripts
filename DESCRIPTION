@@ -13,4 +13,6 @@ Imports: sqldf,
     Amelia,
     RCurl,
     RJSONIO,
-    RPostgreSQL
+    RPostgreSQL,
+    reshape2,
+    ggplot2

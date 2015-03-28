@@ -25,10 +25,11 @@ test_that("plotting-related code works okay",{
 
     twerked.df <- recode.df.vds(df.merged)
 
-    expect_that(twerked.df,equals(c(35136,7)))
+    expect_that(dim(twerked.df),equals(c(35136,7)))
     expect_that(names(twerked.df),equals(c("ts","tod","day",
                                           "obs_count","lane","volume",
                                           "occupancy")))
 
+    expect_that(levels(twerked.df$lane),equals(c( "left",   "lane 2", "lane 3", "right" )))
 
 })

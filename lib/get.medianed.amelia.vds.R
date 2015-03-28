@@ -452,41 +452,42 @@ plot.vds.data  <- function(df.merged,vdsid,year,fileprefix=NULL,subhead='\npost 
             return (1)
         }
     }
-  print('need to make plots')
-  varnames <- names(df.merged)
-  ## make some diagnostic plots
-  ## set up a reconfigured dataframe
+    print('need to make plots')
+    varnames <- names(df.merged)
+    ## make some diagnostic plots
+    ## set up a reconfigured dataframe
     plotvars <- grep('^(n|o)(r|l)\\d+',x=varnames,perl=TRUE,value=TRUE)
     n.idx <- grep('^n',x=plotvars,perl=TRUE,value=TRUE)
     o.idx <- grep('^o',x=plotvars,perl=TRUE,value=TRUE)
 
     recoded <- recode.df.vds( df.merged,plotvars )
 
-  numlanes <- length(levels(as.factor(recode$lane)))
-  plotheight = 300 * numlanes
+    numlanes <- length(levels(as.factor(recode$lane)))
+    plotheight = 300 * numlanes
 
-  savepath <- 'images'
-  if(!file.exists(savepath)){dir.create(savepath)}
-  savepath <- paste(savepath,vdsid,sep='/')
-  if(!file.exists(savepath)){dir.create(savepath)}
+    savepath <- 'images'
+    if(!file.exists(savepath)){dir.create(savepath)}
+    savepath <- paste(savepath,vdsid,sep='/')
+    if(!file.exists(savepath)){dir.create(savepath)}
 
-  imagefileprefix <- paste(vdsid,year,sep='_')
-  if(!is.null(fileprefix)){
-    imagefileprefix <- paste(vdsid,year,fileprefix,sep='_')
-  }
+    imagefileprefix <- paste(vdsid,year,sep='_')
+    if(!is.null(fileprefix)){
+        imagefileprefix <- paste(vdsid,year,fileprefix,sep='_')
+    }
 
-  imagefilename <- paste(savepath,paste(imagefileprefix,'%03d.png',sep='_'),sep='/')
+    imagefilename <- paste(savepath,paste(imagefileprefix,'%03d.png',sep='_'),sep='/')
 
-  print(paste('plotting to',imagefilename))
+    print(paste('plotting to',imagefilename))
 
-  png(file = imagefilename, width=900, height=plotheight, bg="transparent",pointsize=24)
+    ##png(file = imagefilename, width=900, height=plotheight, bg="transparent",pointsize=24)
 
-  plotvars <- grep('^n',x=varnames,perl=TRUE,value=TRUE)
-  f <- formula(paste( paste(plotvars,collapse='+' ),' ~ tod | day'))
-  strip.function.a <- strip.custom(which.given=1,factor.levels=day.of.week, strip.levels = TRUE )
-  strip.function.b <- strip.custom(which.given=2,factor.levels=lane.defs[1:length(plotvars)], strip.levels = TRUE )
-  a <- xyplot( n ~ tod | day + lane, data=recode
-              ,main=paste("Scatterplot volume in each lane, by time of day and day of week, for ",year," at site",vdsid,subhead),
+    plotvars <- grep('^n',x=varnames,perl=TRUE,value=TRUE)
+
+    f <- formula(paste( paste(plotvars,collapse='+' ),' ~ tod | day'))
+    strip.function.a <- strip.custom(which.given=1,factor.levels=day.of.week, strip.levels = TRUE )
+    strip.function.b <- strip.custom(which.given=2,factor.levels=lane.defs[1:length(plotvars)], strip.levels = TRUE )
+    a <- xyplot( n ~ tod | day + lane, data=recode
+               ,main=paste("Scatterplot volume in each lane, by time of day and day of week, for ",year," at site",vdsid,subhead),
               ,strip = function(...){
                 strip.function.a(...)
                 strip.function.b(...)
@@ -740,22 +741,45 @@ recode.df.vds <- function( df ){
     n.idx <- grep('^n',x=plotvars,perl=TRUE,value=TRUE)
     o.idx <- grep('^o',x=plotvars,perl=TRUE,value=TRUE)
 
-    melt_1 <- melt(data=df,
-                   measure.vars=n.idx,
-                   id.vars=c('ts','tod','day','obs_count'),
-                   variable.name='lane',
-                   value.name='volume')
+    melt_1 <- reshape2::melt(data=df,
+                             measure.vars=n.idx,
+                             id.vars=c('ts','tod','day','obs_count'),
+                             variable.name='lane',
+                             value.name='volume')
     melt_1$lane <- as.factor(substr(melt_1$lane,2,3))
 
-    melt_2 <- melt(data=df,
-                   measure.vars=o.idx,
-                   id.vars=c('ts','tod','day','obs_count'),
-                   variable.name='lane',
-                   value.name='occupancy')
+    melt_2 <- reshape2::melt(data=df,
+                             measure.vars=o.idx,
+                             id.vars=c('ts','tod','day','obs_count'),
+                             variable.name='lane',
+                             value.name='occupancy')
 
     melt_2$lane <- as.factor(substr(melt_2$lane,2,3))
 
     melded <- merge(x=melt_1,y=melt_2,all=TRUE)
+
+    ## some useful factor things
+    melded$day <- factor(melded$day,
+                         labels=c('Su','Mo','Tu','We','Th','Fr','Sa'))
+
+    ## lanes?
+
+    lanes <- levels(as.factor(melded$lane))
+
+    lane.names <- c("left","right")
+    numbering <- length(lanes)
+    for(i in 3:numbering){
+        lane.names[i]=paste("lane",(numbering-i+2))
+    }
+
+    ## a little switcheroo here
+    lanes <- c(lanes[1],rev(lanes[-1]))
+    lane.names <- c(lane.names[1],rev(lane.names[-1]))
+
+    melded$lane <- factor(melded$lane,
+                          levels=lanes,
+                          labels=lane.names)
+
     melded
 }
 

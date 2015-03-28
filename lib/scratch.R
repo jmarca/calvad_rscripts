@@ -147,14 +147,32 @@ sp <- qplot(ts, volume, data=twerked.df, colour=occupancy)
 
 sp+scale_color_gradientn(colours = rainbow(5))+geom_point(alpha=occupancy)+ facet_wrap(~lane,ncol=2)
 
-p <- ggplot(twerked.df)
+p <- ggplot2::ggplot(twerked.df)
 
-p + geom_point(aes(x = ts, y = volume, alpha=occupancy, color=day))+ facet_wrap(~lane,ncol=2)
+p + ggplot2::geom_point(ggplot2::aes(x = ts, y = volume, alpha=occupancy, color=day))+ ggplot2::facet_wrap(~lane,ncol=2)
 
-p + geom_point(aes(x = ts, y = volume, color=day),alpha=0.6)+ facet_wrap(~lane,ncol=2)
+p + ggplot2::geom_point(ggplot2::aes(x = ts, y = volume, color=day),alpha=0.6)+ ggplot2::facet_wrap(~lane,ncol=2)
 
-p + geom_point(aes(x = ts, y = volume,  color=occupancy),alpha=0.6)+ facet_wrap(~lane,ncol=2)+scale_color_gradient()
+p + ggplot2::geom_point(ggplot2::aes(x = ts, y = volume,  color=occupancy),alpha=0.6)+ ggplot2::facet_wrap(~lane,ncol=2)+ggplot2::scale_color_gradient()
 
 library(scales) # for muted
 
-p + geom_point(aes(x = ts, y = volume,  color=occupancy),alpha=0.8)+ facet_wrap(~lane,ncol=2)+scale_color_gradient2(midpoint=0.3,high=muted("blue"), low=muted("red"))
+## per lane
+p + ggplot2::geom_point(ggplot2::aes(x = ts, y = volume,  color=occupancy),alpha=0.3)+ ggplot2::facet_wrap(~lane,ncol=2)+ggplot2::scale_color_gradient2(midpoint=0.23,high=("blue"), low=muted("red"))
+
+p +
+    ggplot2::geom_point(ggplot2::aes(x = ts, y = volume,  color=occupancy),alpha=0.7) +
+        ggplot2::facet_wrap(~lane,ncol=2)+
+            ggplot2::scale_color_gradient2(midpoint=0.23,high=("blue"), mid=("red"), low=("yellow"))
+
+## per hour
+p +
+    ggplot2::geom_point(ggplot2::aes(x = ts, y = volume,  color=occupancy),alpha=0.6) +
+        ggplot2::facet_wrap(~tod,ncol=4) +
+            ggplot2::scale_color_gradient2(midpoint=0.23,high=("blue"), mid=("red"), low=("yellow"))
+
+## p + ggplot2::geom_point(ggplot2::aes(x = ts, y = volume,  color=occupancy),alpha=0.50)+ ggplot2::facet_wrap(~tod,ncol=4)+ggplot2::scale_color_gradient2(midpoint=0.23,high=("blue"), low=muted("red"))
+
+
+## hack to see about lanes labeling
+## number of lanes, then drop one for decrement
