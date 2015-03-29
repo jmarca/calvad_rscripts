@@ -32,4 +32,14 @@ test_that("plotting-related code works okay",{
 
     expect_that(levels(twerked.df$lane),equals(c( "left",   "lane 2", "lane 3", "right" )))
 
+    files.to.couch <- plot.vds.data(df.merged,718204,2012,'imputed','\npost imputation',force.plot=TRUE)
+
+    expect_that(files.to.couch,equals(
+        c( "images/718204/718204_2012_imputed_001.png",
+          "images/718204/718204_2012_imputed_002.png",
+          "images/718204/718204_2012_imputed_003.png",
+          "images/718204/718204_2012_imputed_004.png"
+          )))
+
+    ## should also md5 check the dumped images?
 })

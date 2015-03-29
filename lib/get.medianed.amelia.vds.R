@@ -442,9 +442,8 @@ check.for.plot.attachment <- function(vdsid,year,fileprefix=NULL,subhead='\npost
 #' differentiate the imputed plots from the input data plots.
 #' @param subhead Written on the plot
 #' @param force.plot defaults to FALSE.  If FALSE, and a file exists
-#' @return TRUE if all goes well, something else if not.  Really you
-#' run this for the side effect of generating plots that get dumped to
-#' the file system and then saved to the couchdb tracking database.
+#' @return files.to.attach the files that you need to send off to
+#' couchdb tracking database.
 plot.vds.data  <- function(df.merged,vdsid,year,fileprefix=NULL,subhead='\npost imputation',force.plot=FALSE){
     if(!force.plot){
         have.plot <- check.for.plot.attachment(vdsid,year,fileprefix,subhead)
@@ -455,15 +454,14 @@ plot.vds.data  <- function(df.merged,vdsid,year,fileprefix=NULL,subhead='\npost 
     print('need to make plots')
     varnames <- names(df.merged)
     ## make some diagnostic plots
+
     ## set up a reconfigured dataframe
-    plotvars <- grep('^(n|o)(r|l)\\d+',x=varnames,perl=TRUE,value=TRUE)
-    n.idx <- grep('^n',x=plotvars,perl=TRUE,value=TRUE)
-    o.idx <- grep('^o',x=plotvars,perl=TRUE,value=TRUE)
+    recoded <- recode.df.vds( df.merged )
 
-    recoded <- recode.df.vds( df.merged,plotvars )
-
-    numlanes <- length(levels(as.factor(recode$lane)))
-    plotheight = 300 * numlanes
+    ## for coloring occ
+    occmidpoint <- mean(sqrt(recoded$occupancy))
+    volmidpoint <- mean((recoded$volume))
+    daymidpoint <- 12
 
     savepath <- 'images'
     if(!file.exists(savepath)){dir.create(savepath)}
@@ -479,106 +477,58 @@ plot.vds.data  <- function(df.merged,vdsid,year,fileprefix=NULL,subhead='\npost 
 
     print(paste('plotting to',imagefilename))
 
-    ##png(file = imagefilename, width=900, height=plotheight, bg="transparent",pointsize=24)
+    numlanes <- length(levels(recoded$lane))
+    plotheight = 400 * numlanes
+    png(file = imagefilename, width=1600, height=plotheight, bg="transparent",pointsize=24)
 
-    plotvars <- grep('^n',x=varnames,perl=TRUE,value=TRUE)
+    p <- ggplot2::ggplot(recoded)
 
-    f <- formula(paste( paste(plotvars,collapse='+' ),' ~ tod | day'))
-    strip.function.a <- strip.custom(which.given=1,factor.levels=day.of.week, strip.levels = TRUE )
-    strip.function.b <- strip.custom(which.given=2,factor.levels=lane.defs[1:length(plotvars)], strip.levels = TRUE )
-    a <- xyplot( n ~ tod | day + lane, data=recode
-               ,main=paste("Scatterplot volume in each lane, by time of day and day of week, for ",year," at site",vdsid,subhead),
-              ,strip = function(...){
-                strip.function.a(...)
-                strip.function.b(...)
-              }
-              ,ylab=list(label='hourly volume, by lane', cex=2)
-              ,xlab=list(label='time of day', cex=2)
-              ,type='p' ## or 'l
-              ,pch='*'
-              ,scales=list(cex=1.8)
-              ,par.settings=simpleTheme(lty=1:length(plotvars),lwd=3)
-              ,panel=pf
-              ,auto.key = list(
-                 space='bottom',
-                 points = TRUE, lines = FALSE,columns=length(plotvars),padding.text=10,cex=2
-                 )
-              )
-  print(a)
+    q <- p +
+        ggplot2::labs(list(title=paste("Scatterplot hourly volume in each lane, by time of day and day of week, for",year,"at site",vdsid,subhead),
+                           x="time of day",
+                           y="hourly volume per lane")) +
+            ggplot2::geom_point(ggplot2::aes(x = tod, y = volume,  color=occupancy),alpha=0.7) +
+                ggplot2::facet_grid(lane~day)+
+                    ggplot2::scale_color_gradient2(midpoint=occmidpoint,high=("blue"), mid=("red"), low=("yellow"))
 
-  plotvars <- grep('^o(r|l)\\d',x=varnames,perl=TRUE,value=TRUE)
-  f <- formula(paste( paste(plotvars,collapse='+' ),' ~ tod | day'))
-  a <- xyplot( o ~ tod | day + lane, data=recode
-              ,main=paste("Scatterplot occupancy in each lane, by time of day and day of week, for ",year," at site",vdsid,subhead)
-              ,strip = function(...){
-                strip.function.a(...)
-                strip.function.b(...)
-              }
-              ,ylab=list(label='hourly occupancy, by lane', cex=2)
-              ,xlab=list(label='time of day', cex=2)
-              ,type='p' ## or 'l'
-              ,pch='*'
-              ,scales=list(cex=1.8)
-              ,par.settings=simpleTheme(lty=1:length(plotvars),lwd=3)
-              ,panel=pf
-              ,auto.key = list(
-                 space='bottom',
-                 points = TRUE, lines = FALSE,columns=length(plotvars),padding.text=10,cex=2
-                 )
-              )
+    print(q)
 
-  print(a)
+    q <- p +
+        ggplot2::labs(list(title=paste("Scatterplot average hourly occupancy in each lane, by time of day and day of week, for",year,"at site",vdsid,subhead),
+                           x="time of day",
+                           y="hourly avg occupancy per lane")) +
+            ggplot2::geom_point(ggplot2::aes(x = tod, y = occupancy,  color=volume),alpha=0.7) +
+                ggplot2::facet_grid(lane~day)+
+                    ggplot2::scale_color_gradient2(midpoint=volmidpoint,high=("blue"), mid=("red"), low=("yellow"))
+
+    print(q)
 
 
-  a <- xyplot(n ~ o | day + lane, data=recode
-              ,main=paste("Scatterplot hourly volume vs occupancy per lane, by day of week, for ",year," at site",vdsid,subhead)
-              ,strip = function(...){
-                strip.function.a(...)
-                strip.function.b(...)
-              }
-              ,ylab=list(label='hourly volume', cex=2)
-              ,xlab=list(label='hourly occupancy', cex=2)
-              ,type='p' ## or 'l'
-              ,pch='*'
-              ,scales=list(cex=1.8)
-              ,par.settings=simpleTheme(lty=1:length(plotvars),lwd=3)
-              ,panel=pf
-              ,auto.key = list(
-                 space='bottom',
-                 points = TRUE, lines = FALSE,columns=length(plotvars),padding.text=10,cex=2
-                 )
-              )
+    q <- p +
+        ggplot2::labs(list(title=paste("Scatterplot hourly volume vs occupancy in each lane, by day of week, for",year,"at site",vdsid,subhead),
+                           y="hourly volume per lane",
+                           x="hourly avg occupancy per lane")) +
+            ggplot2::geom_point(ggplot2::aes(y = volume, x = occupancy,  color=tod),alpha=0.7) +
+                ggplot2::facet_grid(lane~day)+
+                    ggplot2::scale_color_gradient2(midpoint=daymidpoint,high=("blue"), mid=("red"), low=("lightblue"),name="hour")
 
-  print(a)
+    print(q)
 
-  strip.function.b <- strip.custom(which.given=1,factor.levels=lane.defs[1:length(plotvars)], strip.levels = TRUE )
+    q <- p +
+        ggplot2::labs(list(title=paste("Scatterplot hourly volume vs time in each lane, by hour of day, for",year,"at site",vdsid,subhead),
+                           y="hourly volume per lane",
+                           x="date")) +
+            ggplot2::geom_point(ggplot2::aes(x = ts, y = volume,  color=lane),alpha=0.6) +
+                ggplot2::facet_wrap(~tod,ncol=4) +
+                    ggplot2::scale_color_hue()
 
-  a <- xyplot(n ~ ts | lane, data=recode
-              ,main=paste("Scatterplot hourly volume vs time, per lane, for ",year," at site",vdsid,subhead)
-              ,strip = function(...){
-                strip.function.b(...)
-              }
-              ,ylab=list(label='hourly volume', cex=2)
-              ,xlab=list(label='date', cex=2)
-              ,type='p' ## or 'l'
-              ,scales=list(cex=1.8)
-              ,par.settings=simpleTheme(lty=1:length(plotvars),lwd=3)
-              ,auto.key = list(
-                 space='bottom',
-                 points = TRUE, lines = FALSE,columns=length(plotvars),padding.text=10,cex=2
-                 )
-              )
-  print(a)
+    print(q)
 
-  dev.off()
+    dev.off()
 
-  files.to.attach <- dir(savepath,pattern=paste(imagefileprefix,'0',sep='_'),full.names=TRUE)
-  for(f2a in files.to.attach){
-    couch.attach(trackingdb,vdsid,f2a)
-  }
-  rm(recode)
-  gc()
-  TRUE
+    files.to.attach <- dir(savepath,pattern=paste(imagefileprefix,'0',sep='_'),full.names=TRUE)
+
+    files.to.attach
 }
 
 plot.vds.data.oldway  <- function(df.merged,vdsid,year,fileprefix=NULL,subhead='\npost imputation',force.plot=FALSE){
