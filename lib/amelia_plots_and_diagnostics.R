@@ -89,7 +89,26 @@ make.truck.plots <- function(df,year,site,dir,cdb.id,imputed=TRUE){
   files.to.attach
 }
 
-make.truck.plots.by.lane <- function(df,year,site,dir,cdb.id,imputed=TRUE){
+#' Make truck plots by lane
+#'
+#' just make some diagnostic plots
+#' and stash to CouchDB
+#'
+#' Not yet revised to use ggplot2
+#'
+#' @param df the dataframe
+#' @param year
+#' @param site the site id
+#' @param dir the direction for the data here
+#' @param cdb.id the couchdb doc id for stashing the plot files as attachments
+#' @param imputed defaults to TRUE, whether or not this data has already been imputed to fill any missing holes
+#' @param trackingdb defaults to the usual vdsdata%2ftracking
+#' @return nothing or true, I guess.  run this for the side effect of
+#' generating plots and saving them to couchdb
+make.truck.plots.by.lane <- function(df,year,site,dir,
+                                     cdb.id,
+                                     imputed=TRUE,
+                                     trackingdb='vdsdata%2ftracking'){
   varnames <-  names(df)
   ## make some diagnostic plots
   if(length(df$lane)==0){
@@ -103,7 +122,9 @@ make.truck.plots.by.lane <- function(df,year,site,dir,cdb.id,imputed=TRUE){
   if(imputed){
     trucks <- 'imputed_trucks_bylane'
   }
-  imagefilename <- paste(savepath,paste(site,dir,year,trucks,'%03d.png',sep='_'),sep='/')
+  imagefilename <- paste(savepath,
+                         paste(site,dir,year,trucks,
+                               '%03d.png',sep='_'),sep='/')
   numlanes <- length(levels(as.factor(df$lane)))
   plotheight = 300 * numlanes
 

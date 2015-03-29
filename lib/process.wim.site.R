@@ -11,28 +11,60 @@ day.of.week <-    c('Sunday','Monday','Tuesday','Wednesday','Thursday','Friday',
 lane.defs <- c('left lane','right lane 1', 'right lane 2', 'right lane 3', 'right lane 4', 'right lane 5', 'right lane 6', 'right lane 7', 'right lane 8')
 strip.function.a <- strip.custom(which.given=1,factor.levels=day.of.week, strip.levels = TRUE )
 
-
+#' load the imputed WIM (Amelia) output object from the file system
+#'
+#' Will NOT aggregate or clean up the Amelia output.  Just gets it
+#'
+#' @param wim.site
+#' @param year
+#' @param direction
+#' @param wim.path default '/data/backup/wim' because that is where it
+#' goes on the machine I developed this on.
+#' @param seconds the number of seconds that were aggregated up for
+#' the Amelia run.  defaults to one hour, or 3600
+#' @return the amelia output object
 load_imputed_wim <- function(wim.site,year,direction,wim.path='/data/backup/wim',seconds=3600){
     ## reload the imputed wim data
     cdb.wimid <- paste('wim',wim.site,direction,sep='.')
     savepath <- paste(wim.path,year,wim.site,direction,sep='/')
-    target.file <- make.amelia.output.file(savepath,paste('wim',wim.site,direction,sep=''),seconds,year)
+    target.file <- make.amelia.output.file(savepath,
+                                           paste('wim',wim.site,direction,sep=''),
+                                           seconds,year)
     print(paste('loading',target.file))
-    ## fs write
+    ## fs read
     df.wim.amelia <- NULL
     load.result <- load(file=target.file)
     df.wim.amelia
 }
 
-handle_wim_dir <- function(wim.site,year,direction,
-                           wim.path='/data/backup/wim',seconds=3600){
+#' handle a wim site, direction.  This function loads the imputed wim
+#' data, then makes a merged file, makes truck plots, and attaches
+#' them to the couchdb
+#'
+#' @param wim.site the WIM site id
+#' @param year
+#' @param direction the direction for this data
+#' @param wim.path where are the saved files to be found on the local file system
+#' @param seconds how much the WIM data was aggregated up for the
+#' Amelia runs...defaults to one hour, or 3600 seconds
+#' @param trackingdb defaults to the usual 'vdsdata%2ftracking'
+#' @return nothing or nothing.  run this for the side effect of
+#' generating plots to couchdb
+handle_wim_dir <- function(wim.site,
+                           year,
+                           direction,
+                           wim.path='/data/backup/wim',
+                           seconds=3600,
+                           trackingdb='vdsdata%2ftracking'){
     df.wim.amelia <- load_imputed_wim(wim.site,year,direction,wim.path,seconds)
     if(length(df.wim.amelia) == 1){
         print(paste("amelia run for wim not good",df.wim.amelia))
-        return
-    }else if(!length(df.wim.amelia)>0 || !length(df.wim.amelia$imputations)>0 || df.wim.amelia$code!=1 ){
+        return(NULL)
+    }else if(!length(df.wim.amelia)>0 ||
+             !length(df.wim.amelia$imputations)>0 ||
+             df.wim.amelia$code!=1 ){
         print("amelia run for vds not good")
-        return
+        return(NULL)
     }
     df.wim.amelia.c <- NULL
     for(i in 1:length(df.wim.amelia$imputations)){
@@ -43,13 +75,31 @@ handle_wim_dir <- function(wim.site,year,direction,
     files.to.attach <- make.truck.plots(df.merged,year,wim.site,
                                         direction,cdb.wimid,imputed=TRUE)
 
-    for(f2a in files.to.attach){
-        couch.attach(trackingdb,cdb.wimid,f2a,local=TRUE)
-    }
+    upload.plots.couchdb(trackingdb=trackingdb,
+                         files.to.attach=files.to.attach)
     1
 }
 
-post.impute.plots <- function(wim.site,year,wim.path='/data/backup/wim',seconds=3600){
+#' Generate the post imputation plots for a WIM site
+#'
+#' will run through all directions of flow defined for this WIM site
+#' for the given year
+#'
+#' @param wim.site the WIM site id
+#' @param year
+#' @param wim.path where is the data stashed
+#' @param seconds the number of seconds aggregated in the data,
+#' defaults to one hour or 3600
+#' @param trackingdb where to shove the plots as attachments, defaults
+#' to the usual couchdb trackingdb of 'vdsdata%2ftracking'
+#' @return 1 Run this for the side effect or generating plots for all
+#' directions at this WIM site
+#'
+post.impute.plots <- function(wim.site,
+                              year,
+                              wim.path='/data/backup/wim',
+                              seconds=3600,
+                              trackingdb='vdsdata%2ftracking'){
     ## no need to load raw data
     df.directions <- get.wim.directions(wim.site)
     directions = df.directions$direction
@@ -228,8 +278,22 @@ process.wim.site <- function(wim.site,year,preplot=TRUE,postplot=TRUE,impute=TRU
     returnval
 }
 
-
-preplot <- function(wim.site,direction,year,df.wim,imagepath="images/"){
+#' Generate the plots before imputation
+#'
+#' That's why it is called "pre"
+#'
+#' @param wim.site the WIM site id
+#' @param direction the direction of flow for this data
+#' @param year
+#' @param df.wim the WIM data dataframe
+#' @param imagepath where to stash the images generated, defaults to "./images/"
+#' @param trackingdb defaults to the usual 'vdsdata%2ftracking'
+#' @return falls of the end and dies.  Run for the side effect of
+#' generating files in the local filesystem that then also get
+#' uploaded to CouchDB tracking database document for this wim site as
+#' attachments
+preplot <- function(wim.site,direction,year,df.wim,imagepath="images/",
+                    trackingdb='vdsdata%2ftracking'){
 
     file.pattern <- paste(wim.site,direction,year,'agg.redo',sep='_')
 
@@ -331,14 +395,36 @@ preplot <- function(wim.site,direction,year,df.wim,imagepath="images/"){
     print(a)
 
     dev.off()
-    upload.plots.couchdb(wim.site,direction,year,imagepath)
+    upload.plots.couchdb(wim.site,direction,year,imagepath,trackingdb=trackingdb)
 }
 
+#' upload plots to couchdb
+#'
+#' pass in a list of files, and they will be uploaded as attachments
+#' to the correct document in the tracking db
+#'
+#' @param wim.site the WIM site id
+#' @param direction the direction for this data
+#' @param year
+#' @param imagepath where are the images.  Will be used if you don't
+#' pass in a list of files, otherwise will be ignored
+#' @param trackingdb defaults to the usual 'vdsdata%2ftracking'
+#' @param local defaults to TRUE, will be passed to the couchdb
+#' functions.  If false it will push up to the regular couchdb, if
+#' true will look for whatever is defined as local couchdb server, or
+#' localhost
+#' @param files.to.attach a list of files to attach to couchdb. If
+#' empty or if left as default value, will look through imagepath and
+#' will upload all of the files found that match the pattern for this
+#' wim site id, direction, and year.
+#' @return just falls of the end and exits.  La dee da.  Run this
+#' strictly for the side effect of attaching files to the document in
+#' the couchdb database
 upload.plots.couchdb <- function(wim.site
                                  ,direction
                                  ,year
                                  ,imagepath
-                                 ,trackingdb
+                                 ,trackingdb='vdsdata%2ftracking'
                                 ,local=TRUE
                                 ,files.to.attach=list()){
 
