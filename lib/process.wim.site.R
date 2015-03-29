@@ -114,7 +114,29 @@ post.impute.plots <- function(wim.site,
 
 ## must modularize this more
 
-process.wim.site <- function(wim.site,year,preplot=TRUE,postplot=TRUE,impute=TRUE,wim.path='/data/backup/wim/'){
+#' Process a WIM site's data, including pre-plots, imputation of
+#' missing values, and post-plots.
+#'
+#' This is the main routine.
+#'
+#' @param wim.site
+#' @param year
+#' @param preplot  TRUE or FALSE, defaults to TRUE
+#' @param postplot TRUE or FALSE, defaults to TRUE
+#' @param impute   TRUE or FALSE, defaults to TRUE
+#' @param wim.path where the WIM data can be found on the local file
+#' @param trackingdb the usual "vdsdata%2ftracking"
+#' system.  Default is '/data/backup/wim' because that is the
+#' directory on the machine I developed this function on
+#' @return either 0, 1, or the result of running the imputation if it failed.  Also check the trackingdb for any mention of issues.
+#' @export
+process.wim.site <- function(wim.site,
+                             year,
+                             preplot=TRUE,
+                             postplot=TRUE,
+                             impute=TRUE,
+                             wim.path='/data/backup/wim/',
+                             trackingdb='vdsdata%2ftracking'){
 
     print(paste('wim path is ',wim.path))
 
@@ -136,7 +158,10 @@ process.wim.site <- function(wim.site,year,preplot=TRUE,postplot=TRUE,impute=TRU
     ## only continue if I have real data
     if(dim(df.wim)[1]==0){
         print(paste('problem, dim df.wim is',dim(df.wim)))
-        couch.set.state(year=year,detector.id=paste('wim',wim.site,sep='.'),doc=list('imputed'='no wim data in database'))
+        couch.set.state(year=year,
+                        detector.id=paste('wim',wim.site,sep='.'),
+                        doc=list('imputed'='no wim data in database'),
+                        db=trackingdb)
         return(0)
     }
 
@@ -153,11 +178,17 @@ process.wim.site <- function(wim.site,year,preplot=TRUE,postplot=TRUE,impute=TRU
         ## direction <- names(df.wim.split)[1]
         cdb.wimid <- paste('wim',wim.site,direction,sep='.')
         if(length(df.wim.split[[direction]]$ts)<100){
-            couch.set.state(year=year,detector.id=cdb.wimid,doc=list('imputed'='less than 100 timestamps for raw data in db'))
+            couch.set.state(year=year,
+                            detector.id=cdb.wimid,
+                            doc=list('imputed'='less than 100 timestamps for raw data in db'),
+                            db=trackingdb)
             next
         }
         if(length(df.wim.speed.split[[direction]]$ts)<100){
-            couch.set.state(year=year,detector.id=cdb.wimid,doc=list('imputed'='less than 100 timestamps for speed data in db'))
+            couch.set.state(year=year,
+                            detector.id=cdb.wimid,
+                            doc=list('imputed'='less than 100 timestamps for speed data in db'),
+                            db=trackingdb)
             next
         }
 
@@ -219,7 +250,10 @@ process.wim.site <- function(wim.site,year,preplot=TRUE,postplot=TRUE,impute=TRU
 
             ## direction <- names(df.wim.split)[1]
             print(paste(year,wim.site,direction))
-            couch.set.state(year=year,detector.id=cdb.wimid,doc=list('imputed'='started'))
+            couch.set.state(year=year,
+                            detector.id=cdb.wimid,
+                            doc=list('imputed'='started'),
+                            db=trackingdb)
 
             ## save and move on to the next one
 
@@ -252,7 +286,10 @@ process.wim.site <- function(wim.site,year,preplot=TRUE,postplot=TRUE,impute=TRU
             if(class(r) == "try-error") {
                 returnval <- paste(r,'')
                 print(paste('try error:',r))
-                couch.set.state(year=year,detector.id=cdb.wimid,doc=list('imputed'=paste('try error',r)))
+                couch.set.state(year=year,
+                                detector.id=cdb.wimid,
+                                doc=list('imputed'=paste('try error',r)),
+                                db=trackingdb)
             }
 
             if(df.wim.amelia$code==1){
@@ -262,12 +299,18 @@ process.wim.site <- function(wim.site,year,preplot=TRUE,postplot=TRUE,impute=TRU
                 print(paste('name is',target.file,'savepath is',savepath))
                 ## fs write
                 save(df.wim.amelia,file=target.file,compress="xz")
-                couch.set.state(year=year,detector.id=cdb.wimid,doc=list('imputed'='finished'))
+                couch.set.state(year=year,
+                                detector.id=cdb.wimid,
+                                doc=list('imputed'='finished'),
+                                db=trackingdb)
                 returnval <- 1
             }else{
                 returnval <- paste(df.vds.agg.imputed$code,'message',df.vds.agg.imputed$message)
                 print(paste("amelia not happy:",returnval))
-                couch.set.state(year=year,detector.id=cdb.wimid,doc=list('imputed'=paste('error:',returnval)))
+                couch.set.state(year=year,
+                                detector.id=cdb.wimid,
+                                doc=list('imputed'=paste('error:',returnval)),
+                                db=trackingdb)
             }
             rm(df.wim.amelia,local.df.wim.agg)
             gc()
