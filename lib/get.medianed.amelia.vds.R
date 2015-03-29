@@ -346,6 +346,9 @@ get.aggregated.vds.amelia <- function(vdsid,
 #' local file system's root directory for Amelia output
 #' @param force.plot defaults to FALSE, if TRUE will replot even if
 #' the plot appears to exist already
+#' @param trackingdb the CouchDB database that is being used to track
+#' detector status.  Will push the generated plot files to this
+#' database as attached files
 #' @return the condensed, aggregated Amelia imputation results as a
 #' dataframe
 #'
@@ -355,7 +358,8 @@ get.and.plot.vds.amelia <- function(pair,year,doplots=TRUE,
                                     remote=TRUE,
                                     server='http://lysithia.its.uci.edu',
                                     path,
-                                    force.plot=FALSE){
+                                    force.plot=FALSE,
+                                    trackingdb='vdsdata%2ftracking'){
     ## load the imputed file for this site, year
     aout <- NULL
     if(remote){
@@ -390,7 +394,12 @@ get.and.plot.vds.amelia <- function(pair,year,doplots=TRUE,
     couch.set.state(year,pair,doc=list('occupancy_averaged'=1))
 
     if(doplots){
-        plot.vds.data(df.vds.agg,pair,year,force.plot=force.plot)
+        attach.files <- plot.vds.data(df.vds.agg,pair,year,
+                                      force.plot=force.plot,
+                                      trackingdb=trackingdb)
+        for(f2a in files.to.attach){
+            couch.attach(trackingdb,vdsid,f2a)
+        }
     }
     df.vds.agg
 }
@@ -406,7 +415,27 @@ get.and.plot.vds.amelia <- function(pair,year,doplots=TRUE,
 ##   TRUE
 ## }
 
-check.for.plot.attachment <- function(vdsid,year,fileprefix=NULL,subhead='\npost imputation'){
+#' Check CouchDB for whether or not plots have been previously created and attached.  If TRUE, then you can skip the work, if FALSE, then you need to make all the plots.
+#'
+#' It doesn't check each file, just for the 4th plot created, figuring
+#' that if that one has been saved, then 1,2,and 3 have also been
+#' saved.
+#'
+#' @param vdsid
+#' @param year
+#' @param fileprefix
+#' @param trackingdb defaults to the usual 'vdsdata%2ftracking
+#' @return TRUE or FALSE whether the doc (based on VDSID) has the attached file
+#'
+#' What this routine does is to re-create the expected filename (I
+#' should modularize that routine) and then figure outthe doc id, then
+#' will use couchUtils.R to hit the db and check for whether the
+#' plot file number 4 has been attached to the database yet.
+#'
+#' In my code I use this to test whether or not to redo the plots.
+check.for.plot.attachment <- function(vdsid,year,
+                                      fileprefix=NULL,
+                                      trackingdb='vdsdata%2ftracking'){
   imagefileprefix <- paste(vdsid,year,sep='_')
   if(!is.null(fileprefix)){
     imagefileprefix <- paste(vdsid,year,fileprefix,sep='_')
@@ -442,11 +471,15 @@ check.for.plot.attachment <- function(vdsid,year,fileprefix=NULL,subhead='\npost
 #' differentiate the imputed plots from the input data plots.
 #' @param subhead Written on the plot
 #' @param force.plot defaults to FALSE.  If FALSE, and a file exists
+#' @param trackingdb defaults to 'vdsdata%2ftracking' for checking if
+#' plots already done
 #' @return files.to.attach the files that you need to send off to
 #' couchdb tracking database.
-plot.vds.data  <- function(df.merged,vdsid,year,fileprefix=NULL,subhead='\npost imputation',force.plot=FALSE){
+plot.vds.data  <- function(df.merged,vdsid,year,fileprefix=NULL,subhead='\npost imputation',force.plot=FALSE,trackingdb='vdsdata%2ftracking'){
     if(!force.plot){
-        have.plot <- check.for.plot.attachment(vdsid,year,fileprefix,subhead)
+        have.plot <- check.for.plot.attachment(vdsid,year,
+                                               fileprefix,
+                                               trackingdb=trackingdb)
         if(have.plot){
             return (1)
         }
@@ -531,152 +564,152 @@ plot.vds.data  <- function(df.merged,vdsid,year,fileprefix=NULL,subhead='\npost 
     files.to.attach
 }
 
-plot.vds.data.oldway  <- function(df.merged,vdsid,year,fileprefix=NULL,subhead='\npost imputation',force.plot=FALSE){
-    if(!force.plot){
-        have.plot <- check.for.plot.attachment(vdsid,year,fileprefix,subhead)
-        if(have.plot){
-            return (1)
-        }
-    }
-  print('need to make plots')
-  varnames <- names(df.merged)
-  ## make some diagnostic plots
-  ## set up a reconfigured dataframe
-  plotvars <- grep('^n(r|l)\\d',x=varnames,perl=TRUE,value=TRUE)
+## plot.vds.data.oldway  <- function(df.merged,vdsid,year,fileprefix=NULL,subhead='\npost imputation',force.plot=FALSE){
+##     if(!force.plot){
+##         have.plot <- check.for.plot.attachment(vdsid,year,fileprefix,subhead)
+##         if(have.plot){
+##             return (1)
+##         }
+##     }
+##   print('need to make plots')
+##   varnames <- names(df.merged)
+##   ## make some diagnostic plots
+##   ## set up a reconfigured dataframe
+##   plotvars <- grep('^n(r|l)\\d',x=varnames,perl=TRUE,value=TRUE)
 
-  recode <- data.frame()
-  for(nlane in plotvars){
-    lane <- substr(nlane,2,3)
-    olane <- paste('o',lane,sep='')
-    keepvars <- c(nlane,olane,'tod','day','ts')
-    subset <- data.frame(df.merged[,keepvars])
-    subset$lane <- lane
-    names(subset) <- c('n','o','tod','day','ts','lane')
-    if(length(recode)==0){
-      recode <- subset
-    }else{
-      recode <- rbind(recode,subset)
-    }
-  }
-
-
-  numlanes <- length(levels(as.factor(recode$lane)))
-  plotheight = 300 * numlanes
-
-  savepath <- 'images'
-  if(!file.exists(savepath)){dir.create(savepath)}
-  savepath <- paste(savepath,vdsid,sep='/')
-  if(!file.exists(savepath)){dir.create(savepath)}
-
-  imagefileprefix <- paste(vdsid,year,sep='_')
-  if(!is.null(fileprefix)){
-    imagefileprefix <- paste(vdsid,year,fileprefix,sep='_')
-  }
-
-  imagefilename <- paste(savepath,paste(imagefileprefix,'%03d.png',sep='_'),sep='/')
-
-  print(paste('plotting to',imagefilename))
-
-  png(file = imagefilename, width=900, height=plotheight, bg="transparent",pointsize=24)
-
-  plotvars <- grep('^n',x=varnames,perl=TRUE,value=TRUE)
-  f <- formula(paste( paste(plotvars,collapse='+' ),' ~ tod | day'))
-  strip.function.a <- strip.custom(which.given=1,factor.levels=day.of.week, strip.levels = TRUE )
-  strip.function.b <- strip.custom(which.given=2,factor.levels=lane.defs[1:length(plotvars)], strip.levels = TRUE )
-  a <- xyplot( n ~ tod | day + lane, data=recode
-              ,main=paste("Scatterplot volume in each lane, by time of day and day of week, for ",year," at site",vdsid,subhead),
-              ,strip = function(...){
-                strip.function.a(...)
-                strip.function.b(...)
-              }
-              ,ylab=list(label='hourly volume, by lane', cex=2)
-              ,xlab=list(label='time of day', cex=2)
-              ,type='p' ## or 'l
-              ,pch='*'
-              ,scales=list(cex=1.8)
-              ,par.settings=simpleTheme(lty=1:length(plotvars),lwd=3)
-              ,panel=pf
-              ,auto.key = list(
-                 space='bottom',
-                 points = TRUE, lines = FALSE,columns=length(plotvars),padding.text=10,cex=2
-                 )
-              )
-  print(a)
-
-  plotvars <- grep('^o(r|l)\\d',x=varnames,perl=TRUE,value=TRUE)
-  f <- formula(paste( paste(plotvars,collapse='+' ),' ~ tod | day'))
-  a <- xyplot( o ~ tod | day + lane, data=recode
-              ,main=paste("Scatterplot occupancy in each lane, by time of day and day of week, for ",year," at site",vdsid,subhead)
-              ,strip = function(...){
-                strip.function.a(...)
-                strip.function.b(...)
-              }
-              ,ylab=list(label='hourly occupancy, by lane', cex=2)
-              ,xlab=list(label='time of day', cex=2)
-              ,type='p' ## or 'l'
-              ,pch='*'
-              ,scales=list(cex=1.8)
-              ,par.settings=simpleTheme(lty=1:length(plotvars),lwd=3)
-              ,panel=pf
-              ,auto.key = list(
-                 space='bottom',
-                 points = TRUE, lines = FALSE,columns=length(plotvars),padding.text=10,cex=2
-                 )
-              )
-
-  print(a)
+##   recode <- data.frame()
+##   for(nlane in plotvars){
+##     lane <- substr(nlane,2,3)
+##     olane <- paste('o',lane,sep='')
+##     keepvars <- c(nlane,olane,'tod','day','ts')
+##     subset <- data.frame(df.merged[,keepvars])
+##     subset$lane <- lane
+##     names(subset) <- c('n','o','tod','day','ts','lane')
+##     if(length(recode)==0){
+##       recode <- subset
+##     }else{
+##       recode <- rbind(recode,subset)
+##     }
+##   }
 
 
-  a <- xyplot(n ~ o | day + lane, data=recode
-              ,main=paste("Scatterplot hourly volume vs occupancy per lane, by day of week, for ",year," at site",vdsid,subhead)
-              ,strip = function(...){
-                strip.function.a(...)
-                strip.function.b(...)
-              }
-              ,ylab=list(label='hourly volume', cex=2)
-              ,xlab=list(label='hourly occupancy', cex=2)
-              ,type='p' ## or 'l'
-              ,pch='*'
-              ,scales=list(cex=1.8)
-              ,par.settings=simpleTheme(lty=1:length(plotvars),lwd=3)
-              ,panel=pf
-              ,auto.key = list(
-                 space='bottom',
-                 points = TRUE, lines = FALSE,columns=length(plotvars),padding.text=10,cex=2
-                 )
-              )
+##   numlanes <- length(levels(as.factor(recode$lane)))
+##   plotheight = 300 * numlanes
 
-  print(a)
+##   savepath <- 'images'
+##   if(!file.exists(savepath)){dir.create(savepath)}
+##   savepath <- paste(savepath,vdsid,sep='/')
+##   if(!file.exists(savepath)){dir.create(savepath)}
 
-  strip.function.b <- strip.custom(which.given=1,factor.levels=lane.defs[1:length(plotvars)], strip.levels = TRUE )
+##   imagefileprefix <- paste(vdsid,year,sep='_')
+##   if(!is.null(fileprefix)){
+##     imagefileprefix <- paste(vdsid,year,fileprefix,sep='_')
+##   }
 
-  a <- xyplot(n ~ ts | lane, data=recode
-              ,main=paste("Scatterplot hourly volume vs time, per lane, for ",year," at site",vdsid,subhead)
-              ,strip = function(...){
-                strip.function.b(...)
-              }
-              ,ylab=list(label='hourly volume', cex=2)
-              ,xlab=list(label='date', cex=2)
-              ,type='p' ## or 'l'
-              ,scales=list(cex=1.8)
-              ,par.settings=simpleTheme(lty=1:length(plotvars),lwd=3)
-              ,auto.key = list(
-                 space='bottom',
-                 points = TRUE, lines = FALSE,columns=length(plotvars),padding.text=10,cex=2
-                 )
-              )
-  print(a)
+##   imagefilename <- paste(savepath,paste(imagefileprefix,'%03d.png',sep='_'),sep='/')
 
-  dev.off()
+##   print(paste('plotting to',imagefilename))
 
-  files.to.attach <- dir(savepath,pattern=paste(imagefileprefix,'0',sep='_'),full.names=TRUE)
-  for(f2a in files.to.attach){
-    couch.attach(trackingdb,vdsid,f2a)
-  }
-  rm(recode)
-  gc()
-  TRUE
-}
+##   png(file = imagefilename, width=900, height=plotheight, bg="transparent",pointsize=24)
+
+##   plotvars <- grep('^n',x=varnames,perl=TRUE,value=TRUE)
+##   f <- formula(paste( paste(plotvars,collapse='+' ),' ~ tod | day'))
+##   strip.function.a <- strip.custom(which.given=1,factor.levels=day.of.week, strip.levels = TRUE )
+##   strip.function.b <- strip.custom(which.given=2,factor.levels=lane.defs[1:length(plotvars)], strip.levels = TRUE )
+##   a <- xyplot( n ~ tod | day + lane, data=recode
+##               ,main=paste("Scatterplot volume in each lane, by time of day and day of week, for ",year," at site",vdsid,subhead),
+##               ,strip = function(...){
+##                 strip.function.a(...)
+##                 strip.function.b(...)
+##               }
+##               ,ylab=list(label='hourly volume, by lane', cex=2)
+##               ,xlab=list(label='time of day', cex=2)
+##               ,type='p' ## or 'l
+##               ,pch='*'
+##               ,scales=list(cex=1.8)
+##               ,par.settings=simpleTheme(lty=1:length(plotvars),lwd=3)
+##               ,panel=pf
+##               ,auto.key = list(
+##                  space='bottom',
+##                  points = TRUE, lines = FALSE,columns=length(plotvars),padding.text=10,cex=2
+##                  )
+##               )
+##   print(a)
+
+##   plotvars <- grep('^o(r|l)\\d',x=varnames,perl=TRUE,value=TRUE)
+##   f <- formula(paste( paste(plotvars,collapse='+' ),' ~ tod | day'))
+##   a <- xyplot( o ~ tod | day + lane, data=recode
+##               ,main=paste("Scatterplot occupancy in each lane, by time of day and day of week, for ",year," at site",vdsid,subhead)
+##               ,strip = function(...){
+##                 strip.function.a(...)
+##                 strip.function.b(...)
+##               }
+##               ,ylab=list(label='hourly occupancy, by lane', cex=2)
+##               ,xlab=list(label='time of day', cex=2)
+##               ,type='p' ## or 'l'
+##               ,pch='*'
+##               ,scales=list(cex=1.8)
+##               ,par.settings=simpleTheme(lty=1:length(plotvars),lwd=3)
+##               ,panel=pf
+##               ,auto.key = list(
+##                  space='bottom',
+##                  points = TRUE, lines = FALSE,columns=length(plotvars),padding.text=10,cex=2
+##                  )
+##               )
+
+##   print(a)
+
+
+##   a <- xyplot(n ~ o | day + lane, data=recode
+##               ,main=paste("Scatterplot hourly volume vs occupancy per lane, by day of week, for ",year," at site",vdsid,subhead)
+##               ,strip = function(...){
+##                 strip.function.a(...)
+##                 strip.function.b(...)
+##               }
+##               ,ylab=list(label='hourly volume', cex=2)
+##               ,xlab=list(label='hourly occupancy', cex=2)
+##               ,type='p' ## or 'l'
+##               ,pch='*'
+##               ,scales=list(cex=1.8)
+##               ,par.settings=simpleTheme(lty=1:length(plotvars),lwd=3)
+##               ,panel=pf
+##               ,auto.key = list(
+##                  space='bottom',
+##                  points = TRUE, lines = FALSE,columns=length(plotvars),padding.text=10,cex=2
+##                  )
+##               )
+
+##   print(a)
+
+##   strip.function.b <- strip.custom(which.given=1,factor.levels=lane.defs[1:length(plotvars)], strip.levels = TRUE )
+
+##   a <- xyplot(n ~ ts | lane, data=recode
+##               ,main=paste("Scatterplot hourly volume vs time, per lane, for ",year," at site",vdsid,subhead)
+##               ,strip = function(...){
+##                 strip.function.b(...)
+##               }
+##               ,ylab=list(label='hourly volume', cex=2)
+##               ,xlab=list(label='date', cex=2)
+##               ,type='p' ## or 'l'
+##               ,scales=list(cex=1.8)
+##               ,par.settings=simpleTheme(lty=1:length(plotvars),lwd=3)
+##               ,auto.key = list(
+##                  space='bottom',
+##                  points = TRUE, lines = FALSE,columns=length(plotvars),padding.text=10,cex=2
+##                  )
+##               )
+##   print(a)
+
+##   dev.off()
+
+##   files.to.attach <- dir(savepath,pattern=paste(imagefileprefix,'0',sep='_'),full.names=TRUE)
+##   for(f2a in files.to.attach){
+##     couch.attach(trackingdb,vdsid,f2a)
+##   }
+##   rm(recode)
+##   gc()
+##   TRUE
+## }
 
 #' Recode VDS dataframe for plotting
 #'
