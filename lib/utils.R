@@ -1,4 +1,5 @@
 ## requires that couch utils has been loaded already
+source('node_modules/rstats_couch_utils/couchUtils.R',chdir=TRUE)
 
 #' store amelia chains
 #'
