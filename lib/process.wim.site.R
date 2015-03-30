@@ -56,6 +56,7 @@ handle_wim_dir <- function(wim.site,
                            wim.path='/data/backup/wim',
                            seconds=3600,
                            trackingdb='vdsdata%2ftracking'){
+    cdb.wimid <- paste('wim',wim.site,direction,sep='.')
     df.wim.amelia <- load_imputed_wim(wim.site,year,direction,wim.path,seconds)
     if(length(df.wim.amelia) == 1){
         print(paste("amelia run for wim not good",df.wim.amelia))
@@ -470,6 +471,7 @@ upload.plots.couchdb <- function(wim.site
                                  ,trackingdb='vdsdata%2ftracking'
                                 ,local=TRUE
                                 ,files.to.attach=list()){
+    cdb.wimid <- paste('wim',wim.site,direction,sep='.')
 
     if(length(files.to.attach) ==  0){
         file.pattern <- paste(wim.site,direction,year,'.*png',sep='_')
