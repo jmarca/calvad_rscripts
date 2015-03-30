@@ -59,7 +59,7 @@ test_that("plotting imputed data code works okay",{
                    emburn=c(2,maxiter))
         )
 
-    ## expect_that(class(r),not_equal)
+    expect_that(r,is_a('amelia'))
     ## expect_that(res,equals('df.vds.agg.imputed'))
 
     df.merged <- condense.amelia.output(df.vds.agg.imputed)
