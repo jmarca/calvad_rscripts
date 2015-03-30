@@ -34,7 +34,7 @@ test_that("plotting imputed data code works okay",{
     lanes <- longway.guess.lanes(df)
     n.idx <- vds.lane.numbers(lanes,c("n"))
     o.idx <- vds.lane.numbers(lanes,c("o"))
-    o.cols <- (1:length(names(df.vds.agg)))[is.element(names(df.vds.agg), o.idx)]
+    o.cols <- (1:length(names(df.agg)))[is.element(names(df.agg), o.idx)]
     o.bds.len <- length(o.cols)
     o.bds <- matrix(c(o.cols,sort( rep(c(0, 1),o.bds.len))), nrow = o.bds.len, byrow=FALSE)
 
