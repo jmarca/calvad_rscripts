@@ -488,7 +488,7 @@ plot.raw.data <- function(fname,f,path,year,vds.id,
                                   vds.id,
                                   year,
                                   fileprefix,subhead,
-                                  force.plot=force.plot
+                                  force.plot=force.plot,
                                   trackingdb=trackingdb)
 
   for(f2a in files.to.attach){
