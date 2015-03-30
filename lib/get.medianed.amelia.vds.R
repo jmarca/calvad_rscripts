@@ -576,8 +576,8 @@ plot.vds.data  <- function(df.merged,vdsid,year,fileprefix=NULL,subhead='\npost 
     recoded <- recode.df.vds( df.merged )
 
     ## for coloring occ
-    occmidpoint <- mean(sqrt(recoded$occupancy))
-    volmidpoint <- mean((recoded$volume))
+    occmidpoint <- mean(sqrt(recoded$occupancy),na.rm=TRUE)
+    volmidpoint <- mean((recoded$volume),na.rm=TRUE)
     daymidpoint <- 12
 
     savepath <- 'images'

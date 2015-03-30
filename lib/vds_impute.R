@@ -89,9 +89,19 @@ self.agg.impute.VDS.site.no.plots <- function(fname,f,path,year,seconds,goodfact
 
             r <- try(
                 df.vds.agg.imputed <-
-                amelia(df.vds.agg,idvars=c('ts','obs_count'),ts="tod",splinetime=6,autopri=0.001,
-                       lags =c(n.idx),leads=c(n.idx),cs="day",intercs=TRUE,
-                       sqrts=n.idx, bounds=o.bds,max.resample=10,emburn=c(2,maxiter))
+                    amelia(df.vds.agg,
+                           idvars=c('ts','obs_count'),
+                           ts="tod",
+                           splinetime=6,
+                           autopri=0.001,
+                           lags =c(n.idx),
+                           leads=c(n.idx),
+                           cs="day",
+                           intercs=TRUE,
+                           sqrts=n.idx,
+                           bounds=o.bds,
+                           max.resample=10,
+                           emburn=c(2,maxiter))
                 )
 
 ####### these are various different things I tried with imputation  ###
