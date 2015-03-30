@@ -44,7 +44,7 @@ test_that("plotting imputed data code works okay",{
 
     r <- try(
         df.vds.agg.imputed <-
-            Amelia::amelia(df.vds.agg,
+            Amelia::amelia(df.agg,
                    idvars=c('ts','obs_count'),
                    ts="tod",
                    splinetime=6,
