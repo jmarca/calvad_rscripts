@@ -1,5 +1,8 @@
 source('./utils.R')
 
+## Turn this back on when I turn on remote files again
+## source('node_modules/rstats_remote_files/remoteFiles.R',chdir=TRUE)
+
 #' get amelia vds file
 #'
 #' go grab the output of amelia for this detector from the file server
@@ -404,16 +407,95 @@ get.and.plot.vds.amelia <- function(pair,year,doplots=TRUE,
     df.vds.agg
 }
 
-## plot.zooed.vds.data <- function(df.vds.zoo,vdsid,year,fileprefix=NULL,subhead='\npost imputation',force.plot=FALSE){
+#' Get and plot raw VDS data, prior to imputations
+#'
+#' Basically the same as the above, except the initial processing of
+#' the data is geared towards the raw data, not the output of the
+#' imputations.
+#'
+#' Will load the raw data, aggregate up to one hour (Whereas the
+#' imputation step just aggregates up to two minutes these days) then
+#' will do the plots
+#'
+#' @param fname
+#' @param f
+#' @param path either 'none', the remote server's service path, or the
+#' local file system's root directory for Amelia output
+#' @param year
+#' @param vds.id the VDS id or the wim id or the vds wim pair, I guess
+#' @param force.plot default is FALSE, set to TRUE if you want to skip
+#' checking for existing plots and instead always redo them
+#' @param remote default is FALSE, meaning hit the local server; pass
+#' TRUE if you want hit a remote server or
+#' Note that accessing remote file server stuff is currently disabled
+#' @param server defaults to http://lysithia.its.uci.edu
+#' Note that accessing remote file server stuff is currently disabled
+#' @param force.plot defaults to FALSE, if TRUE will replot even if
+#' the plot appears to exist already
+#' @param trackingdb the CouchDB database that is being used to track
+#' detector status.  Will push the generated plot files to this
+#' database as attached files
+#' @return some sort of status if there are problems, but nothing
+#' really.  This function is run for the side effect that plots get
+#' made and saved
+#'
+plot.raw.data <- function(fname,f,path,year,vds.id,
+                          remote=FALSE,
+                          server='lysithia.its.uci.edu',
+                          force.plot=FALSE,
+                          trackingdb='vdsdata%2ftracking'){
+  ## plot the data out of the detector
+  fileprefix='raw'
+  if(!force.plot){
+      have.plot <- check.for.plot.attachment(vds.id,year,fileprefix,
+                                             trackingdb=trackingdb)
+      if(have.plot){
+          print('already have plots')
+          return (1)
+      }
+  }
 
-##   ## temporary variable for the diagnostic plots
-##   ## wish I could spawn this as a separate job
-##   df.merged <- unzoo.incantation(df.vds.zoo)
-##   plot.vds.data(df.merged,vdsid,year,fileprefix,subhead,force.plot=force.plot)
-##   rm(df.merged)
-##   gc()
-##   TRUE
-## }
+  ## get the raw data
+  ## currently totally ignoring remote file stuff
+  ts <- data.frame()
+  df <- data.frame()
+  ## df.pattern =paste('**/',fname,'*df*',year,'RData',sep='')
+  ##rdata.file <- make.amelia.output.file(path,fname,seconds,year)
+  if(remote){
+      print('remote file stuff is untested at this time')
+      quit(status=10)
+      fetched <- fetch.remote.file(server,service='vdsdata',root=path,file=f)
+      r <- try(result <- load(file=fetched))
+      if(class(r) == "try-error") {
+          print (paste('need to get the raw file.  hold off for now'))
+          return (FALSE)
+      }
+      unlink(x=fetched)
+  }else{
+      df <- load.file(f,fname,year,path)
+  }
+  ## break out ts
+  ts <- df$ts
+  df$ts <- NULL
+  ## aggregate up to an hour?
+  df.vds.agg <- vds.aggregate(df,ts,seconds=3600)
+  if(is.null(dim(df.vds.agg))) return (FALSE)
+
+  subhead='\npre-imputation data'
+  files.to.couch <- plot.vds.data(df.vds.agg,
+                                  vds.id,
+                                  year,
+                                  fileprefix,subhead,
+                                  force.plot=force.plot
+                                  trackingdb=trackingdb)
+
+  for(f2a in files.to.attach){
+      couch.attach('vdsdata%2ftracking',vds.id,f2a)
+  }
+
+  return (TRUE)
+}
+
 
 #' Check CouchDB for whether or not plots have been previously created and attached.  If TRUE, then you can skip the work, if FALSE, then you need to make all the plots.
 #'
