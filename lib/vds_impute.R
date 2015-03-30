@@ -35,6 +35,7 @@ junk.shot <- function(vds.id,f,fname,seconds,year,df){
 #' 200 either, usually.
 #' @param con a database connection to postgresql
 #' @return a string indicating what failed or success
+#' @export
 self.agg.impute.VDS.site.no.plots <- function(fname,f,path,year,seconds,goodfactor=2,maxiter=100,con){
     ## aggregate, then impute
     vds.id <-  get.vdsid.from.filename(fname)
