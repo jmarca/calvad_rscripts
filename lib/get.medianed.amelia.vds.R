@@ -402,7 +402,7 @@ get.and.plot.vds.amelia <- function(pair,year,doplots=TRUE,
         attach.files <- plot.vds.data(df.vds.agg,pair,year,
                                       force.plot=force.plot,
                                       trackingdb=trackingdb)
-        for(f2a in files.to.attach){
+        for(f2a in attach.files){
             couch.attach(trackingdb,vdsid,f2a)
         }
     }
@@ -484,14 +484,14 @@ plot.raw.data <- function(fname,f,path,year,vds.id,
   if(is.null(dim(df.vds.agg))) return (FALSE)
 
   subhead='\npre-imputation data'
-  files.to.couch <- plot.vds.data(df.vds.agg,
+  attach.files <- plot.vds.data(df.vds.agg,
                                   vds.id,
                                   year,
                                   fileprefix,subhead,
                                   force.plot=force.plot,
                                   trackingdb=trackingdb)
 
-  for(f2a in files.to.attach){
+  for(f2a in attach.files){
       couch.attach('vdsdata%2ftracking',vds.id,f2a)
   }
 
