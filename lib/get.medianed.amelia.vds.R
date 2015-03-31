@@ -403,7 +403,10 @@ get.and.plot.vds.amelia <- function(pair,year,doplots=TRUE,
         }
 
 
+        subhead='\npre-imputation data'
+        fileprefix='imputed'
         attach.files <- plot.vds.data(df.vds.agg,pair,year,
+                                      fileprefix,subhead,
                                       force.plot=force.plot,
                                       trackingdb=trackingdb)
         for(f2a in attach.files){
