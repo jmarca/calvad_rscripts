@@ -88,6 +88,27 @@ pct.na <- function(v){
   sum(is.na(v))/length(v)
 }
 
+##' Get the canonical lane numbering system for a given number of lanes
+##'
+##' .. content for \details{} ..
+##' @title
+##' @param lanes the number of lanes in the desired data set
+##' @param raw.data a vector of the values recorded for each lane.
+##' For example, if you have count and occupancy, you'd pass in
+##' c('n','o')
+##' @return a vector consisting of the correct naming for the
+##' variables.  For example, if you have one lane and pass in
+##' c('n','o'), you will get back the vector c("nr1","or1").  If you
+##' have three lanes and still just volume and occupancy c('n','o')
+##' then you will get back c("nl1", "ol1","nr2", "or2","nr1", "or1")
+##'
+##' Note that this enforces my special naming scheme, in which a site
+##' always has a right lane, and then a left lane, and then all other
+##' lanes are coded from the right as r2, r3, etc.  So a 5 lanes site
+##' will have, from left to right, l1, r4, r3, r2, r1.
+##'
+##'
+##' @author James E. Marca
 vds.lane.numbers <- function(lanes,raw.data){
 
   Y <- paste(raw.data,"l1", sep="")
