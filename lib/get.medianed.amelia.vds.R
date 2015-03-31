@@ -376,12 +376,6 @@ get.and.plot.vds.amelia <- function(pair,year,doplots=TRUE,
         return (NULL)
     }
 
-    if(doplots){
-
-        ## do the amelia default plot functions
-        trigger.amelia.plots(aout,pair,year,force.plot=force.plot)
-    }
-
     df.vds.agg <- condense.amelia.output(aout)
 
     ## prior to binding, weed out excessive flows
@@ -399,6 +393,16 @@ get.and.plot.vds.amelia <- function(pair,year,doplots=TRUE,
     couch.set.state(year,pair,doc=list('occupancy_averaged'=1))
 
     if(doplots){
+
+        ## do the amelia default plot functions
+        plotvars <- grep('^(o|n)(r|l)\\d',x=varnames,perl=TRUE,value=TRUE)
+
+        attach.files <- plot.amelia.plots(aout,plotvars,pair,year,force.plot=force.plot)
+        for(f2a in attach.files){
+            couch.attach(trackingdb,vdsid,f2a)
+        }
+
+
         attach.files <- plot.vds.data(df.vds.agg,pair,year,
                                       force.plot=force.plot,
                                       trackingdb=trackingdb)
@@ -528,6 +532,76 @@ check.for.plot.attachment <- function(vdsid,year,
   print(paste('checking for ',fourthfile,'in tracking doc'))
   return (couch.has.attachment(trackingdb,vdsid,fourthfile))
 }
+
+#' Plot VDS data and save the resulting plots to the files system and
+#' CouchDB tracking database
+#'
+#' This is more or less a generic function to plot data either before
+#' or after running Amelia.  It only works for VDS data of course, but
+#' it doesn't care if imputations have been done or not, so indicate
+#' so by including a note in the fileprefix parameter
+#'
+#'
+#' @param df.merged the dataframe to plot
+#' @param vdsid the VDS id
+#' @param year
+#' @param fileprefix helps name the output file, and also to find it.
+#' By default the plot file will be named via the pattern
+#'
+#'     imagefileprefix <- paste(vdsid,year,sep='_')
+#'
+#' But if you include the fileprefix parameter, then the image file
+#' naming will have the pattern
+#'
+#'     imagefileprefix <- paste(vdsid,year,fileprefix,sep='_')
+#'
+#' So you can add something like "imputed" to the file name to
+#' differentiate the imputed plots from the input data plots.
+#' @param subhead Written on the plot
+#' @param force.plot defaults to FALSE.  If FALSE, and a file exists
+#' @param trackingdb defaults to 'vdsdata%2ftracking' for checking if
+#' plots already done
+#' @return files.to.attach the files that you need to send off to
+#' couchdb tracking database.
+plot.amelia.plots  <- function(aout,plotvars,vdsid,year,force.plot=FALSE,
+                               fileprefix='amelia',
+                               trackingdb='vdsdata%2ftracking'){
+    if(!force.plot){
+        have.plot <- check.for.plot.attachment(vdsid,year,
+                                               fileprefix,
+                                               trackingdb=trackingdb)
+        if(have.plot){
+            return (1)
+        }
+    }
+    print('need to make plots')
+    savepath <- 'images'
+    if(!file.exists(savepath)){dir.create(savepath)}
+    savepath <- paste(savepath,vdsid,sep='/')
+    if(!file.exists(savepath)){dir.create(savepath)}
+
+    imagefileprefix <- paste(vdsid,year,sep='_')
+    if(!is.null(fileprefix)){
+        imagefileprefix <- paste(vdsid,year,fileprefix,sep='_')
+    }
+
+    imagefilename <- paste(savepath,paste(imagefileprefix,'%03d.png',sep='_'),sep='/')
+
+    print(paste('plotting to',imagefilename))
+
+    png(file = imagefilename, width=1600, height=1200, bg="transparent",pointsize=24)
+
+    print(plot(aout,which.vars=plotvars,ask=FALSE))
+
+    dev.off()
+
+    files.to.attach <- dir(savepath,pattern=paste(imagefileprefix,'0',sep='_'),full.names=TRUE)
+
+    files.to.attach
+
+}
+
+
 
 #' Plot VDS data and save the resulting plots to the files system and
 #' CouchDB tracking database

@@ -146,3 +146,20 @@ test_that("plotting raw from a site with two lanes works okay",{
 
     ## should also md5 check the dumped images?
 })
+
+test_that("triggering native amelia plots works okay",{
+
+    file <- './files/1211682_ML_2012.120.imputed.RData'
+    res <- load(file)
+    expect_that(res,equals('df.vds.agg.imputed'))
+
+    vars = c("nl1","ol1","nr1","or1")
+    files.to.couch <- plot.amelia.plots(df.vds.agg.imputed,vars=vars,1211682,2012,force.plot=TRUE)
+
+    expect_that(files.to.couch,equals(
+        c("images/1211682/1211682_2012_amelia_001.png",
+          "images/1211682/1211682_2012_amelia_002.png"
+          )))
+
+    ## should also md5 check the dumped images?
+})
