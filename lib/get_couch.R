@@ -1,6 +1,22 @@
 ## some specialized scripts to get things from couchdb
 source('../node_modules/rstats_couch_utils/couchUtils.R')
 
+##' get vds wim pairs from couchdb
+##'
+##' get the design doc vds/pairRData for the passed in year
+##'
+##' The result will be the paired vds_id and wim_ids, suitable for use.
+##'
+##' The advantage of this routine is that the couchdb file *might*
+##' contain more up to date information about the usability of vds or
+##' wim data, compared to the postgresql data table that does not
+##' contain any information on how good the data is.
+##'
+##' @title get.vds.wim.pairs
+##' @param year
+##' @param trackingdb
+##' @return a data frame with year, vds_id, wim_id, doc
+##' @author James E. Marca
 get.vds.wim.pairs <- function(year,trackingdb='vdsdata%2ftracking'){
   docs <- couch.allDocs(trackingdb
                         , query=list(
@@ -35,6 +51,18 @@ get.vds.wim.pairs <- function(year,trackingdb='vdsdata%2ftracking'){
   df.pairs
 }
 
+##' get RData view
+##'
+##' I sometimes store RData as attachments to docs in couchdb
+##'
+##' @title get.RData.view
+##' @param vdsid the VDS id
+##' @param year
+##' @param trackingdb defaults to 'vdsdata/tracking'
+##' @return the files, which is the rows from the view Actually right
+##' now as I write this documentation, I forget what this actually
+##' returns.
+##' @author James E. Marca
 get.RData.view <- function(vdsid,year,trackingdb='vdsdata%2ftracking'){
     docs <- couch.allDocs(trackingdb
                           , query=list(
@@ -50,6 +78,19 @@ get.RData.view <- function(vdsid,year,trackingdb='vdsdata%2ftracking'){
   files
 }
 
+##' Record unmet imputation conditions in CouchDB
+##'
+##' Rather than skipping a detector and moving on, instead write in
+##' couchdb tracking database why the detector could not be imputed
+##'
+##' I can't find where this is actually used at the moment.
+##'
+##' @title couch.record.unmet.conditions
+##' @param year
+##' @param vdsid
+##' @param condition some string or list describing what is wrong
+##' @return the result of calling couch.set.state
+##' @author James E. Marca
 couch.record.unmet.conditions <- function(district,year,vdsid,condition){
   problem <- list()
   print(paste('unmet condition',condition))
@@ -57,15 +98,25 @@ couch.record.unmet.conditions <- function(district,year,vdsid,condition){
   couch.set.state(year,vdsid,doc=problem,local=TRUE)
 }
 
-
+##' evaluate paired data
+##'
+##' This function fixed an even uglier hack done earlier for speed.
+##' The logic is to sift through the names, keep what I need, discard
+##' (?) what I don't wim data, needs to have wim.lanes worth of info
+##'
+##' @title evaluate.paired.data
+##' @param df the data frame with paired data
+##' @param wim.lanes lanes at the WIM site
+##' @param vds.lanes lanes at the VDS site
+##' @return a dataframe that equals
+##' df[,c(vds.vars.lanes,wim.vars.lanes,other.vars)] where
+##' vds.vars.lanes is the vds variables (vol, occ), wim.vars.lanes is
+##' the wim variabes (*hh, *weight,*axle, and *speed variables, see
+##' the code for the exact), and other.vars are other variables
+##' @author James E. Marca
 evaluate.paired.data <- function(df,wim.lanes,vds.lanes){
     paired.data.names <- names(df)
 
-    ## fixing an ugly hack done earlier for speed.
-
-    ## sift through the names, keep what I need, discard (?) what I don't
-
-    ## wim data, needs to have wim.lanes worth of info
 
     wim.var.pattern <-
         "(heavyheavy|_weight|_axle|_len|_speed)"
