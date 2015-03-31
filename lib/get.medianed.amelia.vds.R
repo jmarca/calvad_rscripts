@@ -834,14 +834,21 @@ recode.df.vds <- function( df ){
     lanes <- levels(as.factor(melded$lane))
 
     lane.names <- c("left","right")
-    numbering <- length(lanes)
-    for(i in 3:numbering){
-        lane.names[i]=paste("lane",(numbering-i+2))
+    if(length(lanes)==1){
+        lane.names <- c("lr1")
+    }else{
+        numbering <- length(lanes)
+        if(length(lanes)>2){
+            for(i in 3:numbering){
+                lane.names[i]=paste("lane",(numbering-i+2))
+            }
+            ## a little switcheroo here
+            lanes <- c(lanes[1],rev(lanes[-1]))
+            lane.names <- c(lane.names[1],rev(lane.names[-1]))
+
+        }
     }
 
-    ## a little switcheroo here
-    lanes <- c(lanes[1],rev(lanes[-1]))
-    lane.names <- c(lane.names[1],rev(lane.names[-1]))
 
     melded$lane <- factor(melded$lane,
                           levels=lanes,

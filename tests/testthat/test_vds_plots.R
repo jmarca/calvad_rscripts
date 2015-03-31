@@ -95,3 +95,54 @@ test_that("plotting raw data code works okay",{
 
     ## should also md5 check the dumped images?
 })
+
+test_that("plotting raw from a site with two lanes works okay",{
+
+    file <- './files/1211682_ML_2012.df.2012.RData'
+    df <- load.file(f=file,fname='1211682_ML_2012',year=2012,path='.')
+
+    expect_that(dim(df),equals(c(1013499,5)))
+    expect_that(names(df),equals(c("nl1","ol1","nr1","or1",
+                                   "ts" )))
+
+    ts <- df$ts
+    df$ts <- NULL
+    ## aggregate up to an hour?
+    df.agg <- vds.aggregate(df,ts,seconds=3600)
+
+    expect_that(dim(df.agg),equals(c(8784,8)))
+    expect_that(length(df.agg$nl1[is.na(df.agg$nl1)]),equals(1209))
+
+    expect_that(names(df.agg),
+                equals(c("ts", "nl1","nr1",
+                         "ol1", "or1",
+                         "obs_count","tod","day")))
+
+    expect_that(min(df.agg$nl1,na.rm=TRUE),equals(0.0))
+    expect_that(median(df.agg$nl1,na.rm=TRUE),equals(210.0))
+    expect_that(mean(df.agg$nl1,na.rm=TRUE),equals(267.6293069307))
+    expect_that(max(df.agg$nl1,na.rm=TRUE),equals(1567))
+
+### that should be good enough to verify that condense hasn't changed
+### its spots
+
+    twerked.df <- recode.df.vds(df.agg)
+
+    expect_that(dim(twerked.df),equals(c(17568,7)))
+    expect_that(names(twerked.df),equals(c("ts","tod","day",
+                                          "obs_count","lane","volume",
+                                          "occupancy")))
+
+    expect_that(levels(twerked.df$lane),equals(c( "left", "right" )))
+
+    files.to.couch <- plot.vds.data(df.agg,1211682,2012,'raw','\npre imputation',force.plot=TRUE)
+
+    expect_that(files.to.couch,equals(
+        c("images/1211682/1211682_2012_raw_001.png",
+          "images/1211682/1211682_2012_raw_002.png",
+          "images/1211682/1211682_2012_raw_003.png",
+          "images/1211682/1211682_2012_raw_004.png"
+          )))
+
+    ## should also md5 check the dumped images?
+})
