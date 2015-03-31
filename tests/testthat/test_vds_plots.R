@@ -177,3 +177,15 @@ test_that("bail out rejected amelia run",{
 
 
 })
+
+## actually, this detector really is pretty broken
+## test_that("bail out rejected amelia run",{
+##     file <- '/data/backup/pems/breakup//D12/241/N/S_OF_CHIQUITA/1215855_ML_2012.df.2012.RData'
+##     df <- load.file(f=file,fname='1215855_ML_2012',year=2012,path='/data/backup/pems/breakup')
+##     ts <- df$ts
+##     df$ts <- NULL
+##     ## aggregate up to an hour?
+##     df.agg <- vds.aggregate(df,ts,seconds=120)
+##     twerked.df <- recode.df.vds(df.agg)
+##     files.to.couch <- plot.vds.data(df.agg,1215965,2012,'raw','\npre imputation',force.plot=TRUE)
+## })
