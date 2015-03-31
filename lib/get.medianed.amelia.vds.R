@@ -399,7 +399,7 @@ get.and.plot.vds.amelia <- function(pair,year,doplots=TRUE,
 
         attach.files <- plot.amelia.plots(aout,plotvars,pair,year,force.plot=force.plot)
         for(f2a in attach.files){
-            couch.attach(trackingdb,vdsid,f2a)
+            couch.attach(trackingdb,pair,f2a)
         }
 
 
@@ -407,7 +407,7 @@ get.and.plot.vds.amelia <- function(pair,year,doplots=TRUE,
                                       force.plot=force.plot,
                                       trackingdb=trackingdb)
         for(f2a in attach.files){
-            couch.attach(trackingdb,vdsid,f2a)
+            couch.attach(trackingdb,pair,f2a)
         }
     }
     df.vds.agg
