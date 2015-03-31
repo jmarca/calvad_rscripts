@@ -912,7 +912,7 @@ recode.df.vds <- function( df ){
 
     lane.names <- c("left","right")
     if(length(lanes)==1){
-        lane.names <- c("lr1")
+        lane.names <- c("right")
     }else{
         numbering <- length(lanes)
         if(length(lanes)>2){
