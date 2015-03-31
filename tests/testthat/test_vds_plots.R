@@ -162,3 +162,18 @@ test_that("triggering native amelia plots works okay",{
 
     ## should also md5 check the dumped images?
 })
+
+test_that("bail out rejected amelia run",{
+
+    file <- './files/1215965_ML_2012.120.imputed.RData'
+    res <- load(file)
+    expect_that(res,equals('reject'))
+    expect_that(res,is_a('data.frame'))
+
+
+    expect_that(get.and.plot.vds.amelia(pair = 1215965,year=2012,doplots = TRUE,
+                                        remote=FALSE,path='.',force.plot = TRUE
+                                        ),is_null())
+
+
+})

@@ -72,7 +72,7 @@ get.amelia.vds.file <- function(vdsid,path='/',year,server='http://lysithia.its.
 #' machine or not yet done, or a dataframe containing the amelia
 #' output
 get.amelia.vds.file.local <- function(vdsid,path='/',year,server,serverfile){
-  df.vds.agg.imputed <- list()
+  df.vds.agg.imputed <- NULL
 
   target.file <- make.amelia.output.pattern(vdsid,year)
   isa.df <- dir(path, pattern=target.file,full.names=TRUE, ignore.case=TRUE,recurs=TRUE)
@@ -308,7 +308,7 @@ get.aggregated.vds.amelia <- function(vdsid,
                                       server='http://lysithia.its.uci.edu',
                                       year){
     print(paste('in get.aggregated.vds.amelia, remote is',remote))
-    df.vds.agg.imputed <- list()
+    df.vds.agg.imputed <- NULL
     if(path=='none'){
         path <- district.from.vdsid(vdsid)
     }
@@ -319,13 +319,13 @@ get.aggregated.vds.amelia <- function(vdsid,
         df.vds.agg.imputed <- get.amelia.vds.file.local(vdsid,path=path,year=year,serverfile=serverfile)
     }
 
-    if(length(df.vds.agg.imputed) == 1){
-    print("amelia run for vds not good")
-    return(NULL)
-  }else if(!length(df.vds.agg.imputed)>0 || !length(df.vds.agg.imputed$imputations)>0 || df.vds.agg.imputed$code!=1 ){
-    print("amelia run for vds not good")
-    return(NULL)
-  }
+    if(is.null(df.vds.agg.imputed) || length(df.vds.agg.imputed) == 1){
+        print("amelia run for vds not good")
+        return(NULL)
+    }else if(!length(df.vds.agg.imputed)>0 || !length(df.vds.agg.imputed$imputations)>0 || df.vds.agg.imputed$code!=1 ){
+        print("amelia run for vds not good")
+        return(NULL)
+    }
     condense.amelia.output(df.vds.agg.imputed)
 }
 
