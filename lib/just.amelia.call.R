@@ -123,6 +123,29 @@ fill.truck.gaps <- function(df
                             ## ,mean.pattern="(^ol|^or1|^or2|_weight|_axle|_length|_speed)"
                             ## ,mean.exclude.pattern="^(mean|mt_|tr_)"
 
+#' process variable names in preparation for Amelia call
+#'
+#' I split this out so that I could test different things
+#'
+#' @param names.df the dataframe's names
+#' @param count.pattern how to recognize the count variables, default is
+#' "(heavyheavy|^nl|^nr\\d|_weight|_axle|_length|_speed|_all_veh_speed)"
+#' @param mean.pattern how to recognize what I used to call mean
+#' variables but now that I by default ignore mean variables, there
+#' you go.  Default is "(^ol|^or\\d)" which will grab occupancy
+#' variables
+#' @param exclude.pattern what variables to exclude from the Amelia
+#' run as id variables.  Default is "^(mean|mt_|tr_)"
+#' @param df the data frame.  Optional but if you pass it in, then
+#' will be used to set up boundaries too
+#' @return a list of things,
+#' list(exclude.as.id.vars=exclude.as.id.vars,
+#'      pos.count =pos.count,
+#'      mean.vars =mean.vars,
+#'      count.vars=count.vars,
+#'      pos.bds   =pos.bds)
+#'
+#' which is what you need in the above amelia function
 names.munging <- function(names.df
                             ,count.pattern = "(heavyheavy|^nl|^nr\\d|_weight|_axle|_length|_speed|_all_veh_speed)"
                             ,mean.pattern="(^ol|^or\\d)"
