@@ -157,8 +157,7 @@ test_that("triggering native amelia plots works okay",{
     files.to.couch <- plot.amelia.plots(df.vds.agg.imputed,vars=vars,1211682,2012,force.plot=TRUE)
 
     expect_that(files.to.couch,equals(
-        c("images/1211682/1211682_2012_amelia_001.png",
-          "images/1211682/1211682_2012_amelia_002.png"
+        c("images/1211682/1211682_2012_amelia_001.png"
           )))
 
     ## should also md5 check the dumped images?
