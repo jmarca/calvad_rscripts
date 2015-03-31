@@ -4,6 +4,22 @@ pf <- function(x,y){panel.smoothScatter(x,y,nbin=c(200,200))}
 day.of.week <- c('Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday')
 lane.defs <- c('left lane','right lane 1', 'right lane 2', 'right lane 3', 'right lane 4', 'right lane 5', 'right lane 6', 'right lane 7', 'right lane 8')
 
+#' Make truck plots
+#'
+#' An older function that needs to be redone with ggplot2
+#'
+#' @param df the dataframe
+#' @param year
+#' @param site the WIM site number
+#' @param dir the direction of the data
+#' @param cdb.id the couchdb id for this site
+#' @param imputed whether or not this is post imputed (TRUE, the
+#' default) or pre-imputed (still has gaps from missing data)
+#' @return a list of files that were created, and need to be copied
+#' into couchdb
+#'
+#' But really you run this for the side effect of generating plots
+#' that are written to the file system
 make.truck.plots <- function(df,year,site,dir,cdb.id,imputed=TRUE){
   varnames <-  names(df)
   ## make some diagnostic plots
