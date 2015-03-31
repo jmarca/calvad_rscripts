@@ -210,7 +210,22 @@ recode.lanes <- function(df){
   df
 }
 
-db.ready.dump <- function(imps,vds.id,path='.',con){
+#' db ready dump: Dump out a CSV file that is ready for copying
+#' straight into a database
+#'
+#' @param imps the aggregated result of the amelia imputation run.  I
+#' expect that there wil be the following fields: ts, obs_count,
+#' imputation, vol, occ, and maybe speed.  I will assume that the
+#' sd_vol, sd_occ_and sd_spd are not there, and anyway are
+#' uninteresting and wrong so I long ago started just stashing NA in
+#' those columns.
+#' @param path where to save the output CSV file
+#' @param year
+#' @param con a connection to the database so that I can determine
+#' database-friendly column names
+#' @return just falls off the end.  Generates a CSV file that you can
+#' copy into the database under the directory "path"
+db.ready.dump <- function(imps,vds.id,path='.',year,con){
     target.file <- make.db.dump.output.file(path,vds.id,year)
     dump.file.size <- file.info(target.file)$size
 
@@ -318,19 +333,32 @@ verify.db.dump <- function(fname,path,year,seconds,df.vds.agg.imputed=NA,con){
                 df.vds.agg.imputed$code==1)){
             aout.agg <- impute.aggregate(df.vds.agg.imputed)
         }
-        db.ready.dump(aout.agg,vds.id,path,con=con)
+        db.ready.dump(aout.agg,vds.id,path,year,con=con)
     }else{
         print(paste('not writing dat file to',target.file,'as it already exists'))
     }
 }
 
 
+#' get.vds.file: get the Amelia-imputed VDS file from the filesystem
+#'
+#' This will create the right file name, then search for the right
+#' file below the passed in path.  Then it will load that file and
+#' return it.
+#'
+#' In the case that the Amelia run was rejected, the returned value
+#' will be NULL, not an amelia object.
+#'
+#' @param vds.id the VDS id
+#' @param path the root directory to search
+#' @param year the year
+#' @return an Amelia output object, or NULL if a file can't be found
 get.vds.file <- function(vds.id,path,year){
 
   amelia.dump.file <- make.amelia.output.pattern(vds.id,year)
   files <- dir(path, pattern=amelia.dump.file,
                    full.names=TRUE, ignore.case=TRUE,recurs=TRUE)
-  df.vds.agg.imputed <- list();
+  df.vds.agg.imputed <- NULL
   if(length(files)>0){
     print(paste('loading stored vds amelia object from file',files[1]))
     load.result <-  load(file=files[1])
@@ -338,11 +366,29 @@ get.vds.file <- function(vds.id,path,year){
   df.vds.agg.imputed
 }
 
-
+#' Make a file name for the DB dump routine
+#'
+#' Just push together the strings in a consistent way.
+#'
+#' @param path where you want to store the data
+#' @param vds.id the ID of the VDS site, or really whatever site
+#' you're talking about
+#' @param year the year
+#' @return a canonical filename for the DB dump
 make.db.dump.output.file <- function(path,vds.id,year){
   paste(path,paste('vds_hour_agg',vds.id,year,'dat',sep='.'),sep='/')
 }
 
+#' parse the passed in filename and extract the VDS id from it
+#'
+#' A bit of a hack.  Don't expect it to be super smart.  It isn't and
+#' will break on strange input
+#'
+#' @param filename the filename to process
+#' @return the VDS id Really, pass this well formed input, because I
+#' don't even bother to make sure that the vdsid is all numbers. I
+#' just look for [vdsid]_[vdstype]_[year], split on underscores, and
+#' return the first value
 get.vdsid.from.filename <- function(filename){
   ## files format is [vdsid]_[vdstype]_[year]
   vds.id <-  strsplit(filename,"_")[[1]][1]
