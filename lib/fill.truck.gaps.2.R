@@ -1,3 +1,10 @@
+##' Create truck mean values of various sorts
+##'
+##'
+##' @title create.truck.means
+##' @param df.wim
+##' @return a new dataframe with averages for hh,nhh
+##' @author James E. Marca
 create.truck.means <- function(df.wim){
     ## nh goes with not_heavyheavy
     ## hh goes with heavyheavy
