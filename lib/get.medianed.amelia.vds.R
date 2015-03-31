@@ -835,8 +835,10 @@ recode.df.vds <- function( df ){
 
     lane.names <- c("left","right")
     numbering <- length(lanes)
-    for(i in 3:numbering){
-        lane.names[i]=paste("lane",(numbering-i+2))
+    if(length(lanes)>2){
+        for(i in 3:numbering){
+            lane.names[i]=paste("lane",(numbering-i+2))
+        }
     }
 
     ## a little switcheroo here
