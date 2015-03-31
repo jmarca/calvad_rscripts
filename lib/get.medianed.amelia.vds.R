@@ -413,7 +413,7 @@ get.and.plot.vds.amelia <- function(pair,year,doplots=TRUE,
             couch.attach(trackingdb,pair,f2a)
         }
     }
-    df.vds.agg
+    1
 }
 
 #' Get and plot raw VDS data, prior to imputations
