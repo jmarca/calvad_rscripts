@@ -1,4 +1,21 @@
-
+##' Get WIM dataframe from a saved RData file
+##'
+##' I stopped using this at one point when faced with borked RData
+##' files.  Probably safe to start using again.
+##'
+##' Given the WIM site number, the year, and the direction, will get
+##' the correct RData file from some directory under the path
+##' parameter.  If it exists, will return the reconstituted dataframe.
+##' If not, not.
+##'
+##' @title get.wim.rdata
+##' @param wim.site the WIM site number
+##' @param year
+##' @param direction the direction
+##' @param wim.path the path in the file system to start looking for
+##' the RData files
+##' @return a dataframe with the raw, unimputed data, or NULL
+##' @author James E. Marca
 get.wim.rdata <- function(wim.site,year,direction,wim.path='/data/backup/wim'){
     ## reload the saved, pre-imputation wim data
 
@@ -8,33 +25,7 @@ get.wim.rdata <- function(wim.site,year,direction,wim.path='/data/backup/wim'){
     print(paste('load result is',load.result))
     if(load.result != 'local.df.wim.agg'){
         print(paste("choked loading?",df.wim.amelia))
-        return(1)
+        return(NULL)
     }
     local.df.wim.agg
-}
-
-get.wim.imputed <- function(wim.site,year,direction,wim.path='/data/backup/wim'){
-    ## reload the imputed wim data
-    cdb.wimid <- paste('wim',wim.site,direction,sep='.')
-    savepath <- paste(wim.path,year,wim.site,direction,sep='/')
-    target.file <- make.amelia.output.file(savepath,paste('wim',wim.site,direction,sep=''),seconds,year)
-    print(paste('loading',target.file))
-    load.result <- load(file=target.file)
-    print(paste('load result is',load.result))
-    if(length(df.wim.amelia) == 1){
-        print(paste("amelia run for wim not good",df.wim.amelia))
-        return(1)
-    }else if(!length(df.wim.amelia)>0 || !length(df.wim.amelia$imputations)>0 || df.wim.amelia$code!=1 ){
-        print("amelia run for vds not good")
-        return(1)
-    }
-    ## use zoo to combine a mean value
-    df.wim.amelia.c <- df.wim.amelia$imputations[[1]]
-    for(i in 2:length(df.wim.amelia$imputations)){
-        df.wim.amelia.c <- rbind(df.wim.amelia.c,df.wim.amelia$imputations[[i]])
-    }
-    print('median of amelia imputations')
-    df.zoo <- medianed.aggregate.df(df.wim.amelia.c)
-    rm(df.wim.amelia.c,df.wim.amelia)
-    df.zoo
 }
