@@ -796,11 +796,9 @@ png(file = "wim.imputetests.2008.site.31.%03d.png",
   xyplot(ts ~ jitter(unclass(ts))| (is.na(truck.r1) | is.na(truck.r2) | is.na(truck.r3)), jitter.data=TRUE,  data=df.wim.j.nz.gapfill)
 
 dev.off()
-
-
-
 }
-the following are not used but interesting for historical purposes
+
+## the following are not used but interesting for historical purposes
 
 ## ##' Process WIM the old way
 ## ##'
