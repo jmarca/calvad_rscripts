@@ -1,6 +1,44 @@
 source('get_couch.R')
 
-load.wim.pair.data <- function(wim.ids,vds.nvars,year=0,localcouch=TRUE,do.couch.set.state=FALSE){
+##' Load WIM VDS paired data
+##'
+##' This function will load up all of the WIM VDS paired datasets for
+##' a given set of WIM site ids.  It will match the incoming numbers
+##' of lanes as best as possible.  So if you have a site with 5 lanes,
+##' as indicated by the "vds.vars" input parameter, then this will try
+##' to use sites with 5 or more lanes.  If it can't find that, then it
+##' will fall back on the site(s) with the most lanes.
+##'
+##' The goal is to make a uniform data set for the imputation step.
+##' If the paired data sets are missing some lanes compared to the
+##' target VDS site, then you'll have to remove those extra lanes
+##' prior to calling Amelia, or Amelia will crash as it will have no
+##' way to guess the most likely values for those lanes.  This is also
+##' why I picked the strange lane numbering scheme.  A site with 4
+##' lanes can be paired with a site with 3 lanes because left lanes
+##' and right lanes are correct, and are labeled the same way.
+##'
+##' @title load.wim.pair.data
+##' @param wim.ids a vector of WIM ids that are to be used to impute
+##' trucks at some site
+##' @param vds.nvars the VDS count variables from the target site,
+##' used to limit the chosen set of matched WIM-VDS paired sites
+##' @param year
+##' @param localcouch TRUE if you want to use the localhost couchdb,
+##' FALSE if you want to use the vanilla and ostensibly remote
+##' couchdb.  Usually TRUE is good if you have replication running
+##' @param do.couch.set.state TRUE or FALSE, TRUE will set a "state"
+##' in couchdb for the passed in vds.id, setting the list of
+##' "wim_neighbors" that are ready to go for this year.
+##' @param vds.id Optional, but required if do.couch.set.state is
+##' TRUE.  The VDS id of the detector that will be the target of the
+##' truck imputation step.  For setting the state with the list of WIM
+##' neighbors that are ready to go (or not)
+##' @return the "big data" dataframe of combined WIM and VDS sites,
+##' trimmed to the right number of lanes
+##' @author James E. Marca
+##' @export
+load.wim.pair.data <- function(wim.ids,vds.nvars,year=0,localcouch=TRUE,do.couch.set.state=FALSE,vds.id){
     vds.lanes <- length(vds.nvars)
     wim.vds.pairs <- get.vds.wim.pairs(year)
     if(dim(wim.vds.pairs)[1]==0) {
