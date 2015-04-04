@@ -7,9 +7,9 @@ source('./amelia_plots_and_diagnostics.R')
 source('./get.medianed.amelia.vds.R')
 pf <- function(x,y){panel.smoothScatter(x,y,nbin=c(200,200))}
 
-day.of.week <-    c('Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday')
-lane.defs <- c('left lane','right lane 1', 'right lane 2', 'right lane 3', 'right lane 4', 'right lane 5', 'right lane 6', 'right lane 7', 'right lane 8')
-strip.function.a <- strip.custom(which.given=1,factor.levels=day.of.week, strip.levels = TRUE )
+## day.of.week <-    c('Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday')
+## lane.defs <- c('left lane','right lane 1', 'right lane 2', 'right lane 3', 'right lane 4', 'right lane 5', 'right lane 6', 'right lane 7', 'right lane 8')
+## strip.function.a <- strip.custom(which.given=1,factor.levels=day.of.week, strip.levels = TRUE )
 
 #' load the imputed WIM (Amelia) output object from the file system
 #'
@@ -152,8 +152,6 @@ process.wim.site <- function(wim.site,
     ## two cases.  One, I'm redoing work and can just skip to the
     ## impute step.  Two, I need to hit the db directly.  Figure it
     ## out by checking if I can load the data from the file
-
-    directions <- get.wim.directions(wim.site)
 
     df.wim <- load.wim.data.straight(wim.site,year)
     ## only continue if I have real data

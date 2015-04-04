@@ -24,10 +24,10 @@ junk.shot <- function(vds.id,f,fname,seconds,year,df){
 #' seconds (a parameter passed in) then uses Amelia to impute missing
 #' values.  No diagnostic plots are run.  Do those after.
 #'
-#' @param fname
-#' @param f
-#' @param path
-#' @param year
+#' @param fname filename
+#' @param f the root of the file name
+#' @param path the path
+#' @param year the year
 #' @param seconds  probably 120 these days
 #' @param goodfactor defaults to 2
 #' @param maxiter defaults to 100, currently using 20 as experiece

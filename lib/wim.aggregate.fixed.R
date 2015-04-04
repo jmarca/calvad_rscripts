@@ -1,3 +1,12 @@
+##' Make speed aggregates for WIM data
+##'
+##' need to revise to use sqldf
+##'
+##' @title makes.speed.aggregates
+##' @param df.spd the speed data frame from the WIM summary reports
+##' @param seconds how many seconds to aggregate to
+##' @return the aggregated speed data
+##' @author James E. Marca
 make.speed.aggregates <- function(df.spd,seconds){
   df.spd$ymdh <- trunc(df.spd$ts,units='hours')
   lane.agg <- split(df.spd,df.spd$lane)
@@ -62,4 +71,3 @@ wim.lane.and.time.aggregation <- function(lane.data){
   rm(lane.data.agg)
   df.return
 }
-
