@@ -1,5 +1,7 @@
 ## some specialized scripts to get things from couchdb
-source('../node_modules/rstats_couch_utils/couchUtils.R')
+
+## now I've converted to a proper R package, of sorts
+## source('../node_modules/rstats_couch_utils/couchUtils.R')
 
 ##' get vds wim pairs from couchdb
 ##'
@@ -18,7 +20,7 @@ source('../node_modules/rstats_couch_utils/couchUtils.R')
 ##' @return a data frame with year, vds_id, wim_id, doc
 ##' @author James E. Marca
 get.vds.wim.pairs <- function(year,trackingdb='vdsdata%2ftracking'){
-  docs <- couch.allDocs(trackingdb
+  docs <- rcouchtuils::couch.allDocs(trackingdb
                         , query=list(
                             'startkey'=paste('%5b%22',year,'%22','%5d',sep='')
                             ,'endkey' =paste('%5b%22',year+1,'%22','%5d',sep='')
@@ -64,7 +66,7 @@ get.vds.wim.pairs <- function(year,trackingdb='vdsdata%2ftracking'){
 ##' returns.
 ##' @author James E. Marca
 get.RData.view <- function(vdsid,year,trackingdb='vdsdata%2ftracking'){
-    docs <- couch.allDocs(trackingdb
+    docs <- rcouchtuils::couch.allDocs(trackingdb
                           , query=list(
                             'startkey'=paste('%5b%22',year,'%22,%22',vdsid,'%22%5d',sep='')
                             ,'endkey' =paste('%5b%22',year,'%22,%22',vdsid,'%22,%5b%5d%5d',sep='')
@@ -95,7 +97,7 @@ couch.record.unmet.conditions <- function(district,year,vdsid,condition){
   problem <- list()
   print(paste('unmet condition',condition))
   problem[condition] <- 'unmet'
-  couch.set.state(year,vdsid,doc=problem,local=TRUE)
+  rcouchtuils::couch.set.state(year,vdsid,doc=problem,local=TRUE)
 }
 
 ##' evaluate paired data

@@ -1,6 +1,4 @@
-source('../../lib/process.wim.site.R',chdir=TRUE)
-
-library(testthat)
+source('../../R/process.wim.site.R',chdir=TRUE)
 
 library('RPostgreSQL')
 m <- dbDriver("PostgreSQL")
@@ -12,8 +10,8 @@ con <-  dbConnect(m
                   ,host='192.168.0.1'
                   ,dbname="spatialvds")
 
-trackingdb <- paste('test',trackingdb,sep='_')
-couch.makedb(trackingdb,local=TRUE)
+trackingdb <- c('test','wim','processing')
+rcouchutils::couch.makedb(trackingdb)
 
 test_that("oldway and new way are the same", {
 
@@ -21,7 +19,7 @@ test_that("oldway and new way are the same", {
     year <- 2012
     wim.path <- 'files/wim/'
 
-    directions <- get.wim.directions(wim.site)
+    directions <- get.wim.directions(wim_site_no)
     expect_that(directions$direction[1],equals('N'))
     expect_that(directions$direction[2],equals('S'))
 

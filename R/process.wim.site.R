@@ -5,6 +5,7 @@ source('./wim.loading.functions.R')
 
 source('./amelia_plots_and_diagnostics.R')
 source('./get.medianed.amelia.vds.R')
+
 pf <- function(x,y){panel.smoothScatter(x,y,nbin=c(200,200))}
 
 ## day.of.week <-    c('Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday')

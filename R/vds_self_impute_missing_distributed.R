@@ -12,7 +12,7 @@ source("load.pems.raw.file.R")
 ##library('RJSONIO')
 
 source("vds.processing.functions.R")
-source('../node_modules/rstats_couch_utils/couchUtils.R')
+## source('../node_modules/rstats_couch_utils/couchUtils.R')
 source('../node_modules/rstats_remote_files/remoteFiles.R')
 server <- "http://calvad.ctmlabs.net"
 vds.service <- 'vdsdata'
@@ -24,7 +24,7 @@ source('./amelia_plots_and_diagnostics.R')
 
 source('./vds_impute.R')
 couch.check.is.raw.imputed <- function(year,vdsid){
-  r <- couch.check.state(year,vdsid,'vdsraw_chain_lengths')
+  r <- rcouchtuils::couch.check.state(year,vdsid,'vdsraw_chain_lengths')
   result <- (r[1] != 'todo' )
   return (result)
 }
@@ -68,7 +68,9 @@ process.yearly.files <- function(year,seconds=3600,base.dir="/data/pems/breakup"
         print('quit after one and done')
         quit(save='no',status=10)
       }else{
-        couch.set.state(year,vds.id,list('vdsraw_chain_lengths'=done))
+          rcouchtuils::couch.set.state(year,
+                                       vds.id,
+                                       list('vdsraw_chain_lengths'=done))
       }
     }
   }

@@ -1,5 +1,5 @@
 ## requires that couch utils has been loaded already
-source('../node_modules/rstats_couch_utils//couchUtils.R',chdir=TRUE)
+## source('../node_modules/rstats_couch_utils//couchUtils.R',chdir=TRUE)
 
 #' store amelia chains
 #'
@@ -29,7 +29,7 @@ store.amelia.chains <- function(df.amelia,year,detector.id,imputation.name='',ma
   if(imputation.name != '' ){
     names(trackerdoc) <- paste(imputation.name,names(trackerdoc),sep='_')
   }
-  couch.set.state(year=year,detector.id=detector.id,doc=trackerdoc)
+  rcouchutils::couch.set.state(year=year,detector.id=detector.id,doc=trackerdoc)
   return (itercount)
 }
 
