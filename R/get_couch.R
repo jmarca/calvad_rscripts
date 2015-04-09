@@ -1,7 +1,6 @@
 ## some specialized scripts to get things from couchdb
 
 ## now I've converted to a proper R package, of sorts
-## source('../node_modules/rstats_couch_utils/couchUtils.R')
 
 ##' get vds wim pairs from couchdb
 ##'
@@ -20,13 +19,13 @@
 ##' @return a data frame with year, vds_id, wim_id, doc
 ##' @author James E. Marca
 get.vds.wim.pairs <- function(year,trackingdb='vdsdata%2ftracking'){
-  docs <- rcouchtuils::couch.allDocs(trackingdb
-                        , query=list(
+    docs <- rcouchtuils::couch.allDocs(db=trackingdb
+                                      ,query=list(
                             'startkey'=paste('%5b%22',year,'%22','%5d',sep='')
                             ,'endkey' =paste('%5b%22',year+1,'%22','%5d',sep='')
                             ,'reduce'='false')
-                        , view='_design/vds/_view/pairRData'
-                        , include.docs = FALSE)
+                                      ,view='_design/vds/_view/pairRData'
+                                      ,include.docs = FALSE)
   rows <- docs$rows
   records <- sapply(rows,function(r){
       ## parse out wim info
@@ -66,13 +65,14 @@ get.vds.wim.pairs <- function(year,trackingdb='vdsdata%2ftracking'){
 ##' returns.
 ##' @author James E. Marca
 get.RData.view <- function(vdsid,year,trackingdb='vdsdata%2ftracking'){
-    docs <- rcouchtuils::couch.allDocs(trackingdb
-                          , query=list(
-                            'startkey'=paste('%5b%22',year,'%22,%22',vdsid,'%22%5d',sep='')
-                            ,'endkey' =paste('%5b%22',year,'%22,%22',vdsid,'%22,%5b%5d%5d',sep='')
-                            ,'reduce'='false')
-                        , view='_design/vds/_view/pairRData'
-                        , include.docs = FALSE)
+    docs <- rcouchtuils::couch.allDocs(
+        trackingdb
+       ,query=list(
+            'startkey'=paste('%5b%22',year,'%22,%22',vdsid,'%22%5d',sep='')
+           ,'endkey' =paste('%5b%22',year,'%22,%22',vdsid,'%22,%5b%5d%5d',sep='')
+           ,'reduce'='false')
+      , view='_design/vds/_view/pairRData'
+      , include.docs = FALSE)
   rows <- docs$rows
   files <- sapply(rows,function(r){
     return (r$key[[3]])

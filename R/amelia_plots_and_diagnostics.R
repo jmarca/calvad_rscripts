@@ -195,7 +195,7 @@ make.truck.plots.by.lane <- function(df,year,site,dir,
                                 ,pattern=paste(site,dir,year,trucks,'*',sep='_')
                                 ,full.names=TRUE)
   for(f2a in files.to.attach){
-    couch.attach(trackingdb,cdb.id,f2a)
+    rcouchutils::couch.attach(trackingdb,cdb.id,f2a)
   }
 
 }

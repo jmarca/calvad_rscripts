@@ -1,5 +1,5 @@
-### you need to have an existing value for con, a dbConnect object
-### before the db query code here will work
+### you need to have an existing value for con, a dbConnect object,
+### and pass that in to the various functions that require it
 
 ##' Load WIM data straight from the DB, bypassing any existing RData files
 ##'
@@ -10,14 +10,18 @@
 ##'
 ##' @title load.wim.data.straight
 ##' @param wim.site the WIM site number
-##' @param year
+##' @param year the year
+##' @param con the connection to postgresql
 ##' @return the output from get.wim.site.2, which should be a data
 ##' frame containing the WIM data.
 ##' @author James E. Marca
-load.wim.data.straight <- function(wim.site,year){
+load.wim.data.straight <- function(wim.site,year,con){
   start.wim.time <-  paste(year,"-01-01",sep='')
   end.wim.time <-   paste(year+1,"-01-01",sep='')
-  get.wim.site.2(wim.site,start.time=start.wim.time,end.time=end.wim.time)
+  get.wim.site.2(wim.site,
+                 start.time=start.wim.time,
+                 end.time=end.wim.time,
+                 con)
 }
 
 
@@ -26,17 +30,19 @@ load.wim.data.straight <- function(wim.site,year){
 ##' The WIM data also has summary reports.  These reports contain speed information on all vehicles in every lane, whereas the usual WIM data discards non-truck data.  This command hits the database to query those summary repots for this WIM site.
 ##' @title get.wim.speed.from.sql
 ##' @param wim.site the WIM site number
-##' @param year
+##' @param year the year
+##' @param con the connection to postgresql
 ##' @return a speed dataframe, from a call to get.wim.site.speed
 ##' @author James E. Marca
-get.wim.speed.from.sql <- function(wim.site,year){
+get.wim.speed.from.sql <- function(wim.site,year,con){
   ## load wim data
   ## by year
   start.wim.time <-  paste(year,"-01-01",sep='')
   end.wim.time <-   paste(year+1,"-01-01",sep='')
   df.speed <-  get.wim.site.speed(wim.site,
                                   start.time=start.wim.time,
-                                  end.time=end.wim.time)
+                                  end.time=end.wim.time,
+                                  con)
   df.speed <-  wim.recode.lanes(df.speed)
   df.speed
 }
@@ -50,15 +56,16 @@ get.wim.speed.from.sql <- function(wim.site,year){
 ##' two and three directions.
 ##' @title get.wim.directions
 ##' @param wim.site the WIM site number
+##' @param con a connection to postgresql
 ##' @return a simple dataframe containing the result of the DB query,
 ##' with a column for the direction.  Only applies to the passed in
 ##' WIM site, of course.
 ##' @author James E. Marca
-get.wim.directions <- function(wim.site){
+get.wim.directions <- function(wim.site,con){
   wim.query <- paste("select distinct direction as direction from wim_lane_dir where site_no=",wim.site,sep='')
   print(wim.query)
-  rs <- dbSendQuery(con,wim.query)
-  df.wim <- fetch(rs,n=-1)
+  rs <- RPostgreSQL::dbSendQuery(con,wim.query)
+  df.wim <- RPostgreSQL::fetch(rs,n=-1)
   df.wim
 }
 
@@ -71,6 +78,7 @@ get.wim.directions <- function(wim.site){
 ##' of the WIM sites with more than one lane and that aren't the
 ##' PrePass type.
 ##' @title get.list.wim.sites
+##' @param con a connection to postgresql
 ##' @return the dataframe containing the results of the query, with columns for
 ##'   site_no,
 ##'   loc (location name)
@@ -78,13 +86,13 @@ get.wim.directions <- function(wim.site){
 ##'   vendor (in CAlifornia there used to be PAT and IRD, now just IRD)
 ##'   wim_type The WIM station type, excluding all PrePass stations
 ##' @author James E. Marca
-get.list.wim.sites <-  function(){
+get.list.wim.sites <-  function(con){
   #   wim.query <- paste( "select distinct site_no,loc,lanes,vendor,wim_type from wim_stations join wim_district on (wim_id=site_no) where district_id in (7,8,11,12) and lanes>1 and wim_type != 'PrePass'" )
   #   wim.query <- paste( "select distinct site_no,loc,lanes,vendor,wim_type from wim_stations join wim_district on (wim_id=site_no) where district_id in (1,2,3,4,5,6,9,10) and lanes>1 and wim_type != 'PrePass'" )
   wim.query <- paste( "select distinct site_no,loc,lanes,vendor,wim_type from wim_stations where lanes>1 and wim_type != 'PrePass'" )
   print(wim.query)
-  rs <- dbSendQuery(con,wim.query)
-  df.wim <- fetch(rs,n=-1)
+  rs <- RPostgreSQL::dbSendQuery(con,wim.query)
+  df.wim <- RPostgreSQL::fetch(rs,n=-1)
   df.wim
 }
 
@@ -94,15 +102,16 @@ get.list.wim.sites <-  function(){
 ##'
 ##'
 ##' @title get.wim.sites
+##' @param con the connection to postgresql
 ##' @return a dataframe with one column called wim_id, which is
 ##' actually the "site_no" Not sure why I changed the name, but I did
 ##' this a long time ago
 ##' @author James E. Marca
-get.wim.sites <- function(){
+get.wim.sites <- function(con){
   wim.query <- "select distinct site_no as wim_id from wim_lane_dir order by site_no"
   print(wim.query)
-  rs <- dbSendQuery(con,wim.query)
-  df.wim <- fetch(rs,n=-1)
+  rs <- RPostgreSQL::dbSendQuery(con,wim.query)
+  df.wim <- RPostgreSQL::fetch(rs,n=-1)
   df.wim
 }
 
@@ -116,11 +125,12 @@ get.wim.sites <- function(){
 ##' from the vds_wim_neighbors table
 ##'
 ##' @title get.list.neighbor.vds.sites
+##' @param con the connection to postgresql
 ##' @return a dataframe containing a single column of VDS id called
 ##' vds_id.  These VDS ids are all of the ids that are in the
 ##' vds_wim_neighbors list.
 ##' @author James E. Marca
-get.list.neighbor.vds.sites <- function(){
+get.list.neighbor.vds.sites <- function(con){
 
   ##  db.query <- paste("select distinct c.vds_id,c.direction from (select a.* from imputed.vds_wim_neighbors a left outer join imputed.vds_wim_pairs b on (a.vds_id=b.vds_id and a.site_no=b.wim_id) where wim_id is null) c order by c.vds_id")
   ## select a.* from imputed.vds_wim_neighbors a left outer join imputed.vds_wim_pairs b on (a.vds_id=b.vds_id and a.site_no=b.wim_id) where wim_id is null;
@@ -136,8 +146,8 @@ get.list.neighbor.vds.sites <- function(){
   db.query <- paste("select distinct c.vds_id from imputed.vds_wim_neighbors  c  order by c.vds_id")
 
   print(db.query)
-  rs <- dbSendQuery(con,db.query)
-  df.q <- fetch(rs,n=-1)
+  rs <- RPostgreSQL::dbSendQuery(con,db.query)
+  df.q <- RPostgreSQL::fetch(rs,n=-1)
   df.q
 }
 
@@ -151,13 +161,14 @@ get.list.neighbor.vds.sites <- function(){
 ##' @title get.list.neighbor.wim.istes
 ##' @param vds.id the VDS site id.  Should be already in the neighbor
 ##' table.  If not, then you need to stick it there.
+##' @param con the connection to postgresql
 ##' @return a dataframe containing columns for
 ##'    wim_id the WIM site number
 ##'    dist the distance from the WIM site to the VDS detector (straight line, not network distance)
 ##'    direction the direction of flow of the neighbor WIM site
 ##'    lanes the total number of lanes at the WIM site
 ##' @author James E. Marca
-get.list.neighbor.wim.sites <- function(vds.id){
+get.list.neighbor.wim.sites <- function(vds.id,con){
 
 ##  db.query <- paste("select distinct c.site_no as wim_id,c.dist as distance from (select a.* from imputed.vds_wim_neighbors a left outer join imputed.vds_wim_pairs b on (a.vds_id=b.vds_id and a.site_no=b.wim_id) where wim_id is null and a.vds_id =",vds.id,' and a.direction=\'',relation.direction,'\'',  ") c",sep='')
 ## that above one prevents imputing paired sites.  Not sure that is good.  trying the following
@@ -174,8 +185,8 @@ get.list.neighbor.wim.sites <- function(vds.id){
   db.query <- paste(withstatement, selectstatement,subselect," where a.vds_id =",vds.id, ") c order by lanes desc",sep='')
 
   print(db.query)
-  rs <- dbSendQuery(con,db.query)
-  df.q <- fetch(rs,n=-1)
+  rs <- RPostgreSQL::dbSendQuery(con,db.query)
+  df.q <- RPostgreSQL::fetch(rs,n=-1)
   df.q
 }
 
@@ -189,13 +200,14 @@ get.list.neighbor.wim.sites <- function(vds.id){
 ##' this one is used or the above more genearl one
 ##' @title get.lsit.district.neighbor.wim.sites
 ##' @param vdsid the VDS id
+##' @param con the connection to postgresql
 ##' @return a dataframe containing columns for
 ##'    wim_id the WIM site number
 ##'    dist the distance from the WIM site to the VDS detector (straight line, not network distance)
 ##'    direction the direction of flow of the neighbor WIM site
 ##'    lanes the total number of lanes at the WIM site
 ##' @author James E. Marca
-get.list.district.neighbor.wim.sites <- function(vdsid){
+get.list.district.neighbor.wim.sites <- function(vdsid,con){
   with.part <- "with maxlanes as (select site_no, newctmlmap.canonical_direction(direction) as direction, max(lane_no) as lanes from wim_lane_dir group by site_no, direction order by site_no, direction) "
   select.part <- "select distinct w.site_no as wim_id,ST_Distance_Sphere(v.geom,w.geom) as distance,newctmlmap.canonical_direction(w.direction) as direction,ml.lanes as lanes"
   from.part <- paste("from newtbmap.tvd v ",
@@ -206,8 +218,8 @@ get.list.district.neighbor.wim.sites <- function(vdsid){
   where.part <- paste("where v.id=",vdsid,"order by lanes desc")
   query <- paste(with.part,select.part,from.part,where.part)
   print(query)
-  rs <- dbSendQuery(con,query)
-  df.wim <- fetch(rs,n=-1)
+  rs <- RPostgreSQL::dbSendQuery(con,query)
+  df.wim <- RPostgreSQL::fetch(rs,n=-1)
   df.wim
 }
 
@@ -222,15 +234,16 @@ get.list.district.neighbor.wim.sites <- function(vdsid){
 ##' This function gets all of these pairs all at once
 ##'
 ##' @title get.list.cloest.wim.pairs
+##' @param con the connection to postgresql
 ##' @return a dataframe containing columns for vds_id, wim_id, and direction
 ##' @author James E. Marca
-get.list.closest.wim.pairs <- function(){
+get.list.closest.wim.pairs <- function(con){
 
   wim.query <- paste("select vds_id,wim_id,direction from imputed.vds_wim_pairs")
 
   print(wim.query)
-  rs <- dbSendQuery(con,wim.query)
-  df.q <- fetch(rs,n=-1)
+  rs <- RPostgreSQL::dbSendQuery(con,wim.query)
+  df.q <- RPostgreSQL::fetch(rs,n=-1)
   df.q
 }
 
@@ -245,9 +258,10 @@ get.list.closest.wim.pairs <- function(){
 ##' @param wimid the WIM station
 ##' @param direction the directon of flow
 ##' @param samefreeway Whether to force matches to just the same freeway.  TRUE or FALSE
+##' @param con the connection to postgresql
 ##' @return a dataframe containing vds_id, wim_id, distance, freeway, direction
 ##' @author James E. Marca
-get.list.regenerate.wim.pairs <- function(wimid,direction,samefreeway=TRUE){
+get.list.regenerate.wim.pairs <- function(wimid,direction,samefreeway=TRUE,con){
 
     joinfreeway <- ''
     if(samefreeway){
@@ -267,8 +281,8 @@ get.list.regenerate.wim.pairs <- function(wimid,direction,samefreeway=TRUE){
                      ,"order by dist limit 50")
 
   print(wim.query)
-  rs <- dbSendQuery(con,wim.query)
-  df.q <- fetch(rs,n=-1)
+  rs <- RPostgreSQL::dbSendQuery(con,wim.query)
+  df.q <- RPostgreSQL::fetch(rs,n=-1)
   df.q
 
 }
@@ -282,17 +296,21 @@ get.list.regenerate.wim.pairs <- function(wimid,direction,samefreeway=TRUE){
 ##' @param wim.siteno the WIM site
 ##' @param start.time the starting time for the query
 ##' @param end.time the ending time for the query.
+##' @param con a connection to postgresql
 ##' @return a dataframe containing ts,lane,speed,count,direction So
 ##' you can weight speed by the count in each lane
 ##' @author James E. Marca
-get.wim.site.speed <- function(wim.siteno,start.time,end.time){
+get.wim.site.speed <- function(wim.siteno,
+                               start.time,
+                               end.time,
+                               con){
   query <- paste(
                  "select extract(epoch from ts) as ts, b.lane_no as lane, veh_speed, veh_count, direction from  wim.summaries_5min_speed a join wim_lane_dir b on (b.site_no=a.site_no and  b.wim_lane_no=a.wim_lane_no) where  ts>='",start.time,"' and ts < '",end.time, "' and a.site_no=",wim.siteno)
 
   print(query)
 
-  rs <- dbSendQuery(con,query)
-  df <- fetch(rs,n=-1)
+  rs <- RPostgreSQL::dbSendQuery(con,query)
+  df <- RPostgreSQL::fetch(rs,n=-1)
   df$ts <- as.POSIXct(unclass(df$ts) + ISOdatetime(1970,1,1,0,0,0, tz="UTC"), tz="UTC" )
   dbClearResult(rs)
   rm('rs')
@@ -310,9 +328,13 @@ get.wim.site.speed <- function(wim.siteno,start.time,end.time){
 ##' @param wim.siteno the WIM site
 ##' @param start.time starting time
 ##' @param end.time ending time
+##' @param con a connection to postgresql
 ##' @return a dataframe containing WIM data
 ##' @author James E. Marca
-get.wim.site.2 <- function(wim.siteno,start.time='2007-01-01',end.time='2008-01-01'){
+get.wim.site.2 <- function(wim.siteno,
+                           start.time='2007-01-01',
+                           end.time='2008-01-01',
+                           con){
   ## get the WIM data note that I am joining with wim_lane_dir because
   ## the wim lanes are numbered erratically.  I need to get the lane
   ## correct for Caltrans lane numbering scheme.  You'd think that
@@ -373,15 +395,27 @@ get.wim.site.2 <- function(wim.siteno,start.time='2007-01-01',end.time='2008-01-
 
   print(wim.query)
 
-  rs <- dbSendQuery(con,wim.query)
-  df <- fetch(rs,n=-1)
+  rs <- RPostgreSQL::dbSendQuery(con,wim.query)
+  df <- RPostgreSQL::fetch(rs,n=-1)
   df$ts <- as.POSIXct(unclass(df$ts) + ISOdatetime(1970,1,1,0,0,0, tz="UTC") ,tz='UTC')
   dbClearResult(rs)
   rm(rs)
   df
 }
 
-get.wim.site.extremes <- function(wim.siteno,start.time='2007-01-01',end.time='2008-01-01'){
+##' get wim site extremes.  This does nothing right now
+##'
+##' @title get.wim.site.extremes
+##' @param wim.siteno the site
+##' @param start.time the start to look
+##' @param end.time the end to look
+##' @param con a connection to postgresql
+##' @return nothing at alldocs
+##' @author James E. Marca
+get.wim.site.extremes <- function(wim.siteno,
+                                  start.time,
+                                  end.time,
+                                  con){
 }
 
 ##' Get WIM status, which tells you if the site is good data or unusable
@@ -389,15 +423,16 @@ get.wim.site.extremes <- function(wim.siteno,start.time='2007-01-01',end.time='2
 ##'
 ##' @title get.wim.status
 ##' @param wim.site the WIM site number
+##' @param con a connection to postgresql
 ##' @return a dataframe containing site_no, ts, class_status, class_notes,weight_status,weight_notes.  Stupidly, I used to limit the query to below 2009! but no more
 ##' @author James E. Marca
-get.wim.status <- function(wim.site){
+get.wim.status <- function(wim.site,con){
   ## it is important to ignore bad data
   wim.status.query <-
     paste("select site_no , ts , class_status , class_notes , weight_status , weight_notes from wim_status where site_no=",wim.site)
 
-  rs <- dbSendQuery(con,wim.status.query)
-  df.wim.status <- fetch(rs,n=-1)
+  rs <- RPostgreSQL::dbSendQuery(con,wim.status.query)
+  df.wim.status <- RPostgreSQL::fetch(rs,n=-1)
   df.wim.status
 }
 

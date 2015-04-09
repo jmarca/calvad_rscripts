@@ -140,7 +140,7 @@ sanity.check <- function(data,ts,year=0,vdsid='missing'){
         ## save to couchdb
         print('set state  not okay in couchdb')
         if(year != 0 & vdsid != 'missing' ){
-            couch.set.state(year,vdsid,doc=problem,local=TRUE)
+            rcouchutils::couch.set.state(year,vdsid,doc=problem,local=TRUE)
         }
 
     }

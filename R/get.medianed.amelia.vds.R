@@ -390,7 +390,7 @@ get.and.plot.vds.amelia <- function(pair,year,doplots=TRUE,
     }
 
     ## cruft, but may as well keep it up
-    couch.set.state(year,pair,doc=list('occupancy_averaged'=1))
+    rcouchutils::couch.set.state(year,pair,doc=list('occupancy_averaged'=1))
 
     if(doplots){
 
@@ -399,7 +399,7 @@ get.and.plot.vds.amelia <- function(pair,year,doplots=TRUE,
 
         attach.files <- plot.amelia.plots(aout,plotvars,pair,year,force.plot=force.plot)
         for(f2a in attach.files){
-            couch.attach(trackingdb,pair,f2a)
+            rcouchutils::couch.attach(trackingdb,pair,f2a)
         }
 
 
@@ -410,7 +410,7 @@ get.and.plot.vds.amelia <- function(pair,year,doplots=TRUE,
                                       force.plot=force.plot,
                                       trackingdb=trackingdb)
         for(f2a in attach.files){
-            couch.attach(trackingdb,pair,f2a)
+            rcouchutils::couch.attach(trackingdb,pair,f2a)
         }
     }
     1
@@ -499,7 +499,7 @@ plot.raw.data <- function(fname,f,path,year,vds.id,
                                   trackingdb=trackingdb)
 
   for(f2a in attach.files){
-      couch.attach('vdsdata%2ftracking',vds.id,f2a)
+      rcouchutils::couch.attach('vdsdata%2ftracking',vds.id,f2a)
   }
 
   return (TRUE)
@@ -533,7 +533,7 @@ check.for.plot.attachment <- function(vdsid,year,
   }
   fourthfile <- paste(imagefileprefix,'004.png',sep='_')
   print(paste('checking for ',fourthfile,'in tracking doc'))
-  return (couch.has.attachment(trackingdb,vdsid,fourthfile))
+  return (rcouchutils::couch.has.attachment(trackingdb,vdsid,fourthfile))
 }
 
 #' Plot VDS data and save the resulting plots to the files system and

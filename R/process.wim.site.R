@@ -1,10 +1,10 @@
-source('./utils.R')
-source('./wim.impute.functions.R')
-source('./wim.aggregate.fixed.R')
-source('./wim.loading.functions.R')
+## source('./utils.R')
+## source('./wim.impute.functions.R')
+## source('./wim.aggregate.fixed.R')
+## source('./wim.loading.functions.R')
 
-source('./amelia_plots_and_diagnostics.R')
-source('./get.medianed.amelia.vds.R')
+## source('./amelia_plots_and_diagnostics.R')
+## source('./get.medianed.amelia.vds.R')
 
 pf <- function(x,y){panel.smoothScatter(x,y,nbin=c(200,200))}
 
@@ -158,8 +158,8 @@ process.wim.site <- function(wim.site,
     ## only continue if I have real data
     if(dim(df.wim)[1]==0){
         print(paste('problem, dim df.wim is',dim(df.wim)))
-        couch.set.state(year=year,
-                        detector.id=paste('wim',wim.site,sep='.'),
+        rcouchutils::couch.set.state(year=year,
+                        id=paste('wim',wim.site,sep='.'),
                         doc=list('imputed'='no wim data in database'),
                         db=trackingdb)
         return(0)
@@ -178,15 +178,15 @@ process.wim.site <- function(wim.site,
         ## direction <- names(df.wim.split)[1]
         cdb.wimid <- paste('wim',wim.site,direction,sep='.')
         if(length(df.wim.split[[direction]]$ts)<100){
-            couch.set.state(year=year,
-                            detector.id=cdb.wimid,
+            rcouchutils::couch.set.state(year=year,
+                            id=cdb.wimid,
                             doc=list('imputed'='less than 100 timestamps for raw data in db'),
                             db=trackingdb)
             next
         }
         if(length(df.wim.speed.split[[direction]]$ts)<100){
-            couch.set.state(year=year,
-                            detector.id=cdb.wimid,
+            rcouchutils::couch.set.state(year=year,
+                            id=cdb.wimid,
                             doc=list('imputed'='less than 100 timestamps for speed data in db'),
                             db=trackingdb)
             next
@@ -250,8 +250,8 @@ process.wim.site <- function(wim.site,
 
             ## direction <- names(df.wim.split)[1]
             print(paste(year,wim.site,direction))
-            couch.set.state(year=year,
-                            detector.id=cdb.wimid,
+            rcouchutils::couch.set.state(year=year,
+                            id=cdb.wimid,
                             doc=list('imputed'='started'),
                             db=trackingdb)
 
@@ -286,8 +286,8 @@ process.wim.site <- function(wim.site,
             if(class(r) == "try-error") {
                 returnval <- paste(r,'')
                 print(paste('try error:',r))
-                couch.set.state(year=year,
-                                detector.id=cdb.wimid,
+                rcouchutils::couch.set.state(year=year,
+                                id=cdb.wimid,
                                 doc=list('imputed'=paste('try error',r)),
                                 db=trackingdb)
             }
@@ -299,16 +299,16 @@ process.wim.site <- function(wim.site,
                 print(paste('name is',target.file,'savepath is',savepath))
                 ## fs write
                 save(df.wim.amelia,file=target.file,compress="xz")
-                couch.set.state(year=year,
-                                detector.id=cdb.wimid,
+                rcouchutils::couch.set.state(year=year,
+                                id=cdb.wimid,
                                 doc=list('imputed'='finished'),
                                 db=trackingdb)
                 returnval <- 1
             }else{
                 returnval <- paste(df.vds.agg.imputed$code,'message',df.vds.agg.imputed$message)
                 print(paste("amelia not happy:",returnval))
-                couch.set.state(year=year,
-                                detector.id=cdb.wimid,
+                rcouchutils::couch.set.state(year=year,
+                                id=cdb.wimid,
                                 doc=list('imputed'=paste('error:',returnval)),
                                 db=trackingdb)
             }
@@ -480,10 +480,9 @@ upload.plots.couchdb <- function(wim.site
                                full.names=TRUE)
     }
     for(f2a in files.to.attach){
-        couch.attach(trackingdb
-                    ,cdb.wimid
-                    ,f2a
-                    ,local=local
-                     )
+        rcouchutils::couch.attach(db=trackingdb
+                                 ,docname=cdb.wimid
+                                 ,attfile=f2a
+                                  )
     }
 }

@@ -7,7 +7,8 @@
     "test": "tests"
   },
   "scripts": {
-    "test": "R CMD check"
+      "test": "Rscript Rtest.R",
+      "install":"Rscript Rinstall.R"
   },
   "repository": {
     "type": "git",
@@ -15,6 +16,7 @@
   },
     "dependencies":{
         "rcouchutils":"git://github.com/jmarca/rstats_couch_utils.git",
+        "configr":"git://github.com/jmarca/configr.git",
         "rstats_remote_files":"jmarca/rstats_remote_files"
     },
   "author": "James E. Marca",

@@ -82,7 +82,7 @@ load.wim.pair.data <- function(wim.ids,vds.nvars,year=0,localcouch=TRUE,do.couch
 
             paired.RData <- get.RData.view(paired.vdsid,year)
             if(length(paired.RData)==0) { next() }
-            result <- couch.get.attachment(trackingdb
+            result <- rcouchutils::couch.get.attachment(trackingdb
                                            ,paired.vdsid
                                            ,paired.RData
                                            ,local=localcouch)
@@ -125,7 +125,7 @@ load.wim.pair.data <- function(wim.ids,vds.nvars,year=0,localcouch=TRUE,do.couch
     }
     if(length(ready.wimids)>0 && do.couch.set.state){
         ready.wimids <- unique(ready.wimids)
-        couch.set.state(year
+        rcouchutils::couch.set.state(year
                         ,vds.id
                         ,list('wim_neighbors_ready'=ready.wimids)
                         ,local=localcouch)
