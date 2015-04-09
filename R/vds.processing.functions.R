@@ -1,4 +1,3 @@
-source('./utils.R')
 
 #' sanity check
 #'
@@ -263,11 +262,11 @@ db.ready.dump <- function(imps,vds.id,path='.',year,con){
 #'
 #' deprecated, I guess.  Unused any any event
 #'
-#' @param fname
-#' @param path
-#' @param year
-#' @param seconds
-#' @param df.vds.agg.imputed
+#' @param fname the business end of the file
+#' @param path the path
+#' @param year the year
+#' @param seconds the number of seconds to aggregate
+#' @param df.vds.agg.imputed the data frame of aggregated data
 #' @return TRUE if okay, FALSE if not okay
 verify.imputation.was.okay <- function(fname,path,year,seconds,df.vds.agg.imputed=NA){
   amelia.dump.file <- make.amelia.output.pattern(fname,year)
@@ -304,12 +303,12 @@ verify.imputation.was.okay <- function(fname,path,year,seconds,df.vds.agg.impute
 #' not have multipleimputations and if the imputed data result code
 #' does not equal 1, then do not write out the data as a dat file
 #'
-#' @param fname
-#' @param path
-#' @param year
-#' @param seconds
-#' @param con
-#' @parm df.vds.agg.imputed optional, if empty, then this will be read
+#' @param fname the important part of the file name
+#' @param path the path
+#' @param year the year
+#' @param seconds the seconds of aggregation
+#' @param con the postgresql database connection
+#' @param df.vds.agg.imputed optional, if empty, then this will be read
 #' from the file data you just passed in.  If not empty, then the file
 #' will be checked to make sure it ihas a reasonable, nonzero size,
 #' but otherwise will not be read.

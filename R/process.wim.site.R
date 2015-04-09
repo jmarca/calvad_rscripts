@@ -1,11 +1,3 @@
-## source('./utils.R')
-## source('./wim.impute.functions.R')
-## source('./wim.aggregate.fixed.R')
-## source('./wim.loading.functions.R')
-
-## source('./amelia_plots_and_diagnostics.R')
-## source('./get.medianed.amelia.vds.R')
-
 pf <- function(x,y){panel.smoothScatter(x,y,nbin=c(200,200))}
 
 ## day.of.week <-    c('Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday')
@@ -94,6 +86,8 @@ handle_wim_dir <- function(wim.site,
 #' defaults to one hour or 3600
 #' @param trackingdb where to shove the plots as attachments, defaults
 #' to the usual couchdb trackingdb of 'vdsdata%2ftracking'
+#' @param con the connection to the postgresql database so I can get
+#' the directions for this wim site
 #' @return 1 Run this for the side effect or generating plots for all
 #' directions at this WIM site
 #'
@@ -101,9 +95,10 @@ post.impute.plots <- function(wim.site,
                               year,
                               wim.path='/data/backup/wim',
                               seconds=3600,
-                              trackingdb='vdsdata%2ftracking'){
+                              trackingdb='vdsdata%2ftracking',
+                              con){
     ## no need to load raw data
-    df.directions <- get.wim.directions(wim.site)
+    df.directions <- get.wim.directions(wim.site,con)
     directions = df.directions$direction
     print(paste(directions,collapse=','))
     for(direction in directions){

@@ -1,5 +1,3 @@
-source('get_couch.R')
-
 ##' Load WIM VDS paired data
 ##'
 ##' This function will load up all of the WIM VDS paired datasets for

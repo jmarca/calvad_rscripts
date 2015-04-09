@@ -1,5 +1,14 @@
 
-
+##' load the raw file from PeMS
+##'
+##' Will scan the data and load up, then return the result of scanning
+##'
+##' @title load.raw.file
+##' @param file the file to scan
+##' @param skip the number of lines to skip at the beginning, in case there was a problem on the prior run.  passed to scan
+##' @param nlines the number of lines to scan passed to scan
+##' @return the result of scanning the file
+##' @author James E. Marca
 load.raw.file <- function (file="",skip=0,nlines=0){
   whatlist <- list(ts="",vds_id=0,
                    n1=0,o1=0,s1=0,
@@ -14,7 +23,24 @@ load.raw.file <- function (file="",skip=0,nlines=0){
     scan(file, what=whatlist, skip=skip,nlines=nlines,multi.line=FALSE,flush=TRUE,sep=',')
   testScan
 }
-
+##' load a given file, whether by scanning the raw file, or by loading
+##' an existing RData file
+##'
+##' A side effect is that if the raw data file is scanned, then an
+##' RData file will be saved to the file system to speed things up
+##' next time
+##'
+##' @title load.file
+##' @param f the full file name
+##' @param fname the business end of the name.  Typically the part
+##' that identifies the device id and the year.  It will be passed to
+##' the dir() function as part of the pattern to match when looking
+##' for the RData file.
+##' @param year the year of data
+##' @param path the path to the root of the thing.
+##' @return a data frame with the data in it
+##' @export
+##' @author James E. Marca
 load.file <- function(f,fname,year,path){
   ## is there a df available?
   df <- data.frame()
@@ -43,7 +69,12 @@ load.file <- function(f,fname,year,path){
   }
   df
 }
-
+##' The raw data often has empty lanes.  This will get rid of them.
+##'
+##' @title trim.empty.lanes
+##' @param testScan the scanned data file
+##' @return a data frame without lanes.
+##' @author James E. Marca
 trim.empty.lanes <- function(testScan){
   df <- data.frame(testScan)
 
@@ -84,17 +115,19 @@ trim.empty.lanes <- function(testScan){
   }
   df[,pattern]
 }
+##' Determine the percent of entries that have NA values
+##'
+##' @title pct.na
+##' @param v the vector to examine
+##' @return the percentage the entries in the vector that are NA.
+##' @author James E. Marca
 pct.na <- function(v){
   sum(is.na(v))/length(v)
 }
 
 ##' Get the canonical lane numbering system for a given number of lanes
 ##'
-##' .. content for \details{} ..
-##' @title
-##' @param lanes the number of lanes in the desired data set
-##' @param raw.data a vector of the values recorded for each lane.
-##' For example, if you have count and occupancy, you'd pass in
+##' ##' For example, if you have count and occupancy, you'd pass in
 ##' c('n','o')
 ##' @return a vector consisting of the correct naming for the
 ##' variables.  For example, if you have one lane and pass in
@@ -107,6 +140,9 @@ pct.na <- function(v){
 ##' lanes are coded from the right as r2, r3, etc.  So a 5 lanes site
 ##' will have, from left to right, l1, r4, r3, r2, r1.
 ##'
+##' @title vds.lane.numbers
+##' @param lanes the number of lanes in the desired data set
+##' @param raw.data a vector of the values recorded for each lane.
 ##'
 ##' @author James E. Marca
 vds.lane.numbers <- function(lanes,raw.data){

@@ -1,9 +1,3 @@
-source("utils.R")
-source("load.pems.raw.file.R")
-source("vds.processing.functions.R")
-source("vds.aggregate.R")
-
-
 junk.shot <- function(vds.id,f,fname,seconds,year,df){
     savepath <- get.save.path(f)
 
