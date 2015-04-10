@@ -1,5 +1,7 @@
-source('../../lib/get.medianed.amelia.vds.R',chdir=TRUE)
-library(testthat)
+config <- rcouchutils::get.config(Sys.getenv('RCOUCHUTILS_TEST_CONFIG'))
+trackingdb <- c('test','vds','plots')
+rcouchutils::couch.makedb(trackingdb)
+
 
 test_that("plotting imputed data code works okay",{
 
@@ -154,7 +156,12 @@ test_that("triggering native amelia plots works okay",{
     expect_that(res,equals('df.vds.agg.imputed'))
 
     vars = c("nl1","ol1","nr1","or1")
-    files.to.couch <- plot.amelia.plots(df.vds.agg.imputed,vars=vars,1211682,2012,force.plot=TRUE)
+    files.to.couch <- plot.amelia.plots(aout=df.vds.agg.imputed,
+                                        plotvars=vars,
+                                        vdsid=1211682,
+                                        year=2012,
+                                        force.plot=TRUE,
+                                        trackingdb=trackingdb)
 
     expect_that(files.to.couch,equals(
         c("images/1211682/1211682_2012_amelia_001.png"
@@ -168,8 +175,6 @@ test_that("bail out rejected amelia run",{
     file <- './files/1215965_ML_2012.120.imputed.RData'
     res <- load(file)
     expect_that(res,equals('reject'))
-    expect_that(res,is_a('data.frame'))
-
 
     expect_that(get.and.plot.vds.amelia(pair = 1215965,year=2012,doplots = TRUE,
                                         remote=FALSE,path='.',force.plot = TRUE
@@ -177,15 +182,3 @@ test_that("bail out rejected amelia run",{
 
 
 })
-
-## actually, this detector really is pretty broken
-## test_that("bail out rejected amelia run",{
-##     file <- '/data/backup/pems/breakup//D12/241/N/S_OF_CHIQUITA/1215855_ML_2012.df.2012.RData'
-##     df <- load.file(f=file,fname='1215855_ML_2012',year=2012,path='/data/backup/pems/breakup')
-##     ts <- df$ts
-##     df$ts <- NULL
-##     ## aggregate up to an hour?
-##     df.agg <- vds.aggregate(df,ts,seconds=120)
-##     twerked.df <- recode.df.vds(df.agg)
-##     files.to.couch <- plot.vds.data(df.agg,1215965,2012,'raw','\npre imputation',force.plot=TRUE)
-## })

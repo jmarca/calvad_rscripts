@@ -541,9 +541,11 @@ check.for.plot.attachment <- function(vdsid,year,
 #' so by including a note in the fileprefix parameter
 #'
 #'
-#' @param df.merged the dataframe to plot
+#' @param aout the amelia output
+#' @param plotvars the variables to plot
 #' @param vdsid the VDS id
-#' @param year
+#' @param year the year
+#' @param force.plot defaults to FALSE.  If FALSE, and a file exists
 #' @param fileprefix helps name the output file, and also to find it.
 #' By default the plot file will be named via the pattern
 #'
@@ -556,8 +558,6 @@ check.for.plot.attachment <- function(vdsid,year,
 #'
 #' So you can add something like "imputed" to the file name to
 #' differentiate the imputed plots from the input data plots.
-#' @param subhead Written on the plot
-#' @param force.plot defaults to FALSE.  If FALSE, and a file exists
 #' @param trackingdb defaults to 'vdsdata%2ftracking' for checking if
 #' plots already done
 #' @return files.to.attach the files that you need to send off to

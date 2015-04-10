@@ -1,6 +1,3 @@
-source('../../lib/vds.aggregate.R',chdir=TRUE)
-library(testthat)
-
 ## test_that("oldway and new way are the same",{
 
 ##     file <- './tests/testthat/files/1211682_ML_2012.df.2012.RData'
