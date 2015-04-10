@@ -41,19 +41,21 @@ test_that("plotting imputed data code works okay",{
 
     r <- try(
         df.vds.agg.imputed <-
-            Amelia::amelia(df.agg,
-                   idvars=c('ts','obs_count'),
-                   ts="tod",
-                   splinetime=6,
-                   autopri=0.001,
-                   lags =c(n.idx),
-                   leads=c(n.idx),
-                   cs="day",
-                   intercs=TRUE,
-                   sqrts=n.idx,
-                   bounds=o.bds,
-                   max.resample=10,
-                   emburn=c(2,maxiter))
+            Amelia::amelia(
+                df.agg,
+                idvars=c('ts','obs_count'),
+                ts="tod",
+                splinetime=6,
+                autopri=0.001,
+                lags =c(n.idx,o.idx),
+                leads=c(n.idx,o.idx),
+                cs="day",
+                intercs=TRUE,
+                sqrts=n.idx,
+
+                bounds=o.bds,
+                max.resample=10,
+                emburn=c(2,maxiter))
         )
 
     expect_that(r,is_a('amelia'))
