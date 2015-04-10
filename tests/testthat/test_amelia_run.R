@@ -1,6 +1,3 @@
-source('../../lib/vds_impute.R',chdir=TRUE)
-library(testthat)
-library()
 test_that("plotting imputed data code works okay",{
 
     file  <- './files/718204_ML_2012.df.2012.RData'
