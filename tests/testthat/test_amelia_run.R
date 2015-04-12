@@ -47,7 +47,7 @@ test_that("plotting imputed data code works okay",{
                 ts="tod",
                 splinetime=6,
                 autopri=0.001,
-                ##lags =c(n.idx,o.idx),
+                lags =c(n.idx,o.idx),
                 ##leads=c(n.idx,o.idx),
                 cs="day",
                 intercs=TRUE,
