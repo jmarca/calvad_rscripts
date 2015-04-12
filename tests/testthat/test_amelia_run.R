@@ -50,7 +50,7 @@ test_that("plotting imputed data code works okay",{
                 ##lags =c(n.idx,o.idx),
                 ##leads=c(n.idx,o.idx),
                 cs="day",
-                ## intercs=TRUE,
+                intercs=TRUE,
                 sqrts=c(n.idx,o.idx),
                 bounds=o.bds,
                 max.resample=10,
