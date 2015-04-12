@@ -39,7 +39,6 @@ test_that("plotting imputed data code works okay",{
     df.vds.agg.imputed <- NULL
     maxiter <-  20
     df.agg$toddow <- 24 * df.agg$day + df.agg$tod
-
     r <- try(
         df.vds.agg.imputed <-
             Amelia::amelia(
@@ -51,7 +50,7 @@ test_that("plotting imputed data code works okay",{
                 lags =c(n.idx,o.idx),
                 leads=c(n.idx,o.idx),
                 cs="day",
-                ##intercs=TRUE,
+                intercs=TRUE,
                 sqrts=n.idx,
 
                 bounds=o.bds,
