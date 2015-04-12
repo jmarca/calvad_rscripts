@@ -44,12 +44,12 @@ test_that("plotting imputed data code works okay",{
         df.vds.agg.imputed <-
             Amelia::amelia(
                 df.agg,
-                idvars=c('ts','tod','obs_count'),
+                idvars=c('ts','tod','obs_count','day'),
                 ts="toddow",
                 splinetime=6,
                 autopri=0.001,
-                ##lags =c(n.idx,o.idx),
-                ##leads=c(n.idx,o.idx),
+                lags =c(n.idx,o.idx),
+                leads=c(n.idx,o.idx),
                 ##cs="day",
                 ##intercs=TRUE,
                 sqrts=n.idx,
