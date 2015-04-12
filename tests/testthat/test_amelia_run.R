@@ -51,7 +51,7 @@ test_that("plotting imputed data code works okay",{
                 leads=c(n.idx,o.idx),
                 cs="day",
                 intercs=TRUE,
-                sqrts=n.idx,
+                sqrts=c(n.idx,o.idx),
 
                 bounds=o.bds,
                 max.resample=10,
