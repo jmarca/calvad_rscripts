@@ -228,4 +228,5 @@ test_that("bail out rejected amelia run",{
 
 })
 
+unlink('./files/1211682_ML_2012.120.imputed.RData')
 rcouchutils::couch.deletedb(parts)
