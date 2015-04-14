@@ -37,10 +37,10 @@ get.amelia.vds.file <- function(vdsid,path='/',year,server='http://lysithia.its.
   serverfile = files[1]
   while(attempt < 10){
     attempt <-  attempt + 1
-    print(paste('try',attempt,'loading stored vds amelia object from file',serverfile))
+    ## print(paste('try',attempt,'loading stored vds amelia object from file',serverfile))
     fetched <- fetch.remote.file(server,service='vdsdata',root=paste(path,'/',sep=''),file=serverfile)
     if(fetched == 'df.vds.agg.imputed') break
-    print(paste('attempt ',attempt))
+    ##print(paste('attempt ',attempt))
   }
   if(result == 'reject'){
     return(paste('rejected',files[1]))
@@ -72,13 +72,13 @@ get.amelia.vds.file.local <- function(vdsid,path='/',year,server,serverfile){
 
   target.file <- make.amelia.output.pattern(vdsid,year)
   isa.df <- dir(path, pattern=target.file,full.names=TRUE, ignore.case=TRUE,recurs=TRUE)
-  print(paste(path,target.file,isa.df[1],sep=' : '))
+  ## print(paste(path,target.file,isa.df[1],sep=' : '))
   if(length(isa.df)==0){
       return('todo')
   }
-  print (paste('loading', isa.df[1]))
+  ## print (paste('loading', isa.df[1]))
   load.result <-  load(file=isa.df[1])
-  print(load.result)
+  ## print(load.result)
   df.vds.agg.imputed
 
 }
@@ -146,7 +146,7 @@ unget.amelia.vds.file <- function(vdsid,path='/',year,server='http://calvad.ctml
 #'
 #' Speeds are ignored because speed never works out so far
 medianed.aggregate.df <- function(df_combined,op=median){
-    print(paste('use sqldf to aggregate imputations'))
+    ## print(paste('use sqldf to aggregate imputations'))
 
     varnames <- names(df_combined)
     varnames <- grep( pattern="^ts",x=varnames,perl=TRUE,inv=TRUE,value=TRUE)
@@ -167,7 +167,7 @@ medianed.aggregate.df <- function(df_combined,op=median){
 
     ## aggregate the multiple imputations, resulting in one value per
     ## time step
-    print(sqlstatement)
+    ## print(sqlstatement)
     temp_df <- sqldf::sqldf(sqlstatement,drv="SQLite")
     attr(temp_df$ts,'tzone') <- 'UTC'
 
@@ -185,7 +185,7 @@ medianed.aggregate.df <- function(df_combined,op=median){
                            'from temp_df group by hourly',
                            sep=' ',collapse=' '
                            )
-    print(sqlstatement2)
+    ## print(sqlstatement2)
     ## generate the hourly summation
     df_hourly <- sqldf::sqldf(sqlstatement2,drv="SQLite")
 
@@ -303,7 +303,7 @@ get.aggregated.vds.amelia <- function(vdsid,
                                       remote=TRUE,
                                       server='http://lysithia.its.uci.edu',
                                       year){
-    print(paste('in get.aggregated.vds.amelia, remote is',remote))
+    ## print(paste('in get.aggregated.vds.amelia, remote is',remote))
     df.vds.agg.imputed <- NULL
     if(path=='none'){
         path <- district.from.vdsid(vdsid)
@@ -311,7 +311,7 @@ get.aggregated.vds.amelia <- function(vdsid,
     if(remote){
         df.vds.agg.imputed <- get.amelia.vds.file(vdsid,path=path,year=year,serverfile=serverfile)
     }else{
-        print('calling local version')
+        ## print('calling local version')
         df.vds.agg.imputed <- get.amelia.vds.file.local(vdsid,path=path,year=year,serverfile=serverfile)
     }
 
@@ -350,8 +350,7 @@ get.aggregated.vds.amelia <- function(vdsid,
 #' @param trackingdb the CouchDB database that is being used to track
 #' detector status.  Will push the generated plot files to this
 #' database as attached files
-#' @return the condensed, aggregated Amelia imputation results as a
-#' dataframe
+#' @return 1 if all went well, NULL otherwise
 #'
 #' And plots get made and saved
 #'
@@ -529,7 +528,7 @@ check.for.plot.attachment <- function(vdsid,year,
     imagefileprefix <- paste(vdsid,year,fileprefix,sep='_')
   }
   fourthfile <- paste(imagefileprefix,'004.png',sep='_')
-  print(paste('checking for ',fourthfile,'in tracking doc'))
+  ## print(paste('checking for ',fourthfile,'in tracking doc'))
   return (rcouchutils::couch.has.attachment(trackingdb,vdsid,fourthfile))
 }
 
@@ -574,7 +573,7 @@ plot.amelia.plots  <- function(aout,plotvars,vdsid,year,force.plot=FALSE,
             return (1)
         }
     }
-    print('need to make plots')
+    ## print('need to make plots')
     savepath <- 'images'
     if(!file.exists(savepath)){dir.create(savepath)}
     savepath <- paste(savepath,vdsid,sep='/')
@@ -587,11 +586,11 @@ plot.amelia.plots  <- function(aout,plotvars,vdsid,year,force.plot=FALSE,
 
     imagefilename <- paste(savepath,paste(imagefileprefix,'%03d.png',sep='_'),sep='/')
 
-    print(paste('plotting to',imagefilename))
+    ## print(paste('plotting to',imagefilename))
 
     png(file = imagefilename, width=1600, height=1200, bg="transparent",pointsize=24)
 
-    print(plot(aout,which.vars=plotvars,ask=FALSE))
+    ## print(plot(aout,which.vars=plotvars,ask=FALSE))
 
     dev.off()
 
@@ -642,7 +641,7 @@ plot.vds.data  <- function(df.merged,vdsid,year,fileprefix=NULL,subhead='\npost 
             return (1)
         }
     }
-    print('need to make plots')
+    ## print('need to make plots')
     varnames <- names(df.merged)
     ## make some diagnostic plots
 
@@ -666,7 +665,7 @@ plot.vds.data  <- function(df.merged,vdsid,year,fileprefix=NULL,subhead='\npost 
 
     imagefilename <- paste(savepath,paste(imagefileprefix,'%03d.png',sep='_'),sep='/')
 
-    print(paste('plotting to',imagefilename))
+    ## print(paste('plotting to',imagefilename))
 
     numlanes <- length(levels(recoded$lane))
     plotheight = 400 * numlanes

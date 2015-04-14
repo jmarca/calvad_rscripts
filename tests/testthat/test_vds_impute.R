@@ -1,22 +1,22 @@
 ## call this for calls inside impute routine
-rcouchutils::get.config(Sys.getenv('RCOUCHUTILS_TEST_CONFIG'))
-get.config <- configr::configrr()
-config <- get.config(Sys.getenv('RCOUCHUTILS_TEST_CONFIG'))$postgresql
+config <- rcouchutils::get.config(Sys.getenv('RCOUCHUTILS_TEST_CONFIG'))
+##get.config <- configr::configrr()
+##config <- get.config(Sys.getenv('RCOUCHUTILS_TEST_CONFIG'))$postgresql
 
 library('RPostgreSQL')
 m <- dbDriver("PostgreSQL")
 ## requires environment variables be set externally
 
 con <-  dbConnect(m
-                  ,user=config$auth$username
-                  ,host=config$host
-                  ,dbname=config$db)
+                  ,user=config$postgresql$auth$username
+                  ,host=config$postgresql$host
+                  ,dbname=config$postgresql$db)
 
 test_that("vds impute works okay",{
 
-    file  <- './files/718204_ML_2012.df.2012.RData'
-    fname <- '718204_ML_2012'
-    vds.id <- 718204
+    file  <- './files/1211682_ML_2012.df.2012.RData'
+    fname <- '1211682_ML_2012'
+    vds.id <- 1211682
     year <- 2012
     seconds <- 120
     path <- '.'
@@ -31,5 +31,9 @@ test_that("vds impute works okay",{
 
 
     expect_that(result,equals(1))
+    datfile <- dir(path='.',pattern='vds_hour_agg',full.names=TRUE,recursive=TRUE)
+    expect_that(datfile[1],matches('vds_hour_agg.1211682'))
 
 })
+
+unlink('./vds_hour_agg.718204.2012.dat')

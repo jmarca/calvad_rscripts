@@ -1,8 +1,9 @@
 config <- rcouchutils::get.config(Sys.getenv('RCOUCHUTILS_TEST_CONFIG'))
-trackingdb <- c('test','vds','plots')
-rcouchutils::couch.makedb(trackingdb)
 
+parts <- c('vds','plots')
+result <- rcouchutils::couch.makedb(parts)
 
+context('building blocks of get.and.plot.vds.amelia work okay')
 test_that("plotting imputed data code works okay",{
 
     file <- './files/718204_ML_2012.120.imputed.RData'
@@ -16,11 +17,10 @@ test_that("plotting imputed data code works okay",{
     expect_that(varnames,equals(c("ts", "nl1","nr3","nr2","nr1",
                                   "ol1", "or3","or2","or1",
                                   "obs_count","tod","day")))
-
     expect_that(min(df.merged$nl1),equals(0.0))
-    expect_that(median(df.merged$nl1),equals(1331.2886693577))
-    expect_that(mean(df.merged$nl1),equals(1224.8003974521))
-    expect_that(max(df.merged$nl1),equals(2362.7500629902))
+    expect_that(median(df.merged$nl1),equals(1332.0))
+    expect_that(mean(df.merged$nl1),equals(1227.4734040571))
+    expect_that(max(df.merged$nl1),equals(2370.5550352139))
 
 ### that should be good enough to verify that condense hasn't changed
 ### its spots
@@ -44,7 +44,46 @@ test_that("plotting imputed data code works okay",{
           )))
 
     ## should also md5 check the dumped images?
+
+
 })
+
+context('get.and.plot.vds.amelia works okay')
+test_that("plotting imputed data code works okay",{
+
+    file  <- './files/1211682_ML_2012.df.2012.RData'
+    fname <- '1211682_ML_2012'
+    vds.id <- 1211682
+    year <- 2012
+    seconds <- 120
+    path <- '.'
+
+    df_agg_amelia <- get.and.plot.vds.amelia(pair=vds.id,
+                                             year=2012,
+                                             doplots=TRUE,
+                                             remote=FALSE,
+                                             path=path,
+                                             force.plot=TRUE,
+                                             trackingdb=parts)
+
+    expect_that(df_agg_amelia,equals(1))
+
+    plots <- paste(vds.id,year,'imputed',
+                   c('001.png','002.png','003.png','004.png'),
+                   sep='_')
+    for(plot in plots){
+        result <- rcouchutils::couch.has.attachment(db=parts,docname=vds.id,
+                                                    attachment=plot)
+        expect_true(result)
+    }
+
+    ## should also md5 check the dumped images?
+
+
+})
+
+
+context('raw data plots')
 
 test_that("plotting raw data code works okay",{
 
@@ -68,6 +107,9 @@ test_that("plotting raw data code works okay",{
                 equals(c("ts", "nl1","nr3","nr2","nr1",
                          "ol1", "or3","or2","or1",
                          "obs_count","tod","day")))
+
+    ## use sprintf("%0.10f",mean(df.agg$nl1,na.rm=TRUE)) to get long
+    ## decimal places
 
     expect_that(min(df.agg$nl1,na.rm=TRUE),equals(0.0))
     expect_that(median(df.agg$nl1,na.rm=TRUE),equals(1286.0))
@@ -97,6 +139,8 @@ test_that("plotting raw data code works okay",{
 
     ## should also md5 check the dumped images?
 })
+
+context('two lane site raw data')
 
 test_that("plotting raw from a site with two lanes works okay",{
 
@@ -149,6 +193,7 @@ test_that("plotting raw from a site with two lanes works okay",{
     ## should also md5 check the dumped images?
 })
 
+context('native amelia plots')
 test_that("triggering native amelia plots works okay",{
 
     file <- './files/1211682_ML_2012.120.imputed.RData'
@@ -161,7 +206,7 @@ test_that("triggering native amelia plots works okay",{
                                         vdsid=1211682,
                                         year=2012,
                                         force.plot=TRUE,
-                                        trackingdb=trackingdb)
+                                        trackingdb=parts)
 
     expect_that(files.to.couch,equals(
         c("images/1211682/1211682_2012_amelia_001.png"
@@ -182,3 +227,5 @@ test_that("bail out rejected amelia run",{
 
 
 })
+
+rcouchutils::couch.deletedb(parts)
