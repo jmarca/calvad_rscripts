@@ -6,3 +6,4 @@
 /test.config.json
 /.Rbuildignore
 **/.cookies.txt
+/tests/testthat/vds_hour_agg.718204.2012.dat
