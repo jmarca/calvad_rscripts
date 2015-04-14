@@ -447,10 +447,6 @@ preplot <- function(wim.site,direction,year,df.wim,imagepath="images/",
 #' @param imagepath where are the images.  Will be used if you don't
 #' pass in a list of files, otherwise will be ignored
 #' @param trackingdb defaults to the usual 'vdsdata%2ftracking'
-#' @param local defaults to TRUE, will be passed to the couchdb
-#' functions.  If false it will push up to the regular couchdb, if
-#' true will look for whatever is defined as local couchdb server, or
-#' localhost
 #' @param files.to.attach a list of files to attach to couchdb. If
 #' empty or if left as default value, will look through imagepath and
 #' will upload all of the files found that match the pattern for this
@@ -463,7 +459,6 @@ upload.plots.couchdb <- function(wim.site
                                  ,year
                                  ,imagepath
                                  ,trackingdb='vdsdata%2ftracking'
-                                ,local=TRUE
                                 ,files.to.attach=list()){
     cdb.wimid <- paste('wim',wim.site,direction,sep='.')
 

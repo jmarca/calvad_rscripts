@@ -18,7 +18,7 @@
 #'
 #' Side effect, will store the reason for data rejection to CouchDB,
 #' and also will dump test results to the log file
-sanity.check <- function(data,ts,year=0,vdsid='missing'){
+sanity.check <- function(data,ts,year=0,vdsid='missing',db='vdsdata%2ftracking'){
     problem <- list()
     print ('check dimensions')
   return.val <- dim(data)[2] > 0  ## catch empty data right away
@@ -139,7 +139,7 @@ sanity.check <- function(data,ts,year=0,vdsid='missing'){
         ## save to couchdb
         print('set state  not okay in couchdb')
         if(year != 0 & vdsid != 'missing' ){
-            rcouchutils::couch.set.state(year,vdsid,doc=problem,local=TRUE)
+            rcouchutils::couch.set.state(year,vdsid,doc=problem,db=db)
         }
 
     }

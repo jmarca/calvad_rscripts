@@ -22,9 +22,7 @@
 ##' @param vds.nvars the VDS count variables from the target site,
 ##' used to limit the chosen set of matched WIM-VDS paired sites
 ##' @param year
-##' @param localcouch TRUE if you want to use the localhost couchdb,
-##' FALSE if you want to use the vanilla and ostensibly remote
-##' couchdb.  Usually TRUE is good if you have replication running
+##' @param db default 'vdsdata%2ftracking', the couchdb to save into
 ##' @param do.couch.set.state TRUE or FALSE, TRUE will set a "state"
 ##' in couchdb for the passed in vds.id, setting the list of
 ##' "wim_neighbors" that are ready to go for this year.
@@ -36,7 +34,7 @@
 ##' trimmed to the right number of lanes
 ##' @author James E. Marca
 ##' @export
-load.wim.pair.data <- function(wim.ids,vds.nvars,year=0,localcouch=TRUE,do.couch.set.state=FALSE,vds.id){
+load.wim.pair.data <- function(wim.ids,vds.nvars,year=0,db='vdsdata%2ftracking',do.couch.set.state=FALSE,vds.id){
     vds.lanes <- length(vds.nvars)
     wim.vds.pairs <- get.vds.wim.pairs(year)
     if(dim(wim.vds.pairs)[1]==0) {
@@ -47,7 +45,7 @@ load.wim.pair.data <- function(wim.ids,vds.nvars,year=0,localcouch=TRUE,do.couch
     bigdata <- data.frame()
     if(length(wim.ids)<1){
         print('no wim neighbors in database')
-        ## couch.set.state(year,vds.id,list('truck_imputation_failed'='0 records in wim neighbor table'),local=localcouch)
+        ## couch.set.state(year,vds.id,list('truck_imputation_failed'='0 records in wim neighbor table'),db=db)
         stop()
     }
     ## keep either the max number of lanes group, or all sites that have
@@ -80,10 +78,9 @@ load.wim.pair.data <- function(wim.ids,vds.nvars,year=0,localcouch=TRUE,do.couch
 
             paired.RData <- get.RData.view(paired.vdsid,year)
             if(length(paired.RData)==0) { next() }
-            result <- rcouchutils::couch.get.attachment(trackingdb
-                                           ,paired.vdsid
-                                           ,paired.RData
-                                           ,local=localcouch)
+            result <- rcouchutils::couch.get.attachment(db=db
+                                                       ,docname=paired.vdsid
+                                                       ,attachment=paired.RData)
             if(result != "df.merged"){
                 print (paste(paired.vdsid,paired.RData,'not df.merged'))
                 next()
@@ -126,7 +123,7 @@ load.wim.pair.data <- function(wim.ids,vds.nvars,year=0,localcouch=TRUE,do.couch
         rcouchutils::couch.set.state(year
                         ,vds.id
                         ,list('wim_neighbors_ready'=ready.wimids)
-                        ,local=localcouch)
+                        ,db=db)
     }
 
     bigdata

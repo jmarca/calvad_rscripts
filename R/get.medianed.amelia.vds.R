@@ -386,7 +386,8 @@ get.and.plot.vds.amelia <- function(pair,year,doplots=TRUE,
     }
 
     ## cruft, but may as well keep it up
-    rcouchutils::couch.set.state(year,pair,doc=list('occupancy_averaged'=1))
+    rcouchutils::couch.set.state(year,pair,doc=list('occupancy_averaged'=1)
+                                 ,db=trackingdb)
 
     if(doplots){
 

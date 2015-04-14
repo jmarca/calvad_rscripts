@@ -15,4 +15,5 @@ Imports: sqldf,
     RJSONIO,
     RPostgreSQL,
     reshape2,
-    ggplot2
+    ggplot2,
+    rcouchutils

@@ -7,11 +7,14 @@
 #' @param detector.id
 #' @param imputation.name
 #' @param maxiter default 100
+#' @param db the couchdb tracking db, defaults to vdsdata%2ftracking
 #' @return itercount, the total count of iterations that hit the "max
 #' iteration" limit.  Ideally this will be zero.  If not, the
 #' imputation that hit maxiter is likely unusable
 #'
-store.amelia.chains <- function(df.amelia,year,detector.id,imputation.name='',maxiter=100){
+store.amelia.chains <- function(df.amelia,year,detector.id,
+                                imputation.name='',maxiter=100,
+                                db='vdsdata%2ftracking'){
   m <- length(df.amelia$imputations)
   itercount = 0;
   chains=rep(0,m)
@@ -26,7 +29,7 @@ store.amelia.chains <- function(df.amelia,year,detector.id,imputation.name='',ma
   if(imputation.name != '' ){
     names(trackerdoc) <- paste(imputation.name,names(trackerdoc),sep='_')
   }
-  rcouchutils::couch.set.state(year=year,id=detector.id,doc=trackerdoc)
+  rcouchutils::couch.set.state(year=year,id=detector.id,doc=trackerdoc,db=db)
   return (itercount)
 }
 

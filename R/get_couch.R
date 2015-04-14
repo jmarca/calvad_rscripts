@@ -88,16 +88,19 @@ get.RData.view <- function(vdsid,year,trackingdb='vdsdata%2ftracking'){
 ##' I can't find where this is actually used at the moment.
 ##'
 ##' @title couch.record.unmet.conditions
+##' @param district
 ##' @param year
 ##' @param vdsid
 ##' @param condition some string or list describing what is wrong
+##' @param db the couchdb to save into, defaults to vdsdata%2ftracking
 ##' @return the result of calling couch.set.state
 ##' @author James E. Marca
-couch.record.unmet.conditions <- function(district,year,vdsid,condition){
+couch.record.unmet.conditions <- function(year,vdsid,condition,
+                                          db='vdsdata%2ftracking'){
   problem <- list()
   print(paste('unmet condition',condition))
   problem[condition] <- 'unmet'
-  rcouchutils::couch.set.state(year,vdsid,doc=problem,local=TRUE)
+  rcouchutils::couch.set.state(year,id=vdsid,doc=problem,db=db)
 }
 
 ##' evaluate paired data
