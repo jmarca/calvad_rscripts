@@ -16,14 +16,14 @@ library(testthat)
 
 test_that("dump code works okay",{
 
-    file <- './files/1211682_ML_2012.120.imputed.RData'
+    file <- './files/718204_ML_2012.120.imputed.RData'
 
     res <- load(file)
     expect_that(res,equals('df.vds.agg.imputed'))
 
     tmd <- tempdir()
 
-    verify.db.dump('1211682_ML_2012.120.imputed.RData',
+    verify.db.dump('718204_ML_2012.120.imputed.RData',
                    path=tmd,
                    2012,120,df.vds.agg.imputed=df.vds.agg.imputed,
                    con
@@ -31,6 +31,6 @@ test_that("dump code works okay",{
 
     impsagg <- impute.aggregate(df.vds.agg.imputed)
 
-    db.ready.dump(impsagg,  1211682, tmd, con  )
+    db.ready.dump(impsagg,  718204, tmd, con  )
 
 })
