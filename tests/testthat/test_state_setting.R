@@ -2,10 +2,40 @@ config <- rcouchutils::get.config(Sys.getenv('RCOUCHUTILS_TEST_CONFIG'))
 
 parts <- c('get','set','state')
 result <- rcouchutils::couch.makedb(parts)
-print(result)
-## test_that('store amelia chains output will work',{
 
-## })
+context('amelia chains')
+test_that('store amelia chains output will work',{
+    f <- './files/718204_ML_2012.120.imputed.RData'
+    r <- load(f)
+    vdsid <- 718204
+    year <- 2012
+    expect_that(r,equals('df.vds.agg.imputed'))
+    r <- store.amelia.chains(df.amelia=df.vds.agg.imputed,
+                             year=year,
+                             detector.id=vdsid,
+                             imputation.name='vdsraw',
+                             maxiter=20,
+                             db=parts
+                             )
+    expect_that(r,is_a('numeric'))
+    expect_that(r,equals(0))
+    saved.state <- rcouchutils::couch.check.state(year=year,
+                                            id=vdsid,
+                                            'vdsraw_chain_lengths',
+                                                  db=parts)
+    expect_that(saved.state,is_a('numeric'))
+    expect_that(saved.state,
+                equals(c(5,5,5,5,5)))
+
+    saved.state <- rcouchutils::couch.check.state(year=year,
+                                            id=vdsid,
+                                            'vdsraw_max_iterations',
+                                                  db=parts)
+    expect_that(saved.state,is_a('numeric'))
+    expect_that(saved.state,equals(0))
+
+
+})
 
 ## test_that('process wim site stores a buncha stuff to couchdb',{
 
@@ -15,6 +45,7 @@ print(result)
 
 ## })
 
+context('sanity check')
 test_that('sanity check saves problems to couchdb statedb',{
     dbname <- rcouchutils::couch.makedbname(parts)
     f <- './files/1202248_ML_2010.df.2010.RData'
@@ -95,4 +126,4 @@ test_that('sanity check saves problems to couchdb statedb',{
 ##     expect_that(state.check,equals('todo'))
 
 ## })
-##rcouchutils::couch.deletedb(parts)
+rcouchutils::couch.deletedb(parts)
