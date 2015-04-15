@@ -354,13 +354,13 @@ get.aggregated.vds.amelia <- function(vdsid,
 #' @return 1 if all went well, NULL otherwise
 #'
 #' And plots get made and saved
-#'
+#' @export
 get.and.plot.vds.amelia <- function(pair,year,doplots=TRUE,
                                     remote=TRUE,
                                     server='http://lysithia.its.uci.edu',
                                     path,
                                     force.plot=FALSE,
-                                    trackingdb='vdsdata%2ftracking'){
+                                    trackingdb){
     ## load the imputed file for this site, year
     aout <- NULL
     if(remote){
@@ -393,20 +393,23 @@ get.and.plot.vds.amelia <- function(pair,year,doplots=TRUE,
 
         ## do the amelia default plot functions
         plotvars <- grep('^(o|n)(r|l)\\d',x=varnames,perl=TRUE,value=TRUE)
+        attach.files <- plot_amelia.plots(aout=aout,
+                                          plotvars=plotvars,
+                                          vdsid=pair,
+                                          year=year,
+                                          force.plot=force.plot,
+                                          trackingdb = trackingdb)
 
-        attach.files <- plot.amelia.plots(aout,plotvars,pair,year,force.plot=force.plot)
-        for(f2a in attach.files){
+        for(f2a in c(attach.files)){
             rcouchutils::couch.attach(trackingdb,pair,f2a)
         }
-
-
         subhead='\npost-imputation data'
         fileprefix='imputed'
-        attach.files <- plot.vds.data(df.vds.agg,pair,year,
+        attach.files <- plot_vds.data(df.vds.agg,pair,year,
                                       fileprefix,subhead,
                                       force.plot=force.plot,
                                       trackingdb=trackingdb)
-        for(f2a in attach.files){
+        for(f2a in c(attach.files)){
             rcouchutils::couch.attach(trackingdb,pair,f2a)
         }
     }
@@ -442,12 +445,12 @@ get.and.plot.vds.amelia <- function(pair,year,doplots=TRUE,
 #' @return some sort of status if there are problems, but nothing
 #' really.  This function is run for the side effect that plots get
 #' made and saved
-#'
-plot.raw.data <- function(fname,f,path,year,vds.id,
+#' @export
+plot_raw.data <- function(fname,f,path,year,vds.id,
                           remote=FALSE,
                           server='lysithia.its.uci.edu',
                           force.plot=FALSE,
-                          trackingdb='vdsdata%2ftracking'){
+                          trackingdb){
   ## plot the data out of the detector
   fileprefix='raw'
   if(!force.plot){
@@ -485,7 +488,7 @@ plot.raw.data <- function(fname,f,path,year,vds.id,
   if(is.null(dim(df.vds.agg))) return (FALSE)
 
   subhead='\npre-imputation data'
-  attach.files <- plot.vds.data(df.vds.agg,
+  attach.files <- plot_vds.data(df.vds.agg,
                                   vds.id,
                                   year,
                                   fileprefix,subhead,
@@ -493,7 +496,7 @@ plot.raw.data <- function(fname,f,path,year,vds.id,
                                   trackingdb=trackingdb)
 
   for(f2a in attach.files){
-      rcouchutils::couch.attach('vdsdata%2ftracking',vds.id,f2a)
+      rcouchutils::couch.attach(trackingdb,vds.id,f2a)
   }
 
   return (TRUE)
@@ -511,7 +514,7 @@ plot.raw.data <- function(fname,f,path,year,vds.id,
 #' @param vdsid the detector id
 #' @param year the year
 #' @param fileprefix the file prefix for the plot file
-#' @param trackingdb defaults to the usual vdsdata\%2ftracking
+#' @param trackingdb no default to track down a bug
 #' @return TRUE or FALSE whether the doc (based on VDSID) has the attached file
 #'
 #' What this routine does is to re-create the expected filename (I
@@ -522,7 +525,7 @@ plot.raw.data <- function(fname,f,path,year,vds.id,
 #' In my code I use this to test whether or not to redo the plots.
 check.for.plot.attachment <- function(vdsid,year,
                                       fileprefix=NULL,
-                                      trackingdb='vdsdata%2ftracking'){
+                                      trackingdb){
   imagefileprefix <- paste(vdsid,year,sep='_')
   if(!is.null(fileprefix)){
     imagefileprefix <- paste(vdsid,year,fileprefix,sep='_')
@@ -562,9 +565,10 @@ check.for.plot.attachment <- function(vdsid,year,
 #' plots already done
 #' @return files.to.attach the files that you need to send off to
 #' couchdb tracking database.
-plot.amelia.plots  <- function(aout,plotvars,vdsid,year,force.plot=FALSE,
+#' @export
+plot_amelia.plots  <- function(aout,plotvars,vdsid,year,force.plot=FALSE,
                                fileprefix='amelia',
-                               trackingdb='vdsdata%2ftracking'){
+                               trackingdb){
     if(!force.plot){
         have.plot <- check.for.plot.attachment(vdsid,year,
                                                fileprefix,
@@ -586,17 +590,16 @@ plot.amelia.plots  <- function(aout,plotvars,vdsid,year,force.plot=FALSE,
 
     imagefilename <- paste(savepath,paste(imagefileprefix,'%03d.png',sep='_'),sep='/')
 
-    ## print(paste('plotting to',imagefilename))
-
     png(filename = imagefilename, width=1600, height=1200, bg="transparent",pointsize=24)
 
-    ## print(plot(aout,which.vars=plotvars,ask=FALSE))
+    plotoutput <- plot(aout,which.vars=plotvars,ask=FALSE)
+    print(plotoutput)
 
     dev.off()
 
     files.to.attach <- dir(savepath,pattern=paste(imagefileprefix,'0',sep='_'),full.names=TRUE)
 
-    files.to.attach
+    return(files.to.attach)
 
 }
 
@@ -632,7 +635,7 @@ plot.amelia.plots  <- function(aout,plotvars,vdsid,year,force.plot=FALSE,
 #' plots already done
 #' @return files.to.attach the files that you need to send off to
 #' couchdb tracking database.
-plot.vds.data  <- function(df.merged,vdsid,year,fileprefix=NULL,subhead='\npost imputation',force.plot=FALSE,trackingdb='vdsdata%2ftracking'){
+plot_vds.data  <- function(df.merged,vdsid,year,fileprefix=NULL,subhead='\npost imputation',force.plot=FALSE,trackingdb){
     if(!force.plot){
         have.plot <- check.for.plot.attachment(vdsid,year,
                                                fileprefix,

@@ -34,7 +34,7 @@ test_that("plotting imputed data code works okay",{
 
     expect_that(levels(twerked.df$lane),equals(c( "left",   "lane 2", "lane 3", "right" )))
 
-    files.to.couch <- plot.vds.data(df.merged,718204,2012,'imputed','\npost imputation',force.plot=TRUE)
+    files.to.couch <- plot_vds.data(df.merged,718204,2012,'imputed','\npost imputation',force.plot=TRUE)
 
     expect_that(files.to.couch,equals(
         c( "images/718204/718204_2012_imputed_001.png",
@@ -58,15 +58,26 @@ test_that("plotting imputed data code works okay",{
     seconds <- 120
     path <- '.'
 
-    df_agg_amelia <- get.and.plot.vds.amelia(pair=vds.id,
-                                             year=2012,
-                                             doplots=TRUE,
-                                             remote=FALSE,
-                                             path=path,
-                                             force.plot=TRUE,
-                                             trackingdb=parts)
+    df_agg <- get.and.plot.vds.amelia(
+        pair=vds.id,
+        year=2012,
+        doplots=TRUE,
+        remote=FALSE,
+        path=path,
+        force.plot=TRUE,
+        trackingdb=parts)
 
-    expect_that(df_agg_amelia,equals(1))
+    expect_that(df_agg,is_a('data.frame'))
+    expect_that(names(df_agg),equals(c("ts","nl1","nr1",
+                                       "ol1","or1","obs_count",
+                                       "tod","day")))
+
+    expect_that(min(df_agg$nl1,na.rm=TRUE),equals(0.0))
+    print(sprintf("%0.10f",mean(df_agg$nl1,na.rm=TRUE)))
+    expect_that(mean(df_agg$nl1,na.rm=TRUE),equals(269.98356,tolerance = .00001))
+    expect_that(median(df_agg$nl1,na.rm=TRUE),equals(210))
+    expect_that(max(df_agg$nl1,na.rm=TRUE),equals(1567))
+
 
     plots <- paste(vds.id,year,'imputed',
                    c('001.png','002.png','003.png','004.png'),
@@ -128,7 +139,7 @@ test_that("plotting raw data code works okay",{
 
     expect_that(levels(twerked.df$lane),equals(c( "left",   "lane 2", "lane 3", "right" )))
 
-    files.to.couch <- plot.vds.data(df.agg,718204,2012,'raw','\npre imputation',force.plot=TRUE)
+    files.to.couch <- plot_vds.data(df.agg,718204,2012,'raw','\npre imputation',force.plot=TRUE)
 
     expect_that(files.to.couch,equals(
         c( "images/718204/718204_2012_raw_001.png",
@@ -181,7 +192,7 @@ test_that("plotting raw from a site with two lanes works okay",{
 
     expect_that(levels(twerked.df$lane),equals(c( "left", "right" )))
 
-    files.to.couch <- plot.vds.data(df.agg,1211682,2012,'raw','\npre imputation',force.plot=TRUE)
+    files.to.couch <- plot_vds.data(df.agg,1211682,2012,'raw','\npre imputation',force.plot=TRUE)
 
     expect_that(files.to.couch,equals(
         c("images/1211682/1211682_2012_raw_001.png",
@@ -201,7 +212,7 @@ test_that("triggering native amelia plots works okay",{
     expect_that(res,equals('df.vds.agg.imputed'))
 
     vars = c("nl1","ol1","nr1","or1")
-    files.to.couch <- plot.amelia.plots(aout=df.vds.agg.imputed,
+    files.to.couch <- plot_amelia.plots(aout=df.vds.agg.imputed,
                                         plotvars=vars,
                                         vdsid=1211682,
                                         year=2012,
