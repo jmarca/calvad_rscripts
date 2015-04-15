@@ -14,8 +14,9 @@
 ##' contain any information on how good the data is.
 ##'
 ##' @title get.vds.wim.pairs
-##' @param year
-##' @param trackingdb
+##' @param year the year
+##' @param trackingdb the db to check, the usual "vdsdata\%2ftracking"
+##' is default goto db here
 ##' @return a data frame with year, vds_id, wim_id, doc
 ##' @author James E. Marca
 get.vds.wim.pairs <- function(year,trackingdb='vdsdata%2ftracking'){
@@ -58,7 +59,7 @@ get.vds.wim.pairs <- function(year,trackingdb='vdsdata%2ftracking'){
 ##'
 ##' @title get.RData.view
 ##' @param vdsid the VDS id
-##' @param year
+##' @param year the year
 ##' @param trackingdb defaults to 'vdsdata/tracking'
 ##' @return the files, which is the rows from the view Actually right
 ##' now as I write this documentation, I forget what this actually
@@ -88,11 +89,10 @@ get.RData.view <- function(vdsid,year,trackingdb='vdsdata%2ftracking'){
 ##' I can't find where this is actually used at the moment.
 ##'
 ##' @title couch.record.unmet.conditions
-##' @param district
-##' @param year
-##' @param vdsid
+##' @param year the year
+##' @param vdsid the id
 ##' @param condition some string or list describing what is wrong
-##' @param db the couchdb to save into, defaults to vdsdata%2ftracking
+##' @param db the couchdb to save into, defaults to vdsdata\%2ftracking
 ##' @return the result of calling couch.set.state
 ##' @author James E. Marca
 couch.record.unmet.conditions <- function(year,vdsid,condition,

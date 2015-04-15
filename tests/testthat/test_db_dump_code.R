@@ -1,18 +1,12 @@
-source('./lib/vds.processing.functions.R',chdir=TRUE)
-
+config <- rcouchutils::get.config(Sys.getenv('RCOUCHUTILS_TEST_CONFIG'))
 
 library('RPostgreSQL')
 m <- dbDriver("PostgreSQL")
 ## requires environment variables be set externally
-psqlenv = Sys.getenv(c("PSQL_HOST", "PSQL_USER", "PSQL_PASS"))
-
 con <-  dbConnect(m
-                  ,user=psqlenv[2]
-                  ,host='192.168.0.1'
-                  ,dbname="spatialvds")
-
-library(testthat)
-
+                  ,user=config$postgresql$auth$username
+                  ,host=config$postgresql$host
+                  ,dbname=config$postgresql$db)
 
 test_that("dump code works okay",{
 
@@ -28,9 +22,17 @@ test_that("dump code works okay",{
                    2012,120,df.vds.agg.imputed=df.vds.agg.imputed,
                    con
                    )
-
+    vds.id <- 718204
     impsagg <- impute.aggregate(df.vds.agg.imputed)
 
-    db.ready.dump(impsagg,  718204, tmd, con  )
+    db.ready.dump(imps = impsagg,
+                  vds.id = vds.id,
+                  path=tmd,
+                  year=2012,
+                  con=con  )
+
+    datfile <- dir(path=tmd,pattern='vds_hour_agg',
+                   full.names=TRUE,recursive=TRUE)
+    expect_that(datfile[1],matches(paste('vds_hour_agg',vds.id,sep='.')))
 
 })

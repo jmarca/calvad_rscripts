@@ -2,7 +2,7 @@
 ##'
 ##'
 ##' @title create.truck.means
-##' @param df.wim
+##' @param df.wim the wim data dataframe
 ##' @return a new dataframe with averages for hh,nhh
 ##' @author James E. Marca
 create.truck.means <- function(df.wim){

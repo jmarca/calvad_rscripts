@@ -8,8 +8,6 @@
 ## ####library('Hmisc')
 ## ##library('Amelia')
 ## ##library('lattice')
-## ##library('RCurl')
-## ##library('RJSONIO')
 
 ## source("vds.processing.functions.R")
 ## source('../node_modules/rstats_remote_files/remoteFiles.R')
@@ -48,7 +46,7 @@
 ##                                  reconsider=FALSE,
 ##                                  trackingdb='vdsdata%2ftracking'){
 ##   pattern <- paste("ML_",year,"\\.txt\\..z$",sep='')
-##   files <- dir(base.dir, pattern=pattern,all.files = TRUE,full.names=TRUE, ignore.case=TRUE,recurs=TRUE)
+##   files <- dir(base.dir, pattern=pattern,all.files = TRUE,full.names=TRUE, ignore.case=TRUE,recursive=TRUE)
 ##   files <- sort(files,decreasing=(reverse==2))
 ##   todo <- length(files)
 ##   print ( paste ( "processing",todo,"files") )

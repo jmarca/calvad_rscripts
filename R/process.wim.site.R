@@ -1,16 +1,16 @@
-pf <- function(x,y){panel.smoothScatter(x,y,nbin=c(200,200))}
+pf <- function(x,y){lattice::panel.smoothScatter(x,y,nbin=c(200,200))}
 
 ## day.of.week <-    c('Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday')
 ## lane.defs <- c('left lane','right lane 1', 'right lane 2', 'right lane 3', 'right lane 4', 'right lane 5', 'right lane 6', 'right lane 7', 'right lane 8')
-## strip.function.a <- strip.custom(which.given=1,factor.levels=day.of.week, strip.levels = TRUE )
+strip.function.a <- lattice::strip.custom(which.given=1,factor.levels=day.of.week, strip.levels = TRUE )
 
 #' load the imputed WIM (Amelia) output object from the file system
 #'
 #' Will NOT aggregate or clean up the Amelia output.  Just gets it
 #'
-#' @param wim.site
-#' @param year
-#' @param direction
+#' @param wim.site the wim site
+#' @param year the year
+#' @param direction the direction of flow for this data you want
 #' @param wim.path default '/data/backup/wim' because that is where it
 #' goes on the machine I developed this on.
 #' @param seconds the number of seconds that were aggregated up for
@@ -35,12 +35,12 @@ load_imputed_wim <- function(wim.site,year,direction,wim.path='/data/backup/wim'
 #' them to the couchdb
 #'
 #' @param wim.site the WIM site id
-#' @param year
+#' @param year the year
 #' @param direction the direction for this data
 #' @param wim.path where are the saved files to be found on the local file system
 #' @param seconds how much the WIM data was aggregated up for the
 #' Amelia runs...defaults to one hour, or 3600 seconds
-#' @param trackingdb defaults to the usual 'vdsdata%2ftracking'
+#' @param trackingdb defaults to the usual 'vdsdata\%2ftracking'
 #' @return nothing or nothing.  run this for the side effect of
 #' generating plots to couchdb
 handle_wim_dir <- function(wim.site,
@@ -80,12 +80,12 @@ handle_wim_dir <- function(wim.site,
 #' for the given year
 #'
 #' @param wim.site the WIM site id
-#' @param year
+#' @param year the year
 #' @param wim.path where is the data stashed
 #' @param seconds the number of seconds aggregated in the data,
 #' defaults to one hour or 3600
 #' @param trackingdb where to shove the plots as attachments, defaults
-#' to the usual couchdb trackingdb of 'vdsdata%2ftracking'
+#' to the usual couchdb trackingdb of 'vdsdata\%2ftracking'
 #' @param con the connection to the postgresql database so I can get
 #' the directions for this wim site
 #' @return 1 Run this for the side effect or generating plots for all
@@ -102,7 +102,7 @@ post.impute.plots <- function(wim.site,
     directions = df.directions$direction
     print(paste(directions,collapse=','))
     for(direction in directions){
-        handle_wim_dir(wim.site,year,direction,wim_path,seconds)
+        handle_wim_dir(wim.site,year,direction,wim.path,seconds)
     }
     1
 }
@@ -116,19 +116,22 @@ post.impute.plots <- function(wim.site,
 #'
 #' This is the main routine.
 #'
-#' @param wim.site
-#' @param year
-#' @param preplot  TRUE or FALSE, defaults to TRUE
+#' @param wim.site the wim site
+#' @param year the year
+#' @param seconds the number of seconds to aggregate.  Almost always
+#' will be 3600 (which is one hour)
+#' @param preplot TRUE or FALSE, defaults to TRUE
 #' @param postplot TRUE or FALSE, defaults to TRUE
-#' @param impute   TRUE or FALSE, defaults to TRUE
+#' @param impute TRUE or FALSE, defaults to TRUE
 #' @param wim.path where the WIM data can be found on the local file
-#' @param trackingdb the usual "vdsdata%2ftracking"
+#' @param trackingdb the usual "vdsdata\%2ftracking"
 #' system.  Default is '/data/backup/wim' because that is the
 #' directory on the machine I developed this function on
 #' @return either 0, 1, or the result of running the imputation if it failed.  Also check the trackingdb for any mention of issues.
 #' @export
 process.wim.site <- function(wim.site,
                              year,
+                             seconds=3600,
                              preplot=TRUE,
                              postplot=TRUE,
                              impute=TRUE,
@@ -222,7 +225,6 @@ process.wim.site <- function(wim.site,
         }
         df.wim.sagg <- make.speed.aggregates(df.wim.s)
 
-        ## merge, then explode time using zoo
         df.wim.d.joint <- merge(df.wim.dagg,df.wim.sagg)
         rm(df.wim.dagg, df.wim.sagg,df.wim.s,df.wim.d )
         gc()
@@ -300,7 +302,8 @@ process.wim.site <- function(wim.site,
                                 db=trackingdb)
                 returnval <- 1
             }else{
-                returnval <- paste(df.vds.agg.imputed$code,'message',df.vds.agg.imputed$message)
+                returnval <- paste(df.wim.amelia$code,
+                                   'message',df.wim.amelia$message)
                 print(paste("amelia not happy:",returnval))
                 rcouchutils::couch.set.state(year=year,
                                 id=cdb.wimid,
@@ -322,10 +325,10 @@ process.wim.site <- function(wim.site,
 #'
 #' @param wim.site the WIM site id
 #' @param direction the direction of flow for this data
-#' @param year
+#' @param year the year
 #' @param df.wim the WIM data dataframe
 #' @param imagepath where to stash the images generated, defaults to "./images/"
-#' @param trackingdb defaults to the usual 'vdsdata%2ftracking'
+#' @param trackingdb defaults to the usual 'vdsdata\%2ftracking'
 #' @return falls of the end and dies.  Run for the side effect of
 #' generating files in the local filesystem that then also get
 #' uploaded to CouchDB tracking database document for this wim site as
@@ -337,11 +340,11 @@ preplot <- function(wim.site,direction,year,df.wim,imagepath="images/",
 
     file.path <- paste(paste(imagepath,direction,'/',sep=''),file.pattern,sep='')
 
-    png(file = paste(file.path,'%03d.png',sep='_'), width=900, height=600, bg="transparent",pointsize=18)
+    png(filename = paste(file.path,'%03d.png',sep='_'), width=900, height=600, bg="transparent",pointsize=18)
 
     plotvars <- grep('not_heavyheavy_',x=names(df.wim),perl=TRUE,value=TRUE)
     f <- formula(paste('I(', paste(plotvars,collapse='+' ),') ~ tod | day'))
-    a <- xyplot(f
+    a <- lattice::xyplot(f
                ,data=df.wim
                ,main=paste("Scatterplot non-heavy heavy duty truck counts",year," by time of day at site",wim.site,direction,"\nRevised method, pre-imputation")
                ,strip=strip.function.a
@@ -352,7 +355,7 @@ preplot <- function(wim.site,direction,year,df.wim,imagepath="images/",
     print(a)
     plotvars <- grep('^heavyheavy_',x=names(df.wim),perl=TRUE,value=TRUE)
     f <- formula(paste('I(', paste(plotvars,collapse='+' ),') ~ tod | day'))
-    a <- xyplot(f
+    a <- lattice::xyplot(f
                ,data=df.wim
                ,main=paste("Scatterplot heavy heavy duty truck counts",year," by time of day at site",wim.site,direction,"\nRevised method, pre-imputation")
                ,strip=strip.function.a
@@ -364,7 +367,7 @@ preplot <- function(wim.site,direction,year,df.wim,imagepath="images/",
 
     plotvars <- grep('^count_all',x=names(df.wim),perl=TRUE,value=TRUE)
     f <- formula(paste('I(', paste(plotvars,collapse='+' ),') ~ tod | day'))
-    a <- xyplot(f
+    a <- lattice::xyplot(f
                ,data=df.wim
                ,main=paste("Scatterplot counts from summary reports,",year,"  by time of day at site",wim.site,direction,"\nRevised method, pre-imputation")
                ,strip=strip.function.a
@@ -376,7 +379,7 @@ preplot <- function(wim.site,direction,year,df.wim,imagepath="images/",
 
     splotvars <- grep('^wgt',x=names(df.wim),perl=TRUE,value=TRUE)
     f <- formula(paste('I( (', paste(splotvars,collapse='+' ),') / (', paste(plotvars,collapse='+' ),')) ~ tod | day'))
-    a <- xyplot(f
+    a <- lattice::xyplot(f
                ,data=df.wim
                ,main=paste("Scatterplot mean speeds from summary reports,",year," by time of day at site",wim.site,direction,"\nRevised method, pre-imputation")
                ,strip=strip.function.a
@@ -390,7 +393,7 @@ preplot <- function(wim.site,direction,year,df.wim,imagepath="images/",
 
     plotvars <- grep('not_heavyheavy_',x=names(df.wim),perl=TRUE,value=TRUE)
     f <- formula(paste('I(', paste(plotvars,collapse='+' ),') ~ ts'))
-    a <- xyplot(f
+    a <- lattice::xyplot(f
                ,data=df.wim
                ,main=paste("Scatterplot non-heavy heavy duty truck counts",year," over time at site",wim.site,direction,"\nRevised method, pre-imputation")
                ,strip=strip.function.a
@@ -401,7 +404,7 @@ preplot <- function(wim.site,direction,year,df.wim,imagepath="images/",
 
     plotvars <- grep('^heavyheavy_',x=names(df.wim),perl=TRUE,value=TRUE)
     f <- formula(paste('I(', paste(plotvars,collapse='+' ),') ~ ts'))
-    a <- xyplot(f
+    a <- lattice::xyplot(f
                ,data=df.wim
                ,main=paste("Scatterplot heavy heavy duty truck counts",year," over time at site",wim.site,direction,"\nRevised method, pre-imputation")
                ,strip=strip.function.a
@@ -412,7 +415,7 @@ preplot <- function(wim.site,direction,year,df.wim,imagepath="images/",
 
     plotvars <- grep('^count_all',x=names(df.wim),perl=TRUE,value=TRUE)
     f <- formula(paste('I(', paste(plotvars,collapse='+' ),') ~ ts'))
-    a <- xyplot(f
+    a <- lattice::xyplot(f
                ,data=df.wim
                ,main=paste("Scatterplot counts from summary reports,",year," over time at site",wim.site,direction,"\nRevised method, pre-imputation")
                ,strip=strip.function.a
@@ -423,7 +426,7 @@ preplot <- function(wim.site,direction,year,df.wim,imagepath="images/",
 
     splotvars <- grep('^wgt',x=names(df.wim),perl=TRUE,value=TRUE)
     f <- formula(paste('I( (', paste(splotvars,collapse='+' ),') / (', paste(plotvars,collapse='+' ),')) ~ ts'))
-    a <- xyplot(f
+    a <- lattice::xyplot(f
                ,data=df.wim
                ,main=paste("Scatterplot mean speeds from summary reports,",year," over time at site",wim.site,direction,"\nRevised method, pre-imputation")
                ,strip=strip.function.a
@@ -436,24 +439,28 @@ preplot <- function(wim.site,direction,year,df.wim,imagepath="images/",
     upload.plots.couchdb(wim.site,direction,year,imagepath,trackingdb=trackingdb)
 }
 
-#' upload plots to couchdb
-#'
-#' pass in a list of files, and they will be uploaded as attachments
-#' to the correct document in the tracking db
-#'
-#' @param wim.site the WIM site id
-#' @param direction the direction for this data
-#' @param year
-#' @param imagepath where are the images.  Will be used if you don't
-#' pass in a list of files, otherwise will be ignored
-#' @param trackingdb defaults to the usual 'vdsdata%2ftracking'
-#' @param files.to.attach a list of files to attach to couchdb. If
-#' empty or if left as default value, will look through imagepath and
-#' will upload all of the files found that match the pattern for this
-#' wim site id, direction, and year.
-#' @return just falls of the end and exits.  La dee da.  Run this
-#' strictly for the side effect of attaching files to the document in
-#' the couchdb database
+##' upload plots to couchdb
+##'
+##' pass in a list of files, and they will be uploaded as attachments
+##' to the correct document in the tracking db
+##'
+##' @title upload.plots.couchdb
+##' @param wim.site the WIM site id
+##' @param direction the direction for this data
+##' @param year the year
+##' @param imagepath where are the images.  Will be used if you don't
+##' pass in a list of files, otherwise will be ignored
+##' @param trackingdb defaults to the usual "vdsdata\%2ftracking"
+##' @param files.to.attach a list of files to attach to couchdb.
+##'
+##' If empty or if left as default value, will look through imagepath
+##' and will upload all of the files found that match the pattern for
+##' this wim site id, direction, and year.
+##'
+##' @return just falls of the end and exits.  La dee da.  Run this
+##' strictly for the side effect of attaching files to the document in
+##' the couchdb database
+##' @author James E. Marca
 upload.plots.couchdb <- function(wim.site
                                  ,direction
                                  ,year

@@ -22,7 +22,7 @@ make.speed.aggregates <- function(df.spd,seconds){
       lane.agg[[l]] <- NULL
       next;
     }
-    df.spd.zoo <- zoo(data.frame(wgt.spd=lane.agg[[l]][,c("veh_speed")]*lane.agg[[l]][,c("veh_count")],
+    df.spd.zoo <- zoo::zoo(data.frame(wgt.spd=lane.agg[[l]][,c("veh_speed")]*lane.agg[[l]][,c("veh_count")],
                                  count  =lane.agg[[l]][,c("veh_count")] )
                       ,order.by=as.numeric(lane.agg[[l]]$ymdh))
     df.spd.zoo <- aggregate(df.spd.zoo, identity, sum, na.rm=TRUE )
@@ -53,7 +53,7 @@ wim.lane.and.time.aggregation <- function(lane.data){
   lane.data$ymdh <- trunc(lane.data$ts,units='hours')
   lane.data.agg <- split(lane.data,lane.data$lane)
   for (l in names(lane.data.agg)){
-    df.zoo <- zoo(lane.data.agg[[l]][,mean.var.names],
+    df.zoo <- zoo::zoo(lane.data.agg[[l]][,mean.var.names],
                       ,order.by=as.numeric(lane.data.agg[[l]]$ymdh))
     df.zoo <- aggregate(df.zoo, identity, sum, na.rm=TRUE )
 

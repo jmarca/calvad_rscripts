@@ -100,25 +100,25 @@ self.agg.impute.VDS.site.no.plots <- function(fname,f,path,year,seconds,goodfact
 
 ####### these are various different things I tried with imputation  ###
             ## df.vds.1800.imputed.2 <-
-            ##   amelia(df.vds.1800,idvars=c('ts','obs_count'),ts="tod",splinetime=6,autopri=0.001,
+            ##   Amelia::amelia(df.vds.1800,idvars=c('ts','obs_count'),ts="tod",splinetime=6,autopri=0.001,
             ##          lags =c(n.idx),leads=c(n.idx),cs="day",intercs=TRUE,
             ##          sqrts=n.idx, bounds=o.bds,max.resample=10,emburn=c(2,2000))
 
             ## df.vds.agg.imputed5 <-
-            ##   amelia(df.vds.agg,idvars=c('ts','obs_count'),ts="tod",splinetime=6,autopri=0.001,
+            ##   Amelia::amelia(df.vds.agg,idvars=c('ts','obs_count'),ts="tod",splinetime=6,autopri=0.001,
             ##   cs="day",intercs=TRUE,
             ##   sqrts=n.idx, bounds=o.bds,max.resample=10,emburn=c(2,2000))
 
 
-            ## amelia(df.vds.agg,idvars=c('ts','obs_count'),ts="tod",splinetime=6,autopri=0.001,
+            ## Amelia::amelia(df.vds.agg,idvars=c('ts','obs_count'),ts="tod",splinetime=6,autopri=0.001,
             ## lags=c(n.idx,o.idx),leads=c(n.idx,o.idx),cs="day",intercs=TRUE,
             ## sqrts=n.idx, bounds=o.bds,max.resample=10,emburn=c(2,2000))
 
-            ## amelia(df.vds.agg,idvars=c('ts','obs_count'),ts="tod",splinetime=3,autopri=0.001,
+            ## Amelia::amelia(df.vds.agg,idvars=c('ts','obs_count'),ts="tod",splinetime=3,autopri=0.001,
             ##        lags =c(n.idx,o.idx),leads=c(n.idx,o.idx),cs="day",intercs=TRUE,
             ##        sqrts=n.idx, bounds=o.bds,max.resample=10,emburn=c(2,2000))
 
-            ## amelia(df.vds.agg,idvars=c('ts','obs_count'),ts="tod",splinetime=5,autopri=0.001,
+            ## Amelia::amelia(df.vds.agg,idvars=c('ts','obs_count'),ts="tod",splinetime=5,autopri=0.001,
             ##        lags =c(n.idx,o.idx),leads=c(n.idx,o.idx),cs="day",intercs=TRUE,
             ##        sqrts=n.idx, bounds=o.bds,max.resample=10,emburn=c(2,2000))
 

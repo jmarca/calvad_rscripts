@@ -312,7 +312,7 @@ get.wim.site.speed <- function(wim.siteno,
   rs <- RPostgreSQL::dbSendQuery(con,query)
   df <- RPostgreSQL::fetch(rs,n=-1)
   df$ts <- as.POSIXct(unclass(df$ts) + ISOdatetime(1970,1,1,0,0,0, tz="UTC"), tz="UTC" )
-  dbClearResult(rs)
+  RPostgreSQL::dbClearResult(rs)
   rm('rs')
   df
 }
@@ -398,7 +398,7 @@ get.wim.site.2 <- function(wim.siteno,
   rs <- RPostgreSQL::dbSendQuery(con,wim.query)
   df <- RPostgreSQL::fetch(rs,n=-1)
   df$ts <- as.POSIXct(unclass(df$ts) + ISOdatetime(1970,1,1,0,0,0, tz="UTC") ,tz='UTC')
-  dbClearResult(rs)
+  RPostgreSQL::dbClearResult(rs)
   rm(rs)
   df
 }
@@ -602,7 +602,7 @@ wim.recode.lanes <- function(df){
 pretty.thistogram <- function(x,main="Histogram",xlab="",ylab=""){
   ## get rid of NA values
   x <- x[!is.na(x),]
-  truehist( x, xlab=xlab,main=main )
+  MASS::truehist( x, xlab=xlab,main=main )
                                         # calculate density estimation
   d <- density( x )
 
@@ -650,7 +650,7 @@ smooth.color.scatter <- function(x,main="Histogram",xlab="",ylab=""){
 ##' @author James E. Marca
 wim.plot.gen <- function(file,wim.site,df.wim,width=850,height=850,...){
 
-  png(file = file,
+  png(filename = file,
       width=width, height=height, bg="transparent",...)
 
   ## plots that might be useful
@@ -676,14 +676,14 @@ wim.plot.gen <- function(file,wim.site,df.wim,width=850,height=850,...){
 ## [22] "nh_weight"          "nh_axles"           "nh_len"
 ## [25] "nh_speed"
 
-  xyplot(df.wim$gross_weight ~ df.wim$total_axle_weight | factor(paste(df.wim$total_axles,"axle trucks")),
+  lattice::xyplot(df.wim$gross_weight ~ df.wim$total_axle_weight | factor(paste(df.wim$total_axles,"axle trucks")),
          panel=function(x,y){
-           panel.smoothScatter(x,y,nbin=c(200,200))
+           lattice::panel.smoothScatter(x,y,nbin=c(200,200))
          })
 
-  xyplot(df.wim$gross_weight ~ df.wim$total_axle_spacing | factor(ifelse(df.wim$heavyheavy,"heavy heavy-duty","other")),
+  lattice::xyplot(df.wim$gross_weight ~ df.wim$total_axle_spacing | factor(ifelse(df.wim$heavyheavy,"heavy heavy-duty","other")),
          panel=function(x,y){
-           panel.smoothScatter(x,y,nbin=c(200,200))
+           lattice::panel.smoothScatter(x,y,nbin=c(200,200))
          })
   pretty.thistogram(df.wim$gross_weight/df.wim$total_axles,main=paste("Histogram of WIM gross_weight/axles for all vehicles, at site",wim.site),xlab="gross_weight / total axles")
   pretty.thistogram(df.wim$gross_weight[df.wim$overweight]/df.wim$total_axles[df.wim$overweight],main=paste("Histogram of WIM gross_weight/axles for vehicles w/ at least one axle > 18kips , at site",wim.site),xlab="gross_weight / total axles")
@@ -696,8 +696,8 @@ wim.plot.gen <- function(file,wim.site,df.wim,width=850,height=850,...){
 
   pretty.thistogram(df.wim$total_axle_spacing,main=paste("Histogram of WIM total inter-axle spacing, at site",wim.site),xlab="cumulative inter-axle spacing per vehicle, feet")
 
-  ## xyplot(df.wim$veh_len ~ df.wim$total_axle_spacing, panel = function(x,y){
-  ##   panel.smoothScatter(x,y,nbin=c(400,400))
+  ## lattice::xyplot(df.wim$veh_len ~ df.wim$total_axle_spacing, panel = function(x,y){
+  ##   lattic::panel.smoothScatter(x,y,nbin=c(400,400))
   ## },main=paste("Length vs  inter-axle spacing, at site",wim.site),ylab="measured vehicle length, feet", xlab="total inter-axle spacing per vehicle, feet")
 
   dev.off()
@@ -732,7 +732,7 @@ aout.postimp.plots <- function(file,wim.site,aout,width=850,height=850,...){
     file <- paste ('wim.imputed.',1900+year,'.',wim.site,'.%03d.png',sep='');
 
   }
-  png(file = "wim.imputetests.2008.site.31.%03d.png",
+  png(filename = "wim.imputetests.2008.site.31.%03d.png",
       width=1000, height=1200, bg="transparent")
 
   ## the variables:
@@ -753,16 +753,16 @@ aout.postimp.plots <- function(file,wim.site,aout,width=850,height=850,...){
 
   ## the api
 
-  ##      tscsPlot(output, var, cs, draws = 100, conf = .90,
+  ##      Amelia::tscsPlot(output, var, cs, draws = 100, conf = .90,
   ##            misscol = "red", obscol = "black", xlab, ylab, main,
   ##            pch, ylim, xlim, ...)
   week.days <- c('Sun','Mon','Tue','Wed','Thu','Fri','Sat')
   ## plots that might be useful
   day <- 0
   for(day in 0:6){
-    ## tscsPlot(aout,'truck_r1',day,xlab='time of day',ylab='truck count, lane Right 1', main=paste('Imputed truck counts for wim site',wim.site,'on',week.days[day+1],'in',year) )
-    ## tscsPlot(aout,'truck_r2',day,xlab='time of day',ylab='truck count, lane Right 2', main=paste('Imputed truck counts for wim site',wim.site,'on',week.days[day+1],'in',year) )
-    ## tscsPlot(aout,'truck_r3',day,xlab='time of day',ylab='truck count, lane Right 3', main=paste('Imputed truck counts for wim site',wim.site,'on',week.days[day+1],'in',year) )
+    ## Amelia::tscsPlot(aout,'truck_r1',day,xlab='time of day',ylab='truck count, lane Right 1', main=paste('Imputed truck counts for wim site',wim.site,'on',week.days[day+1],'in',year) )
+    ## Amelia::tscsPlot(aout,'truck_r2',day,xlab='time of day',ylab='truck count, lane Right 2', main=paste('Imputed truck counts for wim site',wim.site,'on',week.days[day+1],'in',year) )
+    ## Amelia::tscsPlot(aout,'truck_r3',day,xlab='time of day',ylab='truck count, lane Right 3', main=paste('Imputed truck counts for wim site',wim.site,'on',week.days[day+1],'in',year) )
 
     ## bout <- aout
     ## cout <- aout
@@ -780,58 +780,20 @@ aout.postimp.plots <- function(file,wim.site,aout,width=850,height=850,...){
     ##   hh.count.filter2 <- bout$imputations[[imp]][,"heavyheavy_r3"]==0
     ##   is.na(cout$imputations[[imp]]) <- hh.count.filter2
     ## }
-    tscsPlot(aout,'truck_r1',day,xlab='time of day',ylab='trucks, lane Right 1', main=paste('trucks wim site',wim.site,'on',week.days[day+1],'in',year) )
-    tscsPlot(aout,'truck_r2',day,xlab='time of day',ylab='trucks, lane Right 2', main=paste('trucks wim site',wim.site,'on',week.days[day+1],'in',year) )
-    tscsPlot(aout,'truck_r3',day,xlab='time of day',ylab='trucks, lane Right 3', main=paste('trucks wim site',wim.site,'on',week.days[day+1],'in',year) )
-    tscsPlot(aout,'tr_weight_r1',day,xlab='time of day',ylab='sum weight of trucks, lane Right 1', main=paste('Imputed weight of trucks wim site',wim.site,'on',week.days[day+1],'in',year) )
-    tscsPlot(aout,'tr_weight_r2',day,xlab='time of day',ylab='sum weight of trucks, lane Right 2', main=paste('Imputed weight of trucks wim site',wim.site,'on',week.days[day+1],'in',year) )
-    tscsPlot(aout,'tr_weight_r3',day,xlab='time of day',ylab='sum weight of trucks, lane Right 3', main=paste('Imputed weight of trucks wim site',wim.site,'on',week.days[day+1],'in',year) )
-    tscsPlot(aout,'heavyheavy_r1',day,xlab='time of day',ylab='hh trucks, lane Right 1', main=paste('heavy heavy trucks wim site',wim.site,'on',week.days[day+1],'in',year) )
-    tscsPlot(aout,'heavyheavy_r2',day,xlab='time of day',ylab='hh trucks, lane Right 2', main=paste('heavy heavy trucks wim site',wim.site,'on',week.days[day+1],'in',year) )
-    tscsPlot(aout,'heavyheavy_r3',day,xlab='time of day',ylab='hh trucks, lane Right 3', main=paste('heavy heavy trucks wim site',wim.site,'on',week.days[day+1],'in',year) )
+    Amelia::tscsPlot(aout,'truck_r1',day,xlab='time of day',ylab='trucks, lane Right 1', main=paste('trucks wim site',wim.site,'on',week.days[day+1],'in',year) )
+    Amelia::tscsPlot(aout,'truck_r2',day,xlab='time of day',ylab='trucks, lane Right 2', main=paste('trucks wim site',wim.site,'on',week.days[day+1],'in',year) )
+    Amelia::tscsPlot(aout,'truck_r3',day,xlab='time of day',ylab='trucks, lane Right 3', main=paste('trucks wim site',wim.site,'on',week.days[day+1],'in',year) )
+    Amelia::tscsPlot(aout,'tr_weight_r1',day,xlab='time of day',ylab='sum weight of trucks, lane Right 1', main=paste('Imputed weight of trucks wim site',wim.site,'on',week.days[day+1],'in',year) )
+    Amelia::tscsPlot(aout,'tr_weight_r2',day,xlab='time of day',ylab='sum weight of trucks, lane Right 2', main=paste('Imputed weight of trucks wim site',wim.site,'on',week.days[day+1],'in',year) )
+    Amelia::tscsPlot(aout,'tr_weight_r3',day,xlab='time of day',ylab='sum weight of trucks, lane Right 3', main=paste('Imputed weight of trucks wim site',wim.site,'on',week.days[day+1],'in',year) )
+    Amelia::tscsPlot(aout,'heavyheavy_r1',day,xlab='time of day',ylab='hh trucks, lane Right 1', main=paste('heavy heavy trucks wim site',wim.site,'on',week.days[day+1],'in',year) )
+    Amelia::tscsPlot(aout,'heavyheavy_r2',day,xlab='time of day',ylab='hh trucks, lane Right 2', main=paste('heavy heavy trucks wim site',wim.site,'on',week.days[day+1],'in',year) )
+    Amelia::tscsPlot(aout,'heavyheavy_r3',day,xlab='time of day',ylab='hh trucks, lane Right 3', main=paste('heavy heavy trucks wim site',wim.site,'on',week.days[day+1],'in',year) )
 
   }
   dev.off()
 }
 
-more.plot.scratch <- function(){
-
-  zero.count <- bout$imputations[[1]]$heavyheavy_r3 == 0
-  xyplot(
-         bout$imputations[[1]]$hh_weight_r3[bout$missMatrix[,32] & ! zero.count ]
-         ~
-         bout$imputations[[1]]$tod[bout$missMatrix[,32] & ! zero.count]  |  bout$imputations[[1]]$day[bout$missMatrix[,32] & !zero.count ]
-         )
-
-  zero.count <- aout.all$imputations[[1]]$heavyheavy_r3 == 0
-  xyplot(
-         aout.all$imputations[[1]]$hh_weight_r3[aout.all$missMatrix[,32] & !zero.count ]
-         ~
-         aout.all$imputations[[1]]$tod[aout.all$missMatrix[,32] & !zero.count ] |  aout.all$imputations[[1]]$day[aout.all$missMatrix[,32] & !zero.count ]
-         )
-
-
-  zero.count <- aout.all.c$imputations[[1]]$heavyheavy_r3 == 0
-
-  xyplot(
-         aout.all.c$imputations[[1]]$hh_weight_r3[aout.all.c$missMatrix[,32] & !zero.count ]
-         ~
-         aout.all.c$imputations[[1]]$tod[aout.all.c$missMatrix[,32] & !zero.count ] |  aout.all.c$imputations[[1]]$day[aout.all.c$missMatrix[,32] & !zero.count ]
-         )
-
-  xyplot(ts ~ ts, groups = (is.na(truck.r1) | is.na(truck.r2) | is.na(truck.r3)),  data=df.wim.agg)
-
-  xyplot(ts ~ ts, groups = (is.na(truck.r1) | is.na(truck.r2) | is.na(truck.r3)),  data=df.wim.agg.gapfill)
-png(file = "wim.imputetests.2008.site.31.%03d.png",
-      width=1200, height=1200, bg="transparent")
-
-  xyplot(ts ~ jitter(unclass(ts)) | (is.na(truck.r1) | is.na(truck.r2) | is.na(truck.r3)), jitter.data=TRUE, data=df.wim.year)
-  xyplot(ts ~ jitter(unclass(ts))| (is.na(truck.r1) | is.na(truck.r2) | is.na(truck.r3)), jitter.data=TRUE,  data=df.wim.year.gapfill)
-  xyplot(ts ~ jitter(unclass(ts))| (is.na(truck.r1) | is.na(truck.r2) | is.na(truck.r3)), jitter.data=TRUE,  data=df.wim.j.nz)
-  xyplot(ts ~ jitter(unclass(ts))| (is.na(truck.r1) | is.na(truck.r2) | is.na(truck.r3)), jitter.data=TRUE,  data=df.wim.j.nz.gapfill)
-
-dev.off()
-}
 
 ## the following are not used but interesting for historical purposes
 

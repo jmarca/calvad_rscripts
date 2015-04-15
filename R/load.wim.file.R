@@ -10,7 +10,7 @@
 ##'
 ##' @title get.wim.rdata
 ##' @param wim.site the WIM site number
-##' @param year
+##' @param year the year
 ##' @param direction the direction
 ##' @param wim.path the path in the file system to start looking for
 ##' the RData files
@@ -21,11 +21,16 @@ get.wim.rdata <- function(wim.site,year,direction,wim.path='/data/backup/wim'){
 
     target.file <- paste(wim.path,year,wim.site,direction,'wim.agg.RData',sep='/')
     print(paste('loading',target.file))
-    load.result <- load(file=target.file)
-    print(paste('load result is',load.result))
-    if(load.result != 'local.df.wim.agg'){
-        print(paste("choked loading?",df.wim.amelia))
+
+    env <- new.env()
+    res <- load(file=target.file,env)
+    result <- list()
+    result[[res]]=env
+    print(paste('load result is',res))
+    if(res != 'local.df.wim.agg'){
+        print(paste("choked loading?",res,"is not local.df.wim.agg as expected"))
         return(NULL)
     }
-    local.df.wim.agg
+    return(result[[1]][[res]])
+
 }

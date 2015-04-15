@@ -21,8 +21,8 @@
 ##' trucks at some site
 ##' @param vds.nvars the VDS count variables from the target site,
 ##' used to limit the chosen set of matched WIM-VDS paired sites
-##' @param year
-##' @param db default 'vdsdata%2ftracking', the couchdb to save into
+##' @param year the year
+##' @param db default "vdsdata\%2ftracking", the couchdb to save into
 ##' @param do.couch.set.state TRUE or FALSE, TRUE will set a "state"
 ##' in couchdb for the passed in vds.id, setting the list of
 ##' "wim_neighbors" that are ready to go for this year.
@@ -78,13 +78,16 @@ load.wim.pair.data <- function(wim.ids,vds.nvars,year=0,db='vdsdata%2ftracking',
 
             paired.RData <- get.RData.view(paired.vdsid,year)
             if(length(paired.RData)==0) { next() }
-            result <- rcouchutils::couch.get.attachment(db=db
+            get_result <- rcouchutils::couch.get.attachment(db=db
                                                        ,docname=paired.vdsid
                                                        ,attachment=paired.RData)
-            if(result != "df.merged"){
+            varnames <- names(get_result)
+            if(varnames[1] != "df.merged"){
                 print (paste(paired.vdsid,paired.RData,'not df.merged'))
                 next()
             }
+            df.merged <- get_result[[1]][[varnames[1]]]
+
             if(dim(df.merged)[1] < 100){
                 print(paste('pairing for',paired.vdsid,paired.RData,'pretty empty'))
                 next()

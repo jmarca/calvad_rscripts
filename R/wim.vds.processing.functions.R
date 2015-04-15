@@ -33,7 +33,7 @@ dump.tsdf.to.DB.file <- function(vds.id,df,con,target.file,...){
   dump$sd_vol <- NA
   dump$sd_occ <- NA
   dump$sd_spd <- NA
-  db.legal.names  <- make.db.names(con,names(dump),
+  db.legal.names  <- RPostgreSQL::make.db.names(con,names(dump),
                                    unique=TRUE,allow.keywords=FALSE)
   names(dump) <- db.legal.names
   ## fs write
@@ -115,7 +115,7 @@ check.imputed.combined<- function(path,wim,vds,year){
     aout <- 'failed'
     fname <- paste('wim',wim,'vds',vds[vdsi],'imputed',year,'RData',sep='.')
     done.file <- dir(path, pattern=fname,
-                   full.names=TRUE, ignore.case=TRUE,recurs=TRUE)
+                   full.names=TRUE, ignore.case=TRUE,recursive=TRUE)
     if(length(done.file)>0){
       result = TRUE;
       return(result);
@@ -145,7 +145,7 @@ load.imputed.combined <- function(path,wim,vds,year){
     aout <- 'failed'
     fname <- paste('wim',wim,'vds',vds[vdsi],'imputed',year,'RData',sep='.')
     done.file <- dir(path, pattern=fname,
-                   full.names=TRUE, ignore.case=TRUE,recurs=TRUE)
+                   full.names=TRUE, ignore.case=TRUE,recursive=TRUE)
     if(length(done.file)>0){
       print(paste('loading imputed combined file',done.file[1]))
       load.result <-  load(file=done.file[1])
@@ -200,7 +200,7 @@ load.imputed.combined <- function(path,wim,vds,year){
 load.imputed.combined.prefetch <- function(path,pattern='wim.*reduced.*vds.*imputed.*RData',recursive=FALSE) {
 
 
-  existing.files <- dir(path, pattern=pattern, full.names=TRUE, ignore.case=TRUE, recurs=recursive)
+  existing.files <- dir(path, pattern=pattern, full.names=TRUE, ignore.case=TRUE, recursive=recursive)
 
   ## return a function that can be called that searches from this list
 

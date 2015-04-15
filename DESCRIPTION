@@ -8,12 +8,10 @@ License: GPLv2
 LazyData: true
 Suggests: testthat
 Imports: sqldf,
-    lattice,
-    zoo,
     Amelia,
-    RCurl,
-    RJSONIO,
     RPostgreSQL,
     reshape2,
     ggplot2,
-    rcouchutils
+    rcouchutils,
+    lattice,
+    zoo

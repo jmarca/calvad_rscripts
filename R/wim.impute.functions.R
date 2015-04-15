@@ -63,7 +63,7 @@ find.wim.gaps <- function(df.wim,count.pattern = "^(truck|heavyheavy)"){
   ## ignore 'ts' in zoo object
   zn <- names(df.wim)[names(df.wim)!='ts']
 
-  df.wim.zoo <- zooreg(df.wim[,zn],order.by=df.wim$ts,frequency=1/3600)
+  df.wim.zoo <- zoo::zooreg(df.wim[,zn],order.by=df.wim$ts,frequency=1/3600)
 
   truck.lanes <- grep( pattern="^truck",x=names(df.wim),perl=TRUE,value=TRUE)
 
@@ -279,7 +279,7 @@ fill.wim.gaps <- function(df.wim
   print(paste("excluded:",  paste(exclude.as.id.vars,collapse=' ')))
 
   df.truckamelia.b <-
-    amelia(df.wim,idvars=exclude.as.id.vars,
+    Amelia::amelia(df.wim,idvars=exclude.as.id.vars,
            ts="tod",splinetime=6,
            lags =new.cnt.vs,leads=new.cnt.vs,sqrts=c(new.cnt.vs,axle.vs),
            cs="day",intercs=TRUE,emburn=c(2,200),
@@ -289,7 +289,7 @@ fill.wim.gaps <- function(df.wim
 
   if(plotfile!=''){
       plotfile <- fixup.plotfile.name(plotfile)
-      png(file = plotfile,
+      png(filename = plotfile,
           width=1600,
           height=1600,
           bg="transparent",
@@ -325,15 +325,21 @@ fixup.plotfile.name <- function(plotfile){
     plotfile
 }
 
-## this totally won't run, but I like the little lane.types hack so
-## I'm keeping it around.  What it does is if I have some count
-## variables that are trucks, like say heavy.heavy.trucks, then you
-## can also figure out not_heavy.heavy.trucks, and if you have
-## overweight trucks, you can figure out not overweight trucks, etc.
-## Not used anymore, as I didn't have any reason to track things like
-## over weight or over long trucks, etc
-
-truck.proportions <- function(df.wim){
+##' figure the truck proportions
+##'
+##' this totally won't run, but I like the little lane.types hack so
+##' I'm keeping it around.  What it does is if I have some count
+##' variables that are trucks, like say heavy.heavy.trucks, then you
+##' can also figure out not_heavy.heavy.trucks, and if you have
+##' overweight trucks, you can figure out not overweight trucks, etc.
+##' Not used anymore, as I didn't have any reason to track things like
+##' over weight or over long trucks, etc
+##' @title truck.proportions
+##' @param df.wim the wim dataframe
+##' @param count.vars count variables to use in the figuring
+##' @return a side effect of altering the df.wim
+##' @author James E. Marca
+truck.proportions <- function(df.wim,count.vars){
       ## trying to switch from trucks and others to portions of trucks.  I
   ## don't rmemeber if this works well or not in the imputation.
 
@@ -356,5 +362,5 @@ truck.proportions <- function(df.wim){
       new.cnt.vs <- c(new.cnt.vs,new.var)
     }
   }
-
+  df.wim
 }

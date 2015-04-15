@@ -1,7 +1,4 @@
-## call this for calls inside impute routine
 config <- rcouchutils::get.config(Sys.getenv('RCOUCHUTILS_TEST_CONFIG'))
-##get.config <- configr::configrr()
-##config <- get.config(Sys.getenv('RCOUCHUTILS_TEST_CONFIG'))$postgresql
 
 library('RPostgreSQL')
 m <- dbDriver("PostgreSQL")

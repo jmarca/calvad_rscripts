@@ -11,7 +11,7 @@
 #' @param vdsid the VDS id
 #' @param path the root path to ping the web service.  Use it if there
 #' is some sort of path like, say, /vile/file/server for the thing
-#' @param year
+#' @param year the year
 #' @param server defaults to http://lysithia.its.uci.edu
 #' @param serverfile the already cached server file, if any.  If
 #' 'none' (the default) then an initial hit to the server will be done
@@ -22,33 +22,34 @@
 #' dataframe containing the amelia output
 get.amelia.vds.file <- function(vdsid,path='/',year,server='http://lysithia.its.uci.edu'
                                ,serverfile='none'){
-  df.vds.agg.imputed <- list()
-  files = c(serverfile)
-  if(serverfile == 'none'){
-    path <- toupper(path)
-    amelia.dump.file <- make.amelia.output.pattern(vdsid,year)
-    files <- get.filenames(server=server,base.dir=path, pattern=amelia.dump.file)
-    if(length(files)==0){
-      return('todo')
-    }
-  }
-  result <- 'fail'
-  attempt <- 0
-  serverfile = files[1]
-  while(attempt < 10){
-    attempt <-  attempt + 1
-    ## print(paste('try',attempt,'loading stored vds amelia object from file',serverfile))
-    fetched <- fetch.remote.file(server,service='vdsdata',root=paste(path,'/',sep=''),file=serverfile)
-    if(fetched == 'df.vds.agg.imputed') break
-    ##print(paste('attempt ',attempt))
-  }
-  if(result == 'reject'){
-    return(paste('rejected',files[1]))
-  }
-  if (attempt>9){
-    stop('no data from data server')
-  }
-  df.vds.agg.imputed
+    stop('do not use before fixing and removing this')
+  ## df.vds.agg.imputed <- list()
+  ## files = c(serverfile)
+  ## if(serverfile == 'none'){
+  ##   path <- toupper(path)
+  ##   amelia.dump.file <- make.amelia.output.pattern(vdsid,year)
+  ##   files <- get.filenames(server=server,base.dir=path, pattern=amelia.dump.file)
+  ##   if(length(files)==0){
+  ##     return('todo')
+  ##   }
+  ## }
+  ## result <- 'fail'
+  ## attempt <- 0
+  ## serverfile = files[1]
+  ## while(attempt < 10){
+  ##   attempt <-  attempt + 1
+  ##   ## print(paste('try',attempt,'loading stored vds amelia object from file',serverfile))
+  ##   fetched <- fetch.remote.file(server,service='vdsdata',root=paste(path,'/',sep=''),file=serverfile)
+  ##   if(fetched == 'df.vds.agg.imputed') break
+  ##   ##print(paste('attempt ',attempt))
+  ## }
+  ## if(result == 'reject'){
+  ##   return(paste('rejected',files[1]))
+  ## }
+  ## if (attempt>9){
+  ##   stop('no data from data server')
+  ## }
+  ## df.vds.agg.imputed
 }
 
 #' get Amelia VDS file from the local file system
@@ -71,7 +72,7 @@ get.amelia.vds.file.local <- function(vdsid,path='/',year,server,serverfile){
   df.vds.agg.imputed <- NULL
 
   target.file <- make.amelia.output.pattern(vdsid,year)
-  isa.df <- dir(path, pattern=target.file,full.names=TRUE, ignore.case=TRUE,recurs=TRUE)
+  isa.df <- dir(path, pattern=target.file,full.names=TRUE, ignore.case=TRUE,recursive=TRUE)
   ## print(paste(path,target.file,isa.df[1],sep=' : '))
   if(length(isa.df)==0){
       return('todo')
@@ -85,27 +86,27 @@ get.amelia.vds.file.local <- function(vdsid,path='/',year,server,serverfile){
 
 #' unget Amelia VDS output file
 #'
-#' So you need this because you can get lots of files laying around
-#' filling up your hard drive.  This call will unmap any temp files
-#' generated in the prior call
+#' So you need this if you fetch from a remote server because you can
+#' get lots of files laying around filling up your hard drive.  This
+#' call will unmap any temp files generated in the prior call
 #'
 #' @param vdsid the VDS id
 #' @param path the root path to ping the web service.  Use it if there
 #' is some sort of path like, say, /vile/file/server for the thing
-#' @param year
+#' @param year the year
 #' @param server defaults to http://lysithia.its.uci.edu
 #' @return nothing at all
 unget.amelia.vds.file <- function(vdsid,path='/',year,server='http://calvad.ctmlabs.net'){
-
-  path <- toupper(path)
-  amelia.dump.file <- make.amelia.output.pattern(vdsid,year)
-  files <- get.filenames(server=server,base.dir=path, pattern=amelia.dump.file)
-  df.vds.agg.imputed <- list()
-  if(length(files)==0){
-    return()
-  }
-  unmap.temp.files(files[1])
-  return()
+    stop('currently not useful, as all files are local')
+  ## path <- toupper(path)
+  ## amelia.dump.file <- make.amelia.output.pattern(vdsid,year)
+  ## files <- get.filenames(server=server,base.dir=path, pattern=amelia.dump.file)
+  ## df.vds.agg.imputed <- list()
+  ## if(length(files)==0){
+  ##   return()
+  ## }
+  ## unmap.temp.files(files[1])
+  ## return()
 }
 
 ## tempfix.borkborkbork <- function(df){
@@ -149,13 +150,13 @@ medianed.aggregate.df <- function(df_combined,op=median){
     ## print(paste('use sqldf to aggregate imputations'))
 
     varnames <- names(df_combined)
-    varnames <- grep( pattern="^ts",x=varnames,perl=TRUE,inv=TRUE,value=TRUE)
+    varnames <- grep( pattern="^ts",x=varnames,perl=TRUE,invert=TRUE,value=TRUE)
     varnames <- setdiff(varnames,c('tod','day'))
 
     n.names <- grep(pattern="^n(l|r)\\d+",x=varnames,perl=TRUE,value=TRUE)
     o.names <- grep(pattern="^o(l|r)\\d+",x=varnames,perl=TRUE,value=TRUE)
 
-    other.names <- grep(pattern="^(n|o)(l|r)\\d+",x=varnames,inv=TRUE,perl=TRUE,value=TRUE)
+    other.names <- grep(pattern="^(n|o)(l|r)\\d+",x=varnames,invert=TRUE,perl=TRUE,value=TRUE)
 
     ## use sqldf...so much faster than zoo, aggregate
 
@@ -210,7 +211,7 @@ medianed.aggregate.df <- function(df_combined,op=median){
 ## medianed.aggregate.df.oldway <- function(df.combined,op=median){
 ##   print('use zoo to combine a value')
 ##   varnames <- names(df.combined)
-##   varnames <- grep( pattern="^ts",x=varnames,perl=TRUE,inv=TRUE,value=TRUE)
+##   varnames <- grep( pattern="^ts",x=varnames,perl=TRUE,invert=TRUE,value=TRUE)
 
 ##   df.z <- zooreg(df.combined[,varnames]
 ##                        ,order.by=as.numeric(df.combined$ts))
@@ -275,7 +276,7 @@ condense.amelia.output <- function(aout,op=median){
 #' imputations, combined one per timestamp with median.
 condense.amelia.output.into.zoo <- function(aout,op){
     print('old way of accessing condense.amelia.output')
-    condense.amelia.output(aout,opp)
+    condense.amelia.output(aout,op)
 }
 
 #' Get aggregated VDS Amelia file
@@ -294,7 +295,7 @@ condense.amelia.output.into.zoo <- function(aout,op){
 #' @param remote default is TRUE, meaning hit a remote server, or
 #' FALSE meaning hit the local server
 #' @param server defaults to http://lysithia.its.uci.edu
-#' @param year
+#' @param year the year
 #' @return the condensed, aggregated Amelia imputation results as a
 #' dataframe
 get.aggregated.vds.amelia <- function(vdsid,
@@ -336,7 +337,7 @@ get.aggregated.vds.amelia <- function(vdsid,
 #' plot functions.
 #'
 #' @param pair the VDS id or the wim id or the vds wim pair, I guess
-#' @param year
+#' @param year the year
 #' @param doplots default is TRUE, set to FALSE if you want to skip
 #' plotting, but then, why are you running this if you don't want
 #' plots.
@@ -409,7 +410,7 @@ get.and.plot.vds.amelia <- function(pair,year,doplots=TRUE,
             rcouchutils::couch.attach(trackingdb,pair,f2a)
         }
     }
-    1
+    df.vds.agg
 }
 
 #' Get and plot raw VDS data, prior to imputations
@@ -422,14 +423,12 @@ get.and.plot.vds.amelia <- function(pair,year,doplots=TRUE,
 #' imputation step just aggregates up to two minutes these days) then
 #' will do the plots
 #'
-#' @param fname
-#' @param f
+#' @param fname the base name of the file
+#' @param f the full file name
 #' @param path either 'none', the remote server's service path, or the
 #' local file system's root directory for Amelia output
-#' @param year
+#' @param year the year
 #' @param vds.id the VDS id or the wim id or the vds wim pair, I guess
-#' @param force.plot default is FALSE, set to TRUE if you want to skip
-#' checking for existing plots and instead always redo them
 #' @param remote default is FALSE, meaning hit the local server; pass
 #' TRUE if you want hit a remote server or
 #' Note that accessing remote file server stuff is currently disabled
@@ -467,15 +466,14 @@ plot.raw.data <- function(fname,f,path,year,vds.id,
   ## df.pattern =paste('**/',fname,'*df*',year,'RData',sep='')
   ##rdata.file <- make.amelia.output.file(path,fname,seconds,year)
   if(remote){
-      print('remote file stuff is untested at this time')
-      quit(status=10)
-      fetched <- fetch.remote.file(server,service='vdsdata',root=path,file=f)
-      r <- try(result <- load(file=fetched))
-      if(class(r) == "try-error") {
-          print (paste('need to get the raw file.  hold off for now'))
-          return (FALSE)
-      }
-      unlink(x=fetched)
+      stop('remote file stuff is untested at this time')
+      ## fetched <- fetch.remote.file(server,service='vdsdata',root=path,file=f)
+      ## r <- try(result <- load(file=fetched))
+      ## if(class(r) == "try-error") {
+      ##     print (paste('need to get the raw file.  hold off for now'))
+      ##     return (FALSE)
+      ## }
+      ## unlink(x=fetched)
   }else{
       df <- load.file(f,fname,year,path)
   }
@@ -502,16 +500,18 @@ plot.raw.data <- function(fname,f,path,year,vds.id,
 }
 
 
-#' Check CouchDB for whether or not plots have been previously created and attached.  If TRUE, then you can skip the work, if FALSE, then you need to make all the plots.
+#' Check CouchDB for whether or not plots have been previously created
+#' and attached.  If TRUE, then you can skip the work, if FALSE, then
+#' you need to make all the plots.
 #'
 #' It doesn't check each file, just for the 4th plot created, figuring
 #' that if that one has been saved, then 1,2,and 3 have also been
 #' saved.
 #'
-#' @param vdsid
-#' @param year
-#' @param fileprefix
-#' @param trackingdb defaults to the usual 'vdsdata%2ftracking
+#' @param vdsid the detector id
+#' @param year the year
+#' @param fileprefix the file prefix for the plot file
+#' @param trackingdb defaults to the usual vdsdata\%2ftracking
 #' @return TRUE or FALSE whether the doc (based on VDSID) has the attached file
 #'
 #' What this routine does is to re-create the expected filename (I
@@ -558,7 +558,7 @@ check.for.plot.attachment <- function(vdsid,year,
 #'
 #' So you can add something like "imputed" to the file name to
 #' differentiate the imputed plots from the input data plots.
-#' @param trackingdb defaults to 'vdsdata%2ftracking' for checking if
+#' @param trackingdb defaults to 'vdsdata\%2ftracking' for checking if
 #' plots already done
 #' @return files.to.attach the files that you need to send off to
 #' couchdb tracking database.
@@ -588,7 +588,7 @@ plot.amelia.plots  <- function(aout,plotvars,vdsid,year,force.plot=FALSE,
 
     ## print(paste('plotting to',imagefilename))
 
-    png(file = imagefilename, width=1600, height=1200, bg="transparent",pointsize=24)
+    png(filename = imagefilename, width=1600, height=1200, bg="transparent",pointsize=24)
 
     ## print(plot(aout,which.vars=plotvars,ask=FALSE))
 
@@ -613,7 +613,7 @@ plot.amelia.plots  <- function(aout,plotvars,vdsid,year,force.plot=FALSE,
 #'
 #' @param df.merged the dataframe to plot
 #' @param vdsid the VDS id
-#' @param year
+#' @param year the year
 #' @param fileprefix helps name the output file, and also to find it.
 #' By default the plot file will be named via the pattern
 #'
@@ -628,7 +628,7 @@ plot.amelia.plots  <- function(aout,plotvars,vdsid,year,force.plot=FALSE,
 #' differentiate the imputed plots from the input data plots.
 #' @param subhead Written on the plot
 #' @param force.plot defaults to FALSE.  If FALSE, and a file exists
-#' @param trackingdb defaults to 'vdsdata%2ftracking' for checking if
+#' @param trackingdb defaults to 'vdsdata\%2ftracking' for checking if
 #' plots already done
 #' @return files.to.attach the files that you need to send off to
 #' couchdb tracking database.
@@ -669,7 +669,7 @@ plot.vds.data  <- function(df.merged,vdsid,year,fileprefix=NULL,subhead='\npost 
 
     numlanes <- length(levels(recoded$lane))
     plotheight = 400 * numlanes
-    png(file = imagefilename, width=1600, height=plotheight, bg="transparent",pointsize=24)
+    png(filename = imagefilename, width=1600, height=plotheight, bg="transparent",pointsize=24)
 
     p <- ggplot2::ggplot(recoded)
 
@@ -767,7 +767,7 @@ plot.vds.data  <- function(df.merged,vdsid,year,fileprefix=NULL,subhead='\npost 
 
 ##   print(paste('plotting to',imagefilename))
 
-##   png(file = imagefilename, width=900, height=plotheight, bg="transparent",pointsize=24)
+##   png(filename = imagefilename, width=900, height=plotheight, bg="transparent",pointsize=24)
 
 ##   plotvars <- grep('^n',x=varnames,perl=TRUE,value=TRUE)
 ##   f <- formula(paste( paste(plotvars,collapse='+' ),' ~ tod | day'))
@@ -872,8 +872,6 @@ plot.vds.data  <- function(df.merged,vdsid,year,fileprefix=NULL,subhead='\npost 
 #'
 #'
 #' @param df the dataframe
-#' @param plotvars will be extracted fromthe ususal suspects if not
-#' present
 #' @return will return a new dataframe recoded for easy plotting
 recode.df.vds <- function( df ){
     varnames <- names(df)

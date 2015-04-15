@@ -77,7 +77,7 @@ fill.truck.gaps <- function(df
   print(paste("excluded:",  paste(exclude.as.id.vars,collapse=' ')))
   ## this version is thorough, but does not run fast enough for the moment
   ## df.amelia <-
-  ##   amelia(df,idvars=exclude.as.id.vars,
+  ##   Amelia::amelia(df,idvars=exclude.as.id.vars,
   ##          ts="tod",
   ##          splinetime=6,
   ##          lags =count.vars,leads=count.vars,
@@ -88,7 +88,7 @@ fill.truck.gaps <- function(df
   ##          bounds = pos.bds, max.resample=10,empri = 0.05 *nrow(df))
   ## this one works
   ## df.amelia <-
-  ##   amelia(df,idvars=exclude.as.id.vars,
+  ##   Amelia::amelia(df,idvars=exclude.as.id.vars,
   ##          ts="tod",
   ##          splinetime=3,
   ##          ## lags =count.vars,leads=count.vars,
@@ -103,7 +103,7 @@ fill.truck.gaps <- function(df
 
   exclude.as.id.vars <- c('tod','day',exclude.as.id.vars)
     df.amelia <-
-    amelia(df,idvars=exclude.as.id.vars,
+    Amelia::amelia(df,idvars=exclude.as.id.vars,
            ts="toddow",
            splinetime=6,
            #lags =count.vars,
@@ -300,7 +300,7 @@ names.munging <- function(names.df
 ##   exclude.as.id.vars <- setdiff(ic.names,c(mean.vars,new.cnt.vs,'tod','day'))
 
 ##   df.amelia <-
-##     amelia(df,idvars=exclude.as.id.vars,
+##     Amelia::amelia(df,idvars=exclude.as.id.vars,
 ##            ts="tod",
 ##            ##splinetime=3,
 ##            ##lags =new.cnt.vs,leads=new.cnt.vs,

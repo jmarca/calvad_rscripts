@@ -14,6 +14,8 @@
 #' @param ts the timestamp sequence for each record in data
 #' @param year the year of the data
 #' @param vdsid the detector's id
+#' @param db the couchdb to save trcking info.  defaults to
+#' "vdsdata\%2ftracking"
 #' @return TRUE if the data is good to go, FALSE if not
 #'
 #' Side effect, will store the reason for data rejection to CouchDB,
@@ -218,8 +220,9 @@ recode.lanes <- function(df){
 #' sd_vol, sd_occ_and sd_spd are not there, and anyway are
 #' uninteresting and wrong so I long ago started just stashing NA in
 #' those columns.
+#' @param vds.id the detector's id
 #' @param path where to save the output CSV file
-#' @param year
+#' @param year the year
 #' @param con a connection to the database so that I can determine
 #' database-friendly column names
 #' @return just falls off the end.  Generates a CSV file that you can
@@ -241,7 +244,7 @@ db.ready.dump <- function(imps,vds.id,path='.',year,con){
     dump$sd_occ <- NA
     dump$sd_spd <- NA
 
-    db.legal.names  <- make.db.names(con,names(dump),
+    db.legal.names  <- RPostgreSQL::make.db.names(con,names(dump),
                                      unique=TRUE,
                                      allow.keywords=FALSE)
     names(dump) <- db.legal.names
@@ -271,7 +274,7 @@ db.ready.dump <- function(imps,vds.id,path='.',year,con){
 verify.imputation.was.okay <- function(fname,path,year,seconds,df.vds.agg.imputed=NA){
   amelia.dump.file <- make.amelia.output.pattern(fname,year)
   done.file <- dir(path, pattern=amelia.dump.file,
-                   full.names=TRUE, ignore.case=TRUE,recurs=TRUE)
+                   full.names=TRUE, ignore.case=TRUE,recursive=TRUE)
   load.result <-  load(file=done.file[1])
   okay <- TRUE
   if(load.result!='reject'){
@@ -356,7 +359,7 @@ get.vds.file <- function(vds.id,path,year){
 
   amelia.dump.file <- make.amelia.output.pattern(vds.id,year)
   files <- dir(path, pattern=amelia.dump.file,
-                   full.names=TRUE, ignore.case=TRUE,recurs=TRUE)
+                   full.names=TRUE, ignore.case=TRUE,recursive=TRUE)
   df.vds.agg.imputed <- NULL
   if(length(files)>0){
     print(paste('loading stored vds amelia object from file',files[1]))
@@ -415,8 +418,6 @@ get.vdsid.from.filename <- function(filename){
 #' else
 #' @return the aggregated data as a dataframe
 impute.aggregate <- function(aout,hour=3600){
-    print('should not be in vds.processing.functions::impute.aggregate')
-
     lanes <- longway.guess.lanes(aout$imputations[[1]])
     print(paste('in impute.aggregate, with lanes=',lanes))
     n.idx <- vds.lane.numbers(lanes,c("n"))
@@ -492,11 +493,12 @@ impute.aggregate <- function(aout,hour=3600){
 #' unused and not worth refactoring at the moment
 #' @param year the year
 #' @param vds.id the id of the VDS detector
+#' @param con database connection to determine legal db column names
 #' @return whatever
 #'
 #' sideeffect is to save an hourly CSV file to the right path
 #'
-hourly.agg.VDS.site <- function(fname,f,path,year,vds.id){
+hourly.agg.VDS.site <- function(fname,f,path,year,vds.id,con){
   ## aggregate non-missing data
   ## return 1 if properly aggregated, return 0 if not
   returnval <- 0
@@ -509,7 +511,7 @@ hourly.agg.VDS.site <- function(fname,f,path,year,vds.id){
   ts <- data.frame()
   df <- data.frame()
   target.file =paste(fname,'.df.*',year,'RData',sep='')
-  isa.df <- dir(path, pattern=target.file,full.names=TRUE, ignore.case=TRUE,recurs=TRUE)
+  isa.df <- dir(path, pattern=target.file,full.names=TRUE, ignore.case=TRUE,recursive=TRUE)
   need.to.save <- FALSE
   if(length(isa.df)>0){
     print (paste('loading', isa.df[1]))
@@ -569,7 +571,7 @@ hourly.agg.VDS.site <- function(fname,f,path,year,vds.id){
   }
   ## need to break up the lane data into rows from columns
   other <- transpose.lanes.to.rows (other) ## should work, unless agg is wierd
-  db.legal.names  <- make.db.names(con,names(other),unique=TRUE,allow.keywords=FALSE)
+  db.legal.names  <- RPostgreSQL::make.db.names(con,names(other),unique=TRUE,allow.keywords=FALSE)
   names(other) <- db.legal.names
   filename <- paste(path,'/',fname,'.',year,'rawaggregate.csv',sep='')
   write.csv(other,file=filename,row.names = FALSE)
@@ -646,6 +648,7 @@ fix.lame.events.df <- function(events,year){
 #' @param good.periods an index identifying which rows of df.agg
 #' represent "good" periods of data
 #' @param detector.id the detector's id
+#' @param ts the time stamp vector
 #' @param detector.type the type of the detector, defaults to vdsid,
 #' other likely possibility is 'wim'
 #' @param con a database connection to use for valid dbnames
@@ -682,7 +685,7 @@ summarize.events <- function(df.agg,year,good.periods,detector.id,ts,detector.ty
     events$event[other$goodbad[event.index]==-1] <- 'imputed'
     events$event[other$goodbad[event.index]==1] <- 'observed'
   }
-  db.legal.names  <- make.db.names(con,
+  db.legal.names  <- RPostgreSQL::make.db.names(con,
                                    names(events),
                                    unique=TRUE,
                                    allow.keywords=FALSE)
