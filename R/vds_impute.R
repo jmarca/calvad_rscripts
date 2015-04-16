@@ -22,15 +22,16 @@ junk.shot <- function(vds.id,f,fname,seconds,year,df){
 #' @param f the root of the file name
 #' @param path the path
 #' @param year the year
-#' @param seconds  probably 120 these days
+#' @param seconds probably 120 these days
 #' @param goodfactor defaults to 2
 #' @param maxiter defaults to 100, currently using 20 as experiece
 #' shows that if it goes past 20, it isn't going to converge at 100 or
 #' 200 either, usually.
 #' @param con a database connection to postgresql
+#' @param trackingdb the couchdb tracking db
 #' @return a string indicating what failed or success
 #' @export
-self.agg.impute.VDS.site.no.plots <- function(fname,f,path,year,seconds,goodfactor=2,maxiter=100,con){
+self.agg.impute.VDS.site.no.plots <- function(fname,f,path,year,seconds,goodfactor=2,maxiter=100,con,trackingdb){
     ## aggregate, then impute
     vds.id <-  get.vdsid.from.filename(fname)
 
@@ -136,7 +137,7 @@ self.agg.impute.VDS.site.no.plots <- function(fname,f,path,year,seconds,goodfact
                 target.file <-  make.amelia.output.file(savepath,fname,seconds,year)
                 save(df.vds.agg.imputed,file=target.file,compress='xz')
                 verify.db.dump(fname,path,year,seconds,df.vds.agg.imputed,con)
-                store.amelia.chains(df.vds.agg.imputed,year,vds.id,'vdsraw',maxiter=maxiter)
+                store.amelia.chains(df.vds.agg.imputed,year,vds.id,'vdsraw',maxiter=maxiter,db=trackingdb)
                 returnval <- 1
             }else{
                 returnval <- paste(df.vds.agg.imputed$code,'message',df.vds.agg.imputed$message)

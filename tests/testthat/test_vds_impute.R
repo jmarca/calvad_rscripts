@@ -1,4 +1,6 @@
 config <- rcouchutils::get.config(Sys.getenv('RCOUCHUTILS_TEST_CONFIG'))
+parts <- ('vds','impute','calls')
+rcouchutils::couch.makedb(parts)
 
 library('RPostgreSQL')
 m <- dbDriver("PostgreSQL")
@@ -25,7 +27,8 @@ test_that("vds impute works okay",{
                                                 seconds=seconds,
                                                 goodfactor=3.5,
                                                 maxiter=20,
-                                                con=con)
+                                                con=con,
+                                                trackingdb=parts)
 
 
     expect_that(result,equals(1))
@@ -42,6 +45,16 @@ test_that("vds impute works okay",{
                                          'imputed.RData',
                                          sep='')))
 
+    saved.state <- rcouchutils::couch.check.state(
+        year=year,
+        id=vds.id,
+        'vdsraw_chain_lengths',
+        db=parts)
+    expect_that(saved.state,is_a('numeric'))
+    expect_that(saved.state,
+                equals(c(3,3,3,3,3)))
+
 })
 
+rcouchutils::couch.deletedb(parts)
 unlink('./vds_hour_agg.1211682.2012.dat')
