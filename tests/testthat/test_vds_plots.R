@@ -60,7 +60,7 @@ test_that("plotting imputed data code works okay",{
 
     df_agg <- get.and.plot.vds.amelia(
         pair=vds.id,
-        year=2012,
+        year=year,
         doplots=TRUE,
         remote=FALSE,
         path=path,

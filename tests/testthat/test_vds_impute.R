@@ -1,5 +1,5 @@
 config <- rcouchutils::get.config(Sys.getenv('RCOUCHUTILS_TEST_CONFIG'))
-parts <- ('vds','impute','calls')
+parts <- c('vds','impute','calls')
 rcouchutils::couch.makedb(parts)
 
 library('RPostgreSQL')
@@ -55,6 +55,7 @@ test_that("vds impute works okay",{
                 equals(c(3,3,3,3,3)))
 
 })
+
 
 rcouchutils::couch.deletedb(parts)
 unlink('./vds_hour_agg.1211682.2012.dat')
