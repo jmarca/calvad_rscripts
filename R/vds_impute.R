@@ -130,26 +130,29 @@ self.agg.impute.VDS.site.no.plots <- function(fname,f,path,year,seconds,goodfact
 
                 return(returnval)
             }
+            ## save no matter whether okay or bad
+            savepath <- get.save.path(f)
+            target.file <-  make.amelia.output.file(savepath,fname,seconds,year)
+            save(df.vds.agg.imputed,file=target.file,compress='xz')
+            store.amelia.chains(
+                df.vds.agg.imputed,year,vds.id,
+                'vdsraw',maxiter=maxiter,db=trackingdb
+                )
 
             if(df.vds.agg.imputed$code==1){
                 ## that means good imputation
-                savepath <- get.save.path(f)
-                target.file <-  make.amelia.output.file(savepath,fname,seconds,year)
-                save(df.vds.agg.imputed,file=target.file,compress='xz')
                 verify.db.dump(fname,path,year,seconds,df.vds.agg.imputed,con)
-                store.amelia.chains(df.vds.agg.imputed,year,vds.id,'vdsraw',maxiter=maxiter,db=trackingdb)
                 returnval <- 1
             }else{
                 returnval <- paste(df.vds.agg.imputed$code,'message',df.vds.agg.imputed$message)
                 rcouchutils::couch.set.state(
-                    year=year,id=detector.id,
+                    year=year,id=vds.id,db=trackingdb,
                     doc=list(
                         'raw_imputation_code'=df.vds.agg.imputed$code,
-                        'raw_imputation_message'=df.vds.agg.imputed$message,
-                        ),db=trackingdb)
+                        'raw_imputation_message'=df.vds.agg.imputed$message
+                        )
+                    )
                 print(paste("amelia not happy:",returnval))
-                ## junk shot !
-                junk.shot(vds.id,f,fname,seconds,year,df)
             }
             ## df.vds.agg
         }

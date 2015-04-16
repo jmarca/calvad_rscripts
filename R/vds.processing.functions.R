@@ -435,7 +435,7 @@ impute.aggregate <- function(aout,hour=3600){
     }
 
     ## aggregate
-    print(paste('aggregate using sqldf'))
+    ## print(paste('aggregate using sqldf'))
     allimp$timeslot <- as.numeric(allimp$ts) - as.numeric(allimp$ts) %% hour
     allimp$tick <- 1
     all.names <- c(n.idx,o.idx,s.idx,'tick')
@@ -465,8 +465,8 @@ impute.aggregate <- function(aout,hour=3600){
 
     sqlstatement <- paste(select,speed_select,from_clause)
 
-    print(sqlstatement)
-    df.agg <- sqldf::sqldf(sqlstatement,drv="SQLite")
+    ## print(sqlstatement)
+    df.agg <- sqldf::sqldf(sqlstatement,drv="RSQLite")
     ## fix time
     attr(df.agg$ts,'tzone') <- 'UTC'
 

@@ -26,7 +26,7 @@ vds.aggregate <- function(df,ts,lanes=0,seconds){
 
 
     ## aggregate
-    print(paste('aggregate using sqldf'))
+    ## print(paste('aggregate using sqldf'))
 
 
     df$ts <- ts  # because I no longer need it out
@@ -51,7 +51,7 @@ vds.aggregate <- function(df,ts,lanes=0,seconds){
                           )
     ## print(sqlstatement)
     ## do it
-    df.agg <- sqldf::sqldf(sqlstatement,drv="SQLite")
+    df.agg <- sqldf::sqldf(sqlstatement,drv="RSQLite")
     ## fix time
     attr(df.agg$ts,'tzone') <- 'UTC'
 

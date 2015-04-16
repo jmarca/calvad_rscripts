@@ -372,45 +372,50 @@ get.and.plot.vds.amelia <- function(pair,year,doplots=TRUE,
         return (NULL)
     }
 
-    df.vds.agg <- condense.amelia.output(aout)
+    df.vds.agg <- NULL
+    if(aout$code == 1){
 
-    ## prior to binding, weed out excessive flows
-    varnames <- names(df.vds.agg)
-    flowvars <- grep('^n(r|l)\\d',x=varnames,perl=TRUE,value=TRUE)
-    for(lane in flowvars){
-        idx <- df.vds.agg[,lane] > 2500
-        if(length(idx[idx])>0){
-            df.vds.agg[idx,lane] <- 2500
-            print(paste('Hey, got excessive flows for ',pair,year))
+        df.vds.agg <- condense.amelia.output(aout)
+
+        ## prior to binding, weed out excessive flows
+        varnames <- names(df.vds.agg)
+        flowvars <- grep('^n(r|l)\\d',x=varnames,perl=TRUE,value=TRUE)
+        for(lane in flowvars){
+            idx <- df.vds.agg[,lane] > 2500
+            if(length(idx[idx])>0){
+                df.vds.agg[idx,lane] <- 2500
+                print(paste('Hey, got excessive flows for ',pair,year))
+            }
         }
-    }
 
-    ## cruft, but may as well keep it up
-    rcouchutils::couch.set.state(year,pair,doc=list('occupancy_averaged'=1)
-                                 ,db=trackingdb)
+        ## cruft, but may as well keep it up
+        rcouchutils::couch.set.state(year,pair,doc=list('occupancy_averaged'=1)
+                                    ,db=trackingdb)
 
-    if(doplots){
+        if(doplots){
 
-        ## do the amelia default plot functions
-        plotvars <- grep('^(o|n)(r|l)\\d',x=varnames,perl=TRUE,value=TRUE)
-        attach.files <- plot_amelia.plots(aout=aout,
-                                          plotvars=plotvars,
-                                          vdsid=pair,
-                                          year=year,
+            ## do the amelia default plot functions
+            plotvars <- grep('^(o|n)(r|l)\\d',x=aout$orig.vars,perl=TRUE,value=TRUE)
+            attach.files <- plot_amelia.plots(aout=aout,
+                                              plotvars=plotvars,
+                                              vdsid=pair,
+                                              year=year,
+                                              force.plot=force.plot,
+                                              trackingdb = trackingdb)
+
+            for(f2a in c(attach.files)){
+                rcouchutils::couch.attach(trackingdb,pair,f2a)
+            }
+
+            subhead='\npost-imputation data'
+            fileprefix='imputed'
+            attach.files <- plot_vds.data(df.vds.agg,pair,year,
+                                          fileprefix,subhead,
                                           force.plot=force.plot,
-                                          trackingdb = trackingdb)
-
-        for(f2a in c(attach.files)){
-            rcouchutils::couch.attach(trackingdb,pair,f2a)
-        }
-        subhead='\npost-imputation data'
-        fileprefix='imputed'
-        attach.files <- plot_vds.data(df.vds.agg,pair,year,
-                                      fileprefix,subhead,
-                                      force.plot=force.plot,
-                                      trackingdb=trackingdb)
-        for(f2a in c(attach.files)){
-            rcouchutils::couch.attach(trackingdb,pair,f2a)
+                                          trackingdb=trackingdb)
+            for(f2a in c(attach.files)){
+                rcouchutils::couch.attach(trackingdb,pair,f2a)
+            }
         }
     }
     df.vds.agg
@@ -590,8 +595,7 @@ plot_amelia.plots  <- function(aout,plotvars,vdsid,year,force.plot=FALSE,
 
     imagefilename <- paste(savepath,paste(imagefileprefix,'%03d.png',sep='_'),sep='/')
 
-    png(filename = imagefilename, width=1600, height=1200, bg="transparent",pointsize=24)
-
+     png(filename = imagefilename, width=1600, height=1200, bg="transparent",pointsize=24)
     plotoutput <- plot(aout,which.vars=plotvars,ask=FALSE)
     print(plotoutput)
 
