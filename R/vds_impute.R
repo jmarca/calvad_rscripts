@@ -141,7 +141,15 @@ self.agg.impute.VDS.site.no.plots <- function(fname,f,path,year,seconds,goodfact
                 returnval <- 1
             }else{
                 returnval <- paste(df.vds.agg.imputed$code,'message',df.vds.agg.imputed$message)
+                rcouchutils::couch.set.state(
+                    year=year,id=detector.id,
+                    doc=list(
+                        'raw_imputation_code'=df.vds.agg.imputed$code,
+                        'raw_imputation_message'=df.vds.agg.imputed$message,
+                        db=trackingdb)
                 print(paste("amelia not happy:",returnval))
+                ## junk shot !
+                junk.shot(vds.id,f,fname,seconds,year,df)
             }
             ## df.vds.agg
         }
