@@ -391,6 +391,7 @@ make.db.dump.output.file <- function(path,vds.id,year){
 #' don't even bother to make sure that the vdsid is all numbers. I
 #' just look for [vdsid]_[vdstype]_[year], split on underscores, and
 #' return the first value
+#' @export
 get.vdsid.from.filename <- function(filename){
   ## files format is [vdsid]_[vdstype]_[year]
   vds.id <-  strsplit(filename,"_")[[1]][1]
