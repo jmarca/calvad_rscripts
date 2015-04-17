@@ -1,5 +1,4 @@
-library('testthat')
-source('../lib/get_couch.R',chdir=TRUE)
+config <- rcouchutils::get.config(Sys.getenv('RCOUCHUTILS_TEST_CONFIG'))
 
 test_that("get.wim.vds.pairs() will get all pairs for a given year", {
 

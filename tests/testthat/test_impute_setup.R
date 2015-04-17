@@ -1,14 +1,7 @@
-source('../lib/amelia_plots_and_diagnostics.R',chdir=TRUE)
-source('../lib/get.medianed.amelia.vds.R',chdir=TRUE)
-source('../lib/wim.loading.functions.R',chdir=TRUE)
-source('../lib/paired.Rdata.R',chdir=TRUE)
-
-library(testthat)
-
 ## must run this somewhere you can load vds data
 test_that("load.wim.pair.data() will return a big data frame", {
 
-    path <- '/data/backup/pems/breakup'
+    path <- '.'
     year <- 2010
     ## fake entry, but real anyway
     ## 37 | 74135.4030687827 | south     |     4
@@ -16,14 +9,11 @@ test_that("load.wim.pair.data() will return a big data frame", {
 
     ## fake pairing, but real anyway
     vdsid <- 1108541
-    df.vds.zoo <- get.and.plot.vds.amelia(pair=vdsid,year,doplots=FALSE,remote=FALSE,path=path)
-    expect_that(dim(df.vds.zoo),equals(c(8604,11)))
+    df.vds.agg <- get.and.plot.vds.amelia(pair=vdsid,year,doplots=FALSE,remote=FALSE,path=path)
 
-    df.vds <- unzoo.incantation(df.vds.zoo)
-    expect_that(dim(df.vds.zoo),equals(c(8604,11)),'df.vds.zoo is sized properly')
+    expect_that(dim(df.vds.agg),equals(c(8604,11)),'df.vds.agg is sized properly')
 
-    rm(df.vds.zoo)
-    df.vds[,'vds_id'] <- vdsid
+    df.vds.agg[,'vds_id'] <- vdsid
     vds.names <- sort(names(df.vds))
     vds.nvars <- grep( pattern="^n(l|r)\\d+",x=vds.names,perl=TRUE,value=TRUE)
 

@@ -114,3 +114,116 @@ oldway
   96   97   98   99  100  101
    7    6    3    3    3    1
 >
+
+
+,"obs_count"
+
+sp <- ggplot(twerked.df, aes(x=ts, y=volume)) + geom_point(shape=1)
+
+sp + facet_grid(day ~ .)
+
+sp + facet_wrap( ~ tod, ncol=4)
+
+
+twerked.df$day <- factor(twerked.df$day,
+                         labels=c('Su','Mo','Tu','We','Th','Fr','Sa'))
+
+twerked.df$lane <- factor(twerked.df$lane,
+                          levels=c('l1','r3','r2','r1'),
+                          labels=c('left','lane2','lane3','right'))
+
+sp <- ggplot(twerked.df, aes(x=ts, y=volume, color=day))
+
+sp + geom_point(shape=1) + facet_wrap( ~ tod, ncol=4)
+
+sp + geom_point(shap=1) + facet_wrap(~lane,ncol=2)+scale_colour_hue("day")
+
+(sp <- qplot(ts, volume, data=twerked.df, colour=day))
+
+sp+scale_color_hue()
+
+
+sp <- qplot(ts, volume, data=twerked.df, colour=occupancy)
+
+sp+scale_color_gradientn(colours = rainbow(5))+geom_point(alpha=occupancy)+ facet_wrap(~lane,ncol=2)
+
+p <- ggplot2::ggplot(twerked.df)
+
+p + ggplot2::geom_point(ggplot2::aes(x = ts, y = volume, alpha=occupancy, color=day))+ ggplot2::facet_wrap(~lane,ncol=2)
+
+p + ggplot2::geom_point(ggplot2::aes(x = ts, y = volume, color=day),alpha=0.6)+ ggplot2::facet_wrap(~lane,ncol=2)
+
+p + ggplot2::geom_point(ggplot2::aes(x = ts, y = volume,  color=occupancy),alpha=0.6)+ ggplot2::facet_wrap(~lane,ncol=2)+ggplot2::scale_color_gradient()
+
+library(scales) # for muted
+
+## per lane
+p + ggplot2::geom_point(ggplot2::aes(x = ts, y = volume,  color=occupancy),alpha=0.3)+ ggplot2::facet_wrap(~lane,ncol=2)+ggplot2::scale_color_gradient2(midpoint=0.23,high=("blue"), low=muted("red"))
+
+p +
+    ggplot2::geom_point(ggplot2::aes(x = ts, y = volume,  color=occupancy),alpha=0.7) +
+        ggplot2::facet_wrap(~lane,ncol=2)+
+            ggplot2::scale_color_gradient2(midpoint=0.23,high=("blue"), mid=("red"), low=("yellow"))
+
+## per hour
+p +
+    ggplot2::geom_point(ggplot2::aes(x = ts, y = volume,  color=occupancy),alpha=0.6) +
+        ggplot2::facet_wrap(~tod,ncol=4) +
+            ggplot2::scale_color_gradient2(midpoint=0.23,high=("blue"), mid=("red"), low=("yellow"))
+
+## p + ggplot2::geom_point(ggplot2::aes(x = ts, y = volume,  color=occupancy),alpha=0.50)+ ggplot2::facet_wrap(~tod,ncol=4)+ggplot2::scale_color_gradient2(midpoint=0.23,high=("blue"), low=muted("red"))
+
+
+
+
+## hack to see about lanes labeling
+## number of lanes, then drop one for decrement
+
+vdsid <- 123456
+subhead <- 'after imputation of mising values'
+
+occmidpoint <- mean(sqrt(twerked.df$occupancy))
+
+volmidpoint <- mean((twerked.df$volume))
+
+daymidpoint <- 12
+
+### plot 1
+p +
+    ggplot2::labs(list(title=paste("Scatterplot hourly volume in each lane, by time of day and day of week, for",year,"at site",vdsid,subhead),
+                       x="time of day",
+                       y="hourly volume per lane")) +
+        ggplot2::geom_point(ggplot2::aes(x = tod, y = volume,  color=occupancy),alpha=0.7) +
+            ggplot2::facet_grid(lane~day)+
+                    ggplot2::scale_color_gradient2(midpoint=occmidpoint,high=("blue"), mid=("red"), low=("yellow"))
+
+### plot 2
+
+p +
+    ggplot2::labs(list(title=paste("Scatterplot average hourly occupancy in each lane, by time of day and day of week, for",year,"at site",vdsid,subhead),
+                       x="time of day",
+                       y="hourly avg occupancy per lane")) +
+        ggplot2::geom_point(ggplot2::aes(x = tod, y = occupancy,  color=volume),alpha=0.7) +
+            ggplot2::facet_grid(lane~day)+
+                    ggplot2::scale_color_gradient2(midpoint=volmidpoint,high=("blue"), mid=("red"), low=("yellow"))
+
+### plot 3
+
+p +
+    ggplot2::labs(list(title=paste("Scatterplot hourly volume vs occupancy in each lane, by day of week, for",year,"at site",vdsid,subhead),
+                       y="hourly volume per lane",
+                       x="hourly avg occupancy per lane")) +
+        ggplot2::geom_point(ggplot2::aes(y = volume, x = occupancy,  color=tod),alpha=0.7) +
+            ggplot2::facet_grid(lane~day)+
+                    ggplot2::scale_color_gradient2(midpoint=daymidpoint,high=("blue"), mid=("red"), low=("lightblue"),name="hour")
+
+### plot 4
+
+## per hour
+p +
+    ggplot2::labs(list(title=paste("Scatterplot hourly volume vs time in each lane, by hour of day, for",year,"at site",vdsid,subhead),
+                       y="hourly volume per lane",
+                       x="date")) +
+    ggplot2::geom_point(ggplot2::aes(x = ts, y = volume,  color=lane),alpha=0.6) +
+        ggplot2::facet_wrap(~tod,ncol=4) +
+            ggplot2::scale_color_hue()
