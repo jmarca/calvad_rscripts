@@ -12,7 +12,9 @@ test_that("plotting imputed data code works okay",{
     df$ts <- NULL
     seconds=120
     df.agg <- vds.aggregate(df,ts,seconds=seconds)
-    files.to.couch <- plot_vds.data(df.agg,vds.id,2012,'raw','\npre imputation',force.plot=TRUE)
+    ## plot for comparisons.  just need to do this once
+    df.agg.3600 <- vds.aggregate(df,ts,seconds=3600)
+    files.to.couch <- plot_vds.data(df.agg.3600,vds.id,2012,'raw','\npre imputation',force.plot=TRUE)
 
     ## use sprintf("%0.10f",mean(df.agg$nl1,na.rm=TRUE)) to get long
 
@@ -22,7 +24,6 @@ test_that("plotting imputed data code works okay",{
     o.cols <- (1:length(names(df.agg)))[is.element(names(df.agg), o.idx)]
     o.bds.len <- length(o.cols)
     o.bds <- matrix(c(o.cols,sort( rep(c(0, 1),o.bds.len))), nrow = o.bds.len, byrow=FALSE)
-
     
 
     df.vds.agg.imputed <- NULL
