@@ -14,7 +14,6 @@ test_that("plotting imputed data code works okay",{
     df.agg <- vds.aggregate(df,ts,seconds=seconds)
     files.to.couch <- plot_vds.data(df.agg,vds.id,2012,'raw','\npre imputation',force.plot=TRUE)
 
-
     ## use sprintf("%0.10f",mean(df.agg$nl1,na.rm=TRUE)) to get long
 
     lanes <- longway.guess.lanes(df)
@@ -51,7 +50,7 @@ test_that("plotting imputed data code works okay",{
 
     df.merged <- condense.amelia.output(df.vds.agg.imputed)
     twerked.df <- recode.df.vds(df.merged)
-    files.to.couch <- plot.vds.data(df.merged,vds.id,2012,'imputed','\npost imputation',force.plot=TRUE)
+    files.to.couch <- plot_vds.data(df.merged,vds.id,2012,'imputed','\npost imputation',force.plot=TRUE)
 
     expect_that(files.to.couch,equals(
         paste("images/",vds.id,"/",vds.id,'_',year,'imputed_00',c(1,2,3,4),'.png',sep='')
