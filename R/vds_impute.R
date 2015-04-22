@@ -76,6 +76,12 @@ self.agg.impute.VDS.site.no.plots <- function(fname,f,path,year,seconds,goodfact
             print ('imputing')
             n.idx <- vds.lane.numbers(lanes,c("n"))
             o.idx <- vds.lane.numbers(lanes,c("o"))
+
+
+            ## create o/n variable
+            names_o_n <- paste(o.idx,'times',n.idx,sep='_')
+            df.agg[,names_o_n] <- df.agg[,o.idx]*(df.agg[,n.idx])
+
             o.cols <- (1:length(names(df.vds.agg)))[is.element(names(df.vds.agg), o.idx)]
             o.bds.len <- length(o.cols)
             o.bds <- matrix(c(o.cols,sort( rep(c(0, 1),o.bds.len))), nrow = o.bds.len, byrow=FALSE)
@@ -93,11 +99,13 @@ self.agg.impute.VDS.site.no.plots <- function(fname,f,path,year,seconds,goodfact
                                    leads=c(n.idx,o.idx),
                                    cs="day",
                                    intercs=TRUE,
-                                   sqrts=c(n.idx,o.idx),
+                                   sqrts=c(n.idx,o.idx,names_o_n),
                                    bounds=o.bds,
                                    max.resample=10,
                                    emburn=c(2,maxiter))
                 )
+
+
 
 ####### these are various different things I tried with imputation  ###
             ## df.vds.1800.imputed.2 <-
@@ -130,6 +138,13 @@ self.agg.impute.VDS.site.no.plots <- function(fname,f,path,year,seconds,goodfact
 
                 return(returnval)
             }
+            ## remove the v*n variables from each imputation
+            for(i in 1:length(df.vds.agg.imputed$imputations)){
+                for(n in names_o_n){
+                    df.vds.agg.imputed$imputations[[i]][,n] <- NULL
+                }
+            }
+
             ## save no matter whether okay or bad
             savepath <- get.save.path(f)
             target.file <-  make.amelia.output.file(savepath,fname,seconds,year)
