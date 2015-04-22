@@ -80,7 +80,7 @@ self.agg.impute.VDS.site.no.plots <- function(fname,f,path,year,seconds,goodfact
 
             ## create o/n variable
             names_o_n <- paste(o.idx,'times',n.idx,sep='_')
-            df.agg[,names_o_n] <- df.agg[,o.idx]*(df.agg[,n.idx])
+            df.vds.agg[,names_o_n] <- df.vds.agg[,o.idx]*(df.vds.agg[,n.idx])
 
             o.cols <- (1:length(names(df.vds.agg)))[is.element(names(df.vds.agg), o.idx)]
             o.bds.len <- length(o.cols)
