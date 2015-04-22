@@ -140,8 +140,8 @@ self.agg.impute.VDS.site.no.plots <- function(fname,f,path,year,seconds,goodfact
             }
             ## remove the v*n variables from each imputation
             for(i in 1:length(df.vds.agg.imputed$imputations)){
-                for(n in names_o_n){
-                    df.vds.agg.imputed$imputations[[i]][,n] <- NULL
+                for(name_o_n in names_o_n){
+                    df.vds.agg.imputed$imputations[[i]][,name_o_n] <- NULL
                 }
             }
 
