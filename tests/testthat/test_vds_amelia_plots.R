@@ -28,12 +28,12 @@ test_that("plotting imputed data code works okay",{
                                        "tod","day")))
 
     expect_that(min(df_agg$nl1,na.rm=TRUE),equals(0.0))
-    print(sprintf("%0.10f",mean(df_agg$nl1,na.rm=TRUE)))
-    expect_that(mean(df_agg$nl1,na.rm=TRUE),equals(269.9333817216,tolerance = .00001))
-    print(sprintf("%0.10f",median(df_agg$nl1,na.rm=TRUE)))
-    expect_that(median(df_agg$nl1,na.rm=TRUE),equals(210))
-    print(sprintf("%0.10f",max(df_agg$nl1,na.rm=TRUE)))
-    expect_that(max(df_agg$nl1,na.rm=TRUE),equals(1567))
+    ## print(sprintf("%0.10f",mean(df_agg$nl1,na.rm=TRUE)))
+    expect_that(mean(df_agg$nl1,na.rm=TRUE),equals(780.1367564096,tolerance = .00001))
+    ## print(sprintf("%0.10f",median(df_agg$nl1,na.rm=TRUE)))
+    expect_that(median(df_agg$nl1,na.rm=TRUE),equals(883))
+    ## print(sprintf("%0.10f",max(df_agg$nl1,na.rm=TRUE)))
+    expect_that(max(df_agg$nl1,na.rm=TRUE),equals(1861))
 
 
     plots <- paste(vds.id,year,'imputed',
@@ -52,4 +52,4 @@ test_that("plotting imputed data code works okay",{
 
 })
 
-## rcouchutils::couch.deletedb(parts)
+rcouchutils::couch.deletedb(parts)
