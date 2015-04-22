@@ -138,12 +138,14 @@ self.agg.impute.VDS.site.no.plots <- function(fname,f,path,year,seconds,goodfact
 
                 return(returnval)
             }
-            ## remove the v*n variables from each imputation
-            for(i in 1:length(df.vds.agg.imputed$imputations)){
-                for(name_o_n in names_o_n){
-                    df.vds.agg.imputed$imputations[[i]][,name_o_n] <- NULL
-                }
-            }
+
+            ## this will mess up amelia-native plots and diagnositcs
+            ## ## remove the v*n variables from each imputation
+            ## for(i in 1:length(df.vds.agg.imputed$imputations)){
+            ##     for(name_o_n in names_o_n){
+            ##         df.vds.agg.imputed$imputations[[i]][,name_o_n] <- NULL
+            ##     }
+            ## }
 
             ## save no matter whether okay or bad
             savepath <- get.save.path(f)

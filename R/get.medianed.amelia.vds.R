@@ -254,6 +254,14 @@ condense.amelia.output <- function(aout,op=median){
         df.c <- rbind(df.c,aout$imputations[[i]])
     }
 
+    ## gather the extra variable names and remove them
+    extravars <- grep('_times_',x=aout$orig.vars,perl=TRUE,value=TRUE)
+
+    for(name_o_n in extravars){
+        df.c[,name_o_n] <- NULL
+    }
+
+
     df.agg <- medianed.aggregate.df(df.c,op)
     df.agg
 }
