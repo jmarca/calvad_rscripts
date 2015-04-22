@@ -73,8 +73,8 @@ test_that("plotting imputed data code works okay",{
                                        "tod","day")))
 
     expect_that(min(df_agg$nl1,na.rm=TRUE),equals(0.0))
-    print(sprintf("%0.10f",mean(df_agg$nl1,na.rm=TRUE)))
-    expect_that(mean(df_agg$nl1,na.rm=TRUE),equals(269.98356,tolerance = .00001))
+    # print(sprintf("%0.10f",mean(df_agg$nl1,na.rm=TRUE)))
+    expect_that(mean(df_agg$nl1,na.rm=TRUE),equals(269.9333817216,tolerance = .00001))
     expect_that(median(df_agg$nl1,na.rm=TRUE),equals(210))
     expect_that(max(df_agg$nl1,na.rm=TRUE),equals(1567))
 

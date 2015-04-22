@@ -395,7 +395,6 @@ get.and.plot.vds.amelia <- function(pair,year,doplots=TRUE,
                 print(paste('Hey, got excessive flows for ',pair,year))
             }
         }
-
         ## cruft, but may as well keep it up
         rcouchutils::couch.set.state(year,pair,doc=list('occupancy_averaged'=1)
                                     ,db=trackingdb)
@@ -403,7 +402,8 @@ get.and.plot.vds.amelia <- function(pair,year,doplots=TRUE,
         if(doplots){
 
             ## do the amelia default plot functions
-            plotvars <- grep('^(o|n)(r|l)\\d',x=aout$orig.vars,perl=TRUE,value=TRUE)
+            plotvars <- grep('^(o|n)(r|l)\\d',x=varnames,perl=TRUE,value=TRUE)
+
             attach.files <- plot_amelia.plots(aout=aout,
                                               plotvars=plotvars,
                                               vdsid=pair,
@@ -582,6 +582,7 @@ check.for.plot.attachment <- function(vdsid,year,
 plot_amelia.plots  <- function(aout,plotvars,vdsid,year,force.plot=FALSE,
                                fileprefix='amelia',
                                trackingdb){
+
     if(!force.plot){
         have.plot <- check.for.plot.attachment(vdsid,year,
                                                fileprefix,
