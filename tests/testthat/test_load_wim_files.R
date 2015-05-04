@@ -1,6 +1,3 @@
-library(testthat)
-source('../lib/load.wim.file.R',chdir=TRUE)
-
 wim.path <- "./data"
 test_that("can get WIM RData file okay",{
     df.wim <- get.wim.rdata(wim.path=wim.path

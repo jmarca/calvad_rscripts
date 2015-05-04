@@ -12,25 +12,33 @@
 ##' @param wim.site the WIM site number
 ##' @param year the year
 ##' @param direction the direction
-##' @param wim.path the path in the file system to start looking for
-##' the RData files
+##' @param wim.path the root path in the file system to start looking
+##' for the RData files.  The code will add in the year, then the site
+##' number, then the direction, so that the file can be found in the
+##' expected place
+##' @param filename.pattern the pattern to use when searching.  Will
+##' look for wim.agg.RData by default, but if, say, you want to load
+##' the imputation output file, then pass in "imputed.RData" or
+##' similar
 ##' @return a dataframe with the raw, unimputed data, or NULL
 ##' @author James E. Marca
-get.wim.rdata <- function(wim.site,year,direction,wim.path='/data/backup/wim'){
+get.wim.rdata <- function(wim.site,year,direction,
+                          wim.path='/data/backup/wim'
+                          ,filename.pattern='wim.agg.RData'){
     ## reload the saved, pre-imputation wim data
+    search.path <- paste(wim.path,year,wim.site,direction,sep='/')
+    isa.df <- dir(search.path, pattern=filename.pattern,
+                  full.names=TRUE, ignore.case=TRUE,recursive=TRUE)
 
-    target.file <- paste(wim.path,year,wim.site,direction,'wim.agg.RData',sep='/')
-    print(paste('loading',target.file))
+    if(length(isa.df)==0){
+        return('todo')
+    }
 
     env <- new.env()
-    res <- load(file=target.file,env)
+    res <- load(file=isa.df,env)
     result <- list()
     result[[res]]=env
-    print(paste('load result is',res))
-    if(res != 'local.df.wim.agg'){
-        print(paste("choked loading?",res,"is not local.df.wim.agg as expected"))
-        return(NULL)
-    }
+
     return(result[[1]][[res]])
 
 }

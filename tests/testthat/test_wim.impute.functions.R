@@ -1,8 +1,3 @@
-source('../lib/wim.impute.functions.R',chdir=TRUE)
-source('../lib/paired.Rdata.R',chdir=TRUE)
-
-library(testthat)
-
 test_that("fixup.plotfile.name will work properly", {
 
     filename <- ""
