@@ -225,23 +225,17 @@ process.wim.site <- function(wim.site,
         }
         df.wim.sagg <- make.speed.aggregates(df.wim.s)
 
-        df.wim.d.joint <- merge(df.wim.dagg,df.wim.sagg)
+        df.wim.d.joint <- merge(df.wim.dagg,df.wim.sagg,all=TRUE)
+
         rm(df.wim.dagg, df.wim.sagg,df.wim.s,df.wim.d )
         gc()
 
-        col.names <- names(df.wim.d.joint)
-        local.df.wim.agg.ts <- as.ts(df.wim.d.joint)
-        rm(df.wim.d.joint)
-        ts.ts <- unclass(time(local.df.wim.agg.ts))+ISOdatetime(1970,1,1,0,0,0,tz='UTC')
-        local.df.wim.agg <- data.frame(ts=ts.ts)
-        local.df.wim.agg[col.names] <- local.df.wim.agg.ts ## [,col.names]
-        rm(local.df.wim.agg.ts)
-        local.df.wim.agg <- add.time.of.day(local.df.wim.agg)
+        df.wim.d.joint <- add.time.of.day(df.wim.d.joint)
         ##    df.wim.dir[[direction]] <- local.df.wim.agg
 
         ## gc()
         if(preplot){
-            preplot(wim.site,direction,year,local.df.wim.agg)
+            preplot(wim.site,direction,year,df.wim.d.joint)
         }
         if(impute){
 
@@ -338,7 +332,13 @@ preplot <- function(wim.site,direction,year,df.wim,imagepath="images/",
 
     file.pattern <- paste(wim.site,direction,year,'agg.redo',sep='_')
 
-    file.path <- paste(paste(imagepath,direction,'/',sep=''),file.pattern,sep='')
+    savepath <- imagepath
+    if(!file.exists(savepath)){dir.create(savepath)}
+    savepath <- paste(savepath,wim.site,sep='/')
+    if(!file.exists(savepath)){dir.create(savepath)}
+    savepath <- paste(savepath,direction,sep='/')
+    if(!file.exists(savepath)){dir.create(savepath)}
+    file.path <- paste(savepath,file.pattern,sep='')
 
     png(filename = paste(file.path,'%03d.png',sep='_'), width=900, height=600, bg="transparent",pointsize=18)
 
@@ -482,4 +482,282 @@ upload.plots.couchdb <- function(wim.site
                                  ,attfile=f2a
                                   )
     }
+}
+
+#' Plot WIM data and save the resulting plots to the files system and
+#' CouchDB tracking database
+#'
+#' This is more or less a generic function to plot data either before
+#' or after running Amelia.  Similar to the VDS version, but this one
+#' works for WIM data, but it doesn't care if imputations have been
+#' done or not, so indicate so by including a note in the fileprefix
+#' parameter
+#'
+#'
+#' @param df.merged the dataframe to plot
+#' @param site_no the WIM site number
+#' @param direction the direction of flow at the site
+#' @param year the year
+#' @param fileprefix helps name the output file, and also to find it.
+#' By default the plot file will be named via the pattern
+#'
+#'     imagefileprefix <- paste(site_no,direction,year,sep='_')
+#'
+#' But if you include the fileprefix parameter, then the image file
+#' naming will have the pattern
+#'
+#'     imagefileprefix <- paste(site_no,direction,year,fileprefix,sep='_')
+#'
+#' So you can add something like "imputed" to the file name to
+#' differentiate the imputed plots from the input data plots.
+#' @param subhead Written on the plot
+#' @param force.plot defaults to FALSE.  If FALSE, and a file exists
+#' @param trackingdb defaults to 'vdsdata\%2ftracking' for checking if
+#' plots already done
+#' @return files.to.attach the files that you need to send off to
+#' couchdb tracking database.
+plot_wim.data  <- function(df.merged,site_no,direction,year,fileprefix=NULL,subhead='\npost imputation',force.plot=FALSE,trackingdb){
+    if(!force.plot){
+        have.plot <- check.for.plot.attachment(site_no,direction,year,
+                                               fileprefix,
+                                               trackingdb=trackingdb)
+        if(have.plot){
+            return (1)
+        }
+    }
+    ## print('need to make plots')
+    varnames <- names(df.merged)
+    ## make some diagnostic plots
+
+    ## set up a reconfigured dataframe
+    recoded <- recode.df.wim( df.merged )
+
+    nh_spds <- recoded$nh_speed/recoded$not_heavyheavy
+    ## for coloring
+    daymidpoint <- 12
+    nh_midpoint <- mean(recoded$not_heavyheavy,na.rm=TRUE)
+    hh_midpoint <- mean(recoded$heavyheavy,na.rm=TRUE)
+    nh_spds_iles <- quantile(nh_spds,
+                      probs=c(0.01,0.25,0.5,0.75,0.99),na.rm=TRUE)
+    hhspd_midpoint <- median(recoded$hh_speed/recoded$heavyheavy,na.rm=TRUE)
+
+    savepath <- 'images'
+    if(!file.exists(savepath)){dir.create(savepath)}
+    savepath <- paste(savepath,site_no,sep='/')
+    if(!file.exists(savepath)){dir.create(savepath)}
+    savepath <- paste(savepath,direction,sep='/')
+    if(!file.exists(savepath)){dir.create(savepath)}
+
+    imagefileprefix <- paste(site_no,direction,year,sep='_')
+    if(!is.null(fileprefix)){
+        imagefileprefix <- paste(site_no,direction,year,fileprefix,sep='_')
+    }
+
+    imagefilename <- paste(savepath,paste(imagefileprefix,'%03d.png',sep='_'),sep='/')
+
+    ## print(paste('plotting to',imagefilename))
+
+    numlanes <- length(levels(recoded$lane))
+    plotheight = 400 * numlanes
+    png(filename = imagefilename, width=1600, height=plotheight, bg="transparent",pointsize=24)
+
+    p <- ggplot2::ggplot(recoded)
+
+    q <- p +
+        ggplot2::labs(list(title=paste("Scatterplot not heavy heavy duty truck hourly counts in each lane, by time of day and day of week, for",year,"at site",site_no,direction,subhead),
+                           x="time of day",
+                           y="hourly counts per lane"))
+
+    q <- q + ggplot2::geom_point(
+        ggplot2::aes(x = tod
+                    ,y = not_heavyheavy
+                    ,colour= heavyheavy
+                     )
+       ,alpha=0.5
+        )
+    q <- q + ggplot2::facet_grid(lane~day)
+
+    q <- q + ggplot2::scale_color_gradient2('heavy heavy trucks',
+                                            midpoint=hh_midpoint,
+                                            high=("blue"),
+                                            mid=("red"),
+                                            low=("yellow"))
+
+    print(q)
+
+    q <- p +
+        ggplot2::labs(list(title=paste("Scatterplot not heavy heavy duty truck hourly counts in each lane, for",year,"at site",site_no,direction,subhead),
+                           x="date",
+                           y="hourly counts per lane"))
+
+    q <- q + ggplot2::geom_point(
+        ggplot2::aes(x = ts
+                    ,y = not_heavyheavy
+                    ,colour= heavyheavy
+                     )
+       ,alpha=0.5
+        )
+    q <- q + ggplot2::facet_grid(lane ~ .)
+
+    q <- q + ggplot2::scale_color_gradient2('heavy heavy trucks',
+                                            midpoint=hh_midpoint,
+                                            high=("blue"),
+                                            mid=("red"),
+                                            low=("yellow"))
+
+    print(q)
+
+    q <- p +
+        ggplot2::labs(list(title=paste("Scatterplot heavy heavy duty truck hourly counts in each lane, by time of day and day of week, for",year,"at site",site_no,direction,subhead),
+                           x="time of day",
+                           y="hourly counts per lane"))
+
+    q <- q + ggplot2::geom_point(
+        ggplot2::aes(x = tod
+                    ,y = heavyheavy
+                    ,colour= not_heavyheavy
+                     )
+       ,alpha=0.5
+        )
+    q <- q + ggplot2::facet_grid(lane~day)
+
+    q <- q + ggplot2::scale_color_gradient2('not heavy heavy trucks',
+                                            midpoint=nh_midpoint,
+                                            high=("blue"),
+                                            mid=("red"),
+                                            low=("yellow"))
+
+    print(q)
+
+    q <- p +
+        ggplot2::labs(list(title=paste("Scatterplot heavy heavy duty truck hourly counts in each lane, for",year,"at site",site_no,direction,subhead),
+                           x="date",
+                           y="hourly counts per lane"))
+    q <- q + ggplot2::geom_point(
+        ggplot2::aes(x = ts
+                    ,y = heavyheavy
+                    ,colour= not_heavyheavy
+                     )
+       ,alpha=0.5
+        )
+    q <- q + ggplot2::facet_grid(lane ~ .)
+    q <- q + ggplot2::scale_color_gradient2('not heavy heavy trucks',
+                                            midpoint=nh_midpoint,
+                                            high=("blue"),
+                                            mid=("red"),
+                                            low=("yellow"))
+    print(q)
+
+    q <- p +
+        ggplot2::labs(list(title=paste("Scatterplot count of all vehciles from WIM summary reports, in each lane by time of day and day of week, for",year,"at site",site_no,direction,subhead),
+                           x="time of day",
+                           y="hourly counts per lane"))
+
+    q <- q + ggplot2::geom_point(
+        ggplot2::aes(x = tod
+                    ,y = count_all_veh_speed
+                    ,colour= wgt_spd_all_veh_speed/count_all_veh_speed
+                     )
+       ,alpha=0.5
+        )
+    q <- q + ggplot2::facet_grid(lane~day)
+
+    q <- q + ggplot2::scale_color_gradient2('average speed',
+                                            midpoint=65,
+                                            high=("blue"),
+                                            mid=("red"),
+                                            low=("yellow"))
+
+    print(q)
+
+    q <- p +
+        ggplot2::labs(list(title=paste("Scatterplot hourly speeds of all vehciles from WIM summary reports, in each lane by time of day and day of week, for",year,"at site",site_no,direction,subhead),
+                           x="time of day",
+                           y="hourly speed per lane, miles per hour"))
+
+    q <- q + ggplot2::geom_point(
+        ggplot2::aes(x = tod
+                    ,y = wgt_spd_all_veh_speed/count_all_veh_speed
+                    ,colour=count_all_veh_speed )
+       ,alpha=0.7
+        )
+    q <- q + ggplot2::facet_grid(lane~day)
+
+    q <- q + ggplot2::scale_color_gradient2('vehicle counts',
+                                            midpoint=mean(recoded$count_all_veh_speed,na.rm=TRUE),
+                                            high=("blue"),
+                                            mid=("red"),
+                                            low=("yellow"))
+
+    print(q)
+
+    dev.off()
+
+    files.to.attach <- dir(savepath,pattern=paste(imagefileprefix,'0',sep='_'),full.names=TRUE)
+
+    files.to.attach
+}
+##' recode the wim data for plotting
+##'
+##' @title recode.df.wim
+##' @param df the dataframe of data
+##' @return a recoded dataframe, using melt and all that
+##' @author James E. Marca
+recode.df.wim <- function( df ){
+    varnames <- names(df)
+    keepvars <- grep('_(r|l)\\d+$',x=varnames,perl=TRUE,value=TRUE)
+    unlaned_vars <- unique(substr(keepvars,start=1,stop=nchar(keepvars)-3))
+
+    melded <- NA
+    for(i in 1:length(unlaned_vars)){
+        measure.vars <- grep(pattern=paste('^',unlaned_vars[i],sep=''),x=varnames,value=TRUE)
+        melt_1 <- reshape2::melt(data=df,
+                                 measure.vars=measure.vars,
+                                 id.vars=c('ts','tod','day')
+                                ,variable.name='lane'
+                                ,value.name=unlaned_vars[i])
+        start_lane_part <- nchar(levels(melt_1$lane)[1])-1
+        end_lane_part   <- nchar(levels(melt_1$lane)[1])
+
+        melt_1$lane <- as.factor(substr(melt_1$lane,
+                                        start_lane_part,
+                                        end_lane_part))
+
+        if(i == 1){
+            melded <- melt_1
+        }else{
+            melded <- merge(x=melded,y=melt_1,all=TRUE)
+        }
+    }
+    ## some useful factor things
+    melded$day <- factor(melded$day,
+                         labels=c('Su','Mo','Tu','We','Th','Fr','Sa'))
+
+    ## lanes?
+
+    lanes <- levels(as.factor(melded$lane))
+
+    lane.names <- c("left","right")
+    if(length(lanes)==1){
+        lane.names <- c("right")
+    }else{
+        numbering <- length(lanes)
+        if(length(lanes)>2){
+            for(i in 3:numbering){
+                lane.names[i]=paste("lane",(numbering-i+2))
+            }
+            ## a little switcheroo here
+            lanes <- c(lanes[1],rev(lanes[-1]))
+            lane.names <- c(lane.names[1],rev(lane.names[-1]))
+
+        }
+    }
+
+
+    melded$lane <- factor(melded$lane,
+                          levels=lanes,
+                          labels=lane.names)
+
+    melded
+
 }

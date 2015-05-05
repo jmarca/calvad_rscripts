@@ -62,6 +62,15 @@ make.speed.aggregates <- function(df.spd,seconds){
         }
     }
 
+    df.return$ts <- as.POSIXct(df.return$ts)
+
+    ## fill in missing times from min to max
+    all.ts <- seq(min(df.return$ts),max(df.return$ts),by=hour)
+
+    ts.all.df <- data.frame(ts=all.ts)
+    attr(ts.all.df$ts,'tzone') <- 'UTC'
+    df.return <- merge(df.return,ts.all.df,all=TRUE)
+
     rm(lane.agg)
     df.return
 }
@@ -94,45 +103,62 @@ make.speed.aggregates <- function(df.spd,seconds){
 ##' @return the aggregated data as a dataframe
 ##' @author James E. Marca
 wim.lane.and.time.aggregation <- function(lane.data){
-  ## use sqldf to make aggregates
-  lane.data$not_heavyheavy <- !lane.data$heavyheavy
-  lane.data <- wim.recode.lanes(lane.data)
-  varnames <- names(lane.data)
-  mean.var.names <- c('not_heavyheavy','heavyheavy',grep( pattern="^(h|n)h_",x=varnames,perl=TRUE,value=TRUE))
+    ## use sqldf to make aggregates
+    lane.data$not_heavyheavy <- !lane.data$heavyheavy
+    lane.data <- wim.recode.lanes(lane.data)
+    varnames <- names(lane.data)
+    mean.var.names <- c('not_heavyheavy','heavyheavy',grep( pattern="^(h|n)h_",x=varnames,perl=TRUE,value=TRUE))
 
 
-  hour <-  3600 ## seconds per hour
-  lane.data$hourly <- as.numeric(lane.data$ts) - as.numeric(lane.data$ts) %% hour
+    hour <-  3600 ## seconds per hour
+    lane.data$hourly <- as.numeric(lane.data$ts) - as.numeric(lane.data$ts) %% hour
 
-  lane.data.agg <- split(lane.data,lane.data$lane)
-  for (l in names(lane.data.agg)){
-      temp_df <- lane.data.agg[[l]]
-      sqlstatement2 <- paste("select min(ts) as ts,",
-                             paste('total(',
-                                   c(mean.var.names),
-                                   ') as ',
-                                   paste(mean.var.names,
-                                         l,
-                                         sep='_'),
-                                   sep=' ',
-                                   collapse=', '),
-                             'from temp_df group by hourly',
-                             sep=' ',collapse=' '
-                             )
-      df_hourly <- sqldf::sqldf(sqlstatement2,drv="SQLite")
-      attr(df_hourly$ts,'tzone') <- 'UTC'
-      df_hourly$ts <- trunc(df_hourly$ts,units='hours')
-      lane.data.agg[[l]] <- df_hourly
-  }
-  ## combine lane by lane aggregates by same hour
-  df.return <- lane.data.agg[[1]]
-  if(length(lane.data.agg)>1){
-    for(l in 2:length(lane.data.agg)){
-      df.return <- merge(df.return,lane.data.agg[[l]],all=TRUE)
+    lane.data.agg <- split(lane.data,lane.data$lane)
+    for (l in names(lane.data.agg)){
+        temp_df <- lane.data.agg[[l]]
+        sqlstatement2 <- paste("select min(ts) as ts,",
+                               paste('total(',
+                                     c(mean.var.names),
+                                     ') as ',
+                                     paste(mean.var.names,
+                                           l,
+                                           sep='_'),
+                                     sep=' ',
+                                     collapse=', '),
+                               'from temp_df group by hourly',
+                               sep=' ',collapse=' '
+                               )
+        df_hourly <- sqldf::sqldf(sqlstatement2,drv="SQLite")
+        attr(df_hourly$ts,'tzone') <- 'UTC'
+        df_hourly$ts <- trunc(df_hourly$ts,units='hours')
+        lane.data.agg[[l]] <- df_hourly
     }
-  }
-  rm(lane.data.agg)
-  df.return
+    ## combine lane by lane aggregates by same hour
+    df.return <- lane.data.agg[[1]]
+    if(length(lane.data.agg)>1){
+        for(l in 2:length(lane.data.agg)){
+            df.return <- merge(df.return,lane.data.agg[[l]],all=TRUE)
+        }
+    }
+    ## make NA values zero instead
+    for(col in names(df.return)){
+        navalues <- is.na(df.return[,col])
+        if(any(navalues)){
+            df.return[navalues,col] <- 0
+        }
+    }
+
+    df.return$ts <- as.POSIXct(df.return$ts)
+
+    ## fill in missing times from min to max
+    all.ts <- seq(min(df.return$ts),max(df.return$ts),by=hour)
+
+    ts.all.df <- data.frame(ts=all.ts)
+    attr(ts.all.df$ts,'tzone') <- 'UTC'
+    df.return <- merge(df.return,ts.all.df,all=TRUE)
+
+    rm(lane.data.agg)
+    df.return
 }
 
 ## old way using zoo
