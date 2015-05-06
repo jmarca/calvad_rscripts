@@ -9,7 +9,7 @@ m <- dbDriver("PostgreSQL")
 con <-  dbConnect(m
                   ,user=config$postgresql$auth$username
                   ,host=config$postgresql$host
-                  ,dbname=config$postgresql$db)
+                  ,dbname='spatialvds') ## hardcoded for now
 
 
 wim.site <-  108
@@ -33,9 +33,9 @@ test_that('load wim from db works okay',{
     df.wim.s <- df.wim.speed.split[[direction]]
     df.wim.d <- wim.additional.variables(df.wim.d)
     df.wim.dagg <- wim.lane.and.time.aggregation(df.wim.d)
-    expect_that(dim(df.dagg),equals(c(8784,21)))
+    expect_that(dim(df.wim.dagg),equals(c(8784,21)))
     df.wim.sagg <- make.speed.aggregates(df.wim.s)
-    expect_that(dim(df.sagg),equals(c(8784,5)))
+    expect_that(dim(df.wim.sagg),equals(c(8784,5)))
 
     df.wim.d.joint <- merge(df.wim.dagg,df.wim.sagg,all=TRUE)
     expect_that(dim(df.wim.d.joint),equals(c(8784,25)))
@@ -101,16 +101,41 @@ test_that('load wim from db works okay',{
     ## it should have bailed out
     expect_that(attach.files,equals(1))
 
+    ## clean up for next test
+    rcouchutils::couch.delete(db=parts,docname=cdb.wimid)
 })
 
-test_that("wim impute works okay",{
-    df <- get.wim.rdata(wim.site = 108,
-                        year = 2012,
-                        direction = 'S',
-                        wim.path='./data')
-    expect_that(df,is_a('data.frame'))
-    df.amelia <- fill.wim.gaps(df.wim=df,
-                               plotfile = 'images/test.wim.amelia.plot.png')
-    expect_that(df.amelia,is_a('amelia'))
+test_that("process wim  site also works okay",{
+    df.wim.amelia <- process.wim.site(wim.site=wim.site,
+                                      year=year,
+                                      seconds=seconds,
+                                      preplot=TRUE,
+                                      postplot=TRUE,
+                                      force.plot=FALSE,
+                                      wim.path='./data',
+                                      trackingdb=parts,
+                                      con=con
+                                      )
+    expect_that(df.wim.amelia$code,equals(1))
+    directions <- c('S','N')
+    for(direction in directions){
+        docid <- paste('wim',wim.site,direction,sep='.')
+        doc <- rcouchutils::couch.get(parts,docid)
+        attachments <- doc[['_attachments']]
+        expect_that(attachments,is_a('list'))
+        ## print(sort(names(attachments)))
+        expect_that(sort(names(attachments)),equals(
+            c(paste(wim.site,direction,year,
+                    c(rep('imputed',6),rep('raw',6)),
+                    c("001.png",
+                      "002.png",
+                      "003.png",
+                      "004.png",
+                      "005.png",
+                      "006.png"),
+                    sep='_'))
+            ))
+    }
 
 })
+rcouchutils::couch.deletedb(parts)

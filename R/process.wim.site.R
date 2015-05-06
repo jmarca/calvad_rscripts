@@ -153,14 +153,18 @@ process.wim.site <- function(wim.site,
         df.wim.d.joint <- add.time.of.day(df.wim.d.joint)
 
         if(preplot){
-            attach.files <- plot_wim.data(df.wim.d.joint,
-                                       wim.site,direction,year,
-                                      ,fileprefix='raw'
-                                      ,subhead='\npre imputation'
-                                      ,force.plot=force.plot
-                                      ,trackingdb=trackingdb)
-            for(f2a in c(attach.files)){
-                rcouchutils::couch.attach(trackingdb,cdb.wimid,f2a)
+            attach.files <- plot_wim.data(df.wim.d.joint
+                                         ,wim.site
+                                         ,direction
+                                         ,year
+                                         ,fileprefix='raw'
+                                         ,subhead='\npre imputation'
+                                         ,force.plot=force.plot
+                                         ,trackingdb=trackingdb)
+            if(attach.files != 1){
+                for(f2a in c(attach.files)){
+                    rcouchutils::couch.attach(trackingdb,cdb.wimid,f2a)
+                }
             }
         }
 
@@ -210,17 +214,20 @@ process.wim.site <- function(wim.site,
 
                 if(postplot){
                     df.wim.agg.amelia <- wim.medianed.aggregate.df(df.wim.amelia)
-                    attach.files <- plot_wim.data(df.wim.agg.amelia,
-                                                  wim.site,direction,year,
+                    attach.files <- plot_wim.data(df.wim.agg.amelia
+                                                 ,wim.site
+                                                 ,direction
+                                                 ,year
                                                  ,fileprefix='imputed'
                                                  ,subhead='\npost imputation'
                                                  ,force.plot=force.plot
                                                  ,trackingdb=trackingdb)
-                    for(f2a in c(attach.files)){
-                        rcouchutils::couch.attach(trackingdb,cdb.wimid,f2a)
+                    if(attach.files != 1){
+                        for(f2a in c(attach.files)){
+                            rcouchutils::couch.attach(trackingdb,cdb.wimid,f2a)
+                        }
                     }
                 }
-
             }else{
                 returnval <- paste(df.wim.amelia$code,
                                    'message',df.wim.amelia$message)
