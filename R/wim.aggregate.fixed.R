@@ -189,3 +189,78 @@ wim.lane.and.time.aggregation <- function(lane.data){
 ##   rm(lane.data.agg)
 ##   df.return
 ## }
+
+##' wim medianed aggregate df
+##'
+##' Generate a hourly aggregate of the impuation results
+##'
+##' @title wim.medianed.aggregate.df
+##' @param df_combined the mulitple imputations, rbind into a single dataframe
+##' @param op defaults to median, but you can also try mean.  This is
+##' how the multiple imputations are merged into a single imputation
+##' result
+##'
+##' @return a dataframe holding one entry per hour, with the multiple
+##' imputations aggregated according to \code{op} according to whatever
+##' time step the amelia run was done, and then aggregated up to one
+##' hour by summing the counts and averaging the occupancies
+##'
+##' @author James E. Marca
+wim.medianed.aggregate.df <- function(df_combined,op=median){
+    if(class(df_combined) == 'amelia'){
+        ## fix that
+        aout <- df_combined
+        df_combined <- NULL
+        for(i in 1:length(aout$imputations)){
+            df_combined <- rbind(df_combined,aout$imputations[[i]])
+        }
+    }
+    varnames <- names(df_combined)
+    varnames <- grep( pattern="^ts",x=varnames,perl=TRUE,invert=TRUE,value=TRUE)
+    varnames <- setdiff(varnames,c('tod','day'))
+
+    ## use sqldf...so much faster than zoo, aggregate
+
+    sqlstatement <- paste("select ts,",
+                          paste('median(',varnames,') as ',varnames,sep=' ',collapse=','),
+                          'from df_combined group by ts',
+                          sep=' ',collapse=' '
+                          )
+
+    ## aggregate the multiple imputations, resulting in one value per
+    ## time step
+    ## print(sqlstatement)
+    temp_df <- sqldf::sqldf(sqlstatement,drv="SQLite")
+    attr(temp_df$ts,'tzone') <- 'UTC'
+
+    ## at the moment this is a no-op, because I am imputing WIM data
+    ## at one hour.  But keep it because it might be useful in the
+    ## future
+    hour <-  3600 ## seconds per hour
+    temp_df$hourly <- as.numeric(temp_df$ts) - as.numeric(temp_df$ts) %% hour
+
+    temp_df$tick <- 1 ## a value to sum up # of records per hour, to
+                      ## compute averages of occupancy (because summed
+                      ## occupancy is meaningless!)
+
+    sqlstatement2 <- paste("select min(ts) as ts,",
+                           paste('total(',c(varnames,'tick'),') as ',c(varnames,'tick'),sep=' ',collapse=','),
+                           'from temp_df group by hourly',
+                           sep=' ',collapse=' '
+                           )
+    ## print(sqlstatement2)
+    ## generate the hourly summation
+    df_hourly <- sqldf::sqldf(sqlstatement2,drv="SQLite")
+
+    ## assign the correct timezone again
+    attr(df_hourly$ts,'tzone') <- 'UTC'
+
+    df_hourly$tick <- NULL
+
+    ts.lt <- as.POSIXlt(df_hourly$ts)
+    df_hourly$tod   <- ts.lt$hour + (ts.lt$min/60)
+    df_hourly$day   <- ts.lt$wday
+
+    ## all done, return value
+    df_hourly
+}

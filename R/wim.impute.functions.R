@@ -286,6 +286,7 @@ fill.wim.gaps <- function(df.wim
   ## make plots if requested
 
   if(plotfile!=''){
+      print('plotting result')
       plotfile <- fixup.plotfile.name(plotfile)
       png(filename = plotfile,
           width=1600,

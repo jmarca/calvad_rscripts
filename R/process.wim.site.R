@@ -231,11 +231,19 @@ process.wim.site <- function(wim.site,
         gc()
 
         df.wim.d.joint <- add.time.of.day(df.wim.d.joint)
-        ##    df.wim.dir[[direction]] <- local.df.wim.agg
 
         ## gc()
         if(preplot){
-            preplot(wim.site,direction,year,df.wim.d.joint)
+            attach.files <- plot_wim.data(df.wim.d.joint,
+                                       wim.site,direction,year,
+                                      ,fileprefix='raw'
+                                      ,subhead='\npre imputation'
+                                      ,force.plot=TRUE
+                                      ,trackingdb=trackingdb)
+            for(f2a in c(attach.files)){
+                rcouchutils::couch.attach(trackingdb,pair,f2a)
+            }
+
         }
         if(impute){
 
@@ -261,16 +269,16 @@ process.wim.site <- function(wim.site,
             filepath <- paste(savepath,'wim.agg.RData',sep='/')
             print(filepath)
 
-            db.legal.names  <- gsub("\\.", "_", names(local.df.wim.agg))
+            db.legal.names  <- gsub("\\.", "_", names(df.wim.d.joint))
 
-            names(local.df.wim.agg) <- db.legal.names
-            save(local.df.wim.agg,file=filepath,compress='xz')
+            names(df.wim.d.joint) <- db.legal.names
+            save(df.wim.d.joint,file=filepath,compress='xz')
             print(paste('saved to',filepath))
 
             print('amelia run')
 
             r <- try(
-                df.wim.amelia <- fill.wim.gaps(local.df.wim.agg
+                df.wim.amelia <- fill.wim.gaps(df.wim.d.joint
                                                ,count.pattern='^(not_heavyheavy|heavyheavy|count_all_veh_speed)'
                                                )
                 )
@@ -294,7 +302,7 @@ process.wim.site <- function(wim.site,
                                 id=cdb.wimid,
                                 doc=list('imputed'='finished'),
                                 db=trackingdb)
-                returnval <- 1
+                returnval <- df.wim.amelia
             }else{
                 returnval <- paste(df.wim.amelia$code,
                                    'message',df.wim.amelia$message)
@@ -304,7 +312,7 @@ process.wim.site <- function(wim.site,
                                 doc=list('imputed'=paste('error:',returnval)),
                                 db=trackingdb)
             }
-            rm(df.wim.amelia,local.df.wim.agg)
+            rm(df.wim.amelia,df.wim.d.joint)
             gc()
         }
 
@@ -517,10 +525,16 @@ upload.plots.couchdb <- function(wim.site
 #' @return files.to.attach the files that you need to send off to
 #' couchdb tracking database.
 plot_wim.data  <- function(df.merged,site_no,direction,year,fileprefix=NULL,subhead='\npost imputation',force.plot=FALSE,trackingdb){
+    cdb.wimid <- paste('wim',site_no,direction,sep='.')
     if(!force.plot){
-        have.plot <- check.for.plot.attachment(site_no,direction,year,
-                                               fileprefix,
-                                               trackingdb=trackingdb)
+        testfile <- paste(site_no,direction,year,sep='_')
+        if(!is.null(fileprefix)){
+            testfile <- paste(testfile,fileprefix,sep='_')
+        }
+        testfile <- paste(testfile,'006.png',sep='_')
+        have.plot <- rcouchutils::couch.has.attachment(trackingdb
+                                                      ,docname = cdb.wimid
+                                                      ,testfile)
         if(have.plot){
             return (1)
         }
