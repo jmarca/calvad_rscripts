@@ -36,10 +36,7 @@ make.speed.aggregates <- function(df.spd,seconds){
         df_hourly <- sqldf::sqldf(sqlstatement,drv="SQLite")
         attr(df_hourly$ts,'tzone') <- 'UTC'
         df_hourly$ts <- trunc(df_hourly$ts,units='hours')
-        ## df.spd.zoo <- zoo::zoo(data.frame(wgt.spd=lane.agg[[l]][,c("veh_speed")]*lane.agg[[l]][,c("veh_count")],
-        ##                              count  =lane.agg[[l]][,c("veh_count")] )
-        ##                   ,order.by=as.numeric(lane.agg[[l]]$ymdh))
-        ## df.spd.zoo <- aggregate(df.spd.zoo, identity, sum, na.rm=TRUE )
+        df_hourly$ts <- as.POSIXct(df_hourly$ts)
 
         lane.agg[[l]] <- df_hourly
 
@@ -131,6 +128,7 @@ wim.lane.and.time.aggregation <- function(lane.data){
         df_hourly <- sqldf::sqldf(sqlstatement2,drv="SQLite")
         attr(df_hourly$ts,'tzone') <- 'UTC'
         df_hourly$ts <- trunc(df_hourly$ts,units='hours')
+        df_hourly$ts <- as.POSIXct(df_hourly$ts)
         lane.data.agg[[l]] <- df_hourly
     }
     ## combine lane by lane aggregates by same hour

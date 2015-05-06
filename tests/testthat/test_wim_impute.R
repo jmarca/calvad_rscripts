@@ -12,7 +12,7 @@ con <-  dbConnect(m
                   ,dbname='spatialvds') ## hardcoded for now
 
 
-wim.site <-  108
+wim.site <-  7 ## 108
 wim.dirs <- c('N','S')
 wim.path <- './data'
 seconds <- 3600
@@ -47,13 +47,16 @@ test_that('load wim from db works okay',{
                               ,subhead='\npre imputation'
                               ,force.plot=TRUE
                               ,trackingdb=parts)
-    expect_that(attach.files,equals(c(
-        "images/108/S/108_S_2012_raw_001.png",
-        "images/108/S/108_S_2012_raw_002.png",
-        "images/108/S/108_S_2012_raw_003.png",
-        "images/108/S/108_S_2012_raw_004.png",
-        "images/108/S/108_S_2012_raw_005.png",
-        "images/108/S/108_S_2012_raw_006.png"
+    expect_that(attach.files,equals(
+        paste("images/",wim.site,"/",direction,"/",
+              wim.site,"_",direction,"_2012_raw_",
+              c("001.png",
+                "002.png",
+                "003.png",
+                "004.png",
+                "005.png",
+                "006.png"),
+              sep='')
         )))
     for(f2a in c(attach.files)){
         rcouchutils::couch.attach(parts,cdb.wimid,f2a)
@@ -81,13 +84,16 @@ test_that('load wim from db works okay',{
                               ,subhead='\npost imputation'
                               ,force.plot=TRUE
                               ,trackingdb=parts)
-    expect_that(attach.files,equals(c(
-        "images/108/S/108_S_2012_imputed_001.png",
-        "images/108/S/108_S_2012_imputed_002.png",
-        "images/108/S/108_S_2012_imputed_003.png",
-        "images/108/S/108_S_2012_imputed_004.png",
-        "images/108/S/108_S_2012_imputed_005.png",
-        "images/108/S/108_S_2012_imputed_006.png"
+    expect_that(attach.files,equals(
+        paste("images/",wim.site,"/",direction,"/",
+              wim.site,"_",direction,"_2012_imputed_",
+              c("001.png",
+                "002.png",
+                "003.png",
+                "004.png",
+                "005.png",
+                "006.png"),
+              sep='')
         )))
     for(f2a in c(attach.files)){
         rcouchutils::couch.attach(parts,cdb.wimid,f2a)
