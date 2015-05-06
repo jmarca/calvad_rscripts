@@ -116,9 +116,10 @@ test_that("process wim  site also works okay",{
                                       trackingdb=parts,
                                       con=con
                                       )
-    expect_that(df.wim.amelia$code,equals(1))
+    expect_that(list.df.wim.amelia,is_a('list'))
     directions <- c('S','N')
     for(direction in directions){
+        expect_that(list.df.wim.amelia[[direction]]$code,equals(1))
         docid <- paste('wim',wim.site,direction,sep='.')
         doc <- rcouchutils::couch.get(parts,docid)
         attachments <- doc[['_attachments']]

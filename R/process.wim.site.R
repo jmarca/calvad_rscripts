@@ -66,7 +66,7 @@ process.wim.site <- function(wim.site,
 
     print(paste('wim path is ',wim.path))
 
-    returnval <- 0
+    returnval <- list()
     if(!preplot & !postplot & !impute){
         print('nothing to do here, preplot, postplot, and impute all false')
         return(0)
@@ -191,7 +191,7 @@ process.wim.site <- function(wim.site,
                 df.wim.amelia <- fill.wim.gaps(df.wim.d.joint)
                 )
             if(class(r) == "try-error") {
-                returnval <- paste(r,'')
+                returnval[[direction]] <- paste(r,'')
                 print(paste('try error:',r))
                 rcouchutils::couch.set.state(year=year,
                                 id=cdb.wimid,
@@ -199,6 +199,7 @@ process.wim.site <- function(wim.site,
                                 db=trackingdb)
             }
 
+            returnval[[direction]] <- df.wim.amelia
             if(df.wim.amelia$code==1){
                 ## that means good imputation
                 ## have a WIM site data with no gaps.  save it
@@ -210,7 +211,6 @@ process.wim.site <- function(wim.site,
                                 id=cdb.wimid,
                                 doc=list('imputed'='finished'),
                                 db=trackingdb)
-                returnval <- df.wim.amelia
 
                 if(postplot){
                     df.wim.agg.amelia <- wim.medianed.aggregate.df(df.wim.amelia)
@@ -229,14 +229,14 @@ process.wim.site <- function(wim.site,
                     }
                 }
             }else{
-                returnval <- paste(df.wim.amelia$code,
-                                   'message',df.wim.amelia$message)
-                print(paste("amelia not happy:",returnval))
+                errdoc <- paste(df.wim.amelia$code,
+                                'message',df.wim.amelia$message)
+                print(paste("amelia not happy:",errdoc))
                 rcouchutils::couch.set.state(year=year,
                                              id=cdb.wimid,
                                              doc=list('imputed'=
                                                           paste('error:',
-                                                                returnval)),
+                                                                errdoc)),
                                              db=trackingdb)
             }
         }
