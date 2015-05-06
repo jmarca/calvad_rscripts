@@ -1,15 +1,23 @@
+config <- rcouchutils::get.config(Sys.getenv('RCOUCHUTILS_TEST_CONFIG'))
+
+parts <- c('impute','setup')
+result <- rcouchutils::couch.makedb(parts)
 ## must run this somewhere you can load vds data
 test_that("load.wim.pair.data() will return a big data frame", {
 
     path <- '.'
-    year <- 2010
+    year <- 2012
     ## fake entry, but real anyway
     ## 37 | 74135.4030687827 | south     |     4
     ## 87 | 23462.8692386871 | south     |     4
 
     ## fake pairing, but real anyway
     vdsid <- 1108541
-    df.vds.agg <- get.and.plot.vds.amelia(pair=vdsid,year,doplots=FALSE,remote=FALSE,path=path)
+    df.vds.agg <- get.and.plot.vds.amelia(pair=vdsid,
+                                          year,
+                                          doplots=FALSE,
+                                          remote=FALSE,
+                                          path=path)
 
     expect_that(dim(df.vds.agg),equals(c(8604,11)),'df.vds.agg is sized properly')
 

@@ -190,7 +190,7 @@ find.complete.weeks.wim.gaps <- function(df.wim){
 #' want to include actual mean values in an amelia run
 #' @param plotfile the name of a plotfile, I guess.  If not
 #' emptystring (the default) then the standard Amelia plot will be run
-#' and saved to this file.
+#' and saved to this file.  If it is empty, then no plots will be run
 #' @return the output of running amelia
 #'
 fill.wim.gaps <- function(df.wim
@@ -207,62 +207,52 @@ fill.wim.gaps <- function(df.wim
   ## weight, speed, and axles
   ##
   ic.names <- names(df.wim)
-
-  # want to parameterize count variables
-
   count.vars <- grep( pattern=count.pattern,x=ic.names,perl=TRUE,value=TRUE)
-  ic.names<- grep( pattern=count.pattern,x=ic.names,perl=TRUE,value=TRUE,invert=TRUE)
 
-
-  ## do not lag/lead ts,tod,day,id add sqrt transform to count data?
-  # id.vars <-   grep( pattern="(ts|id|imp)",x=ic.names,perl=TRUE,value=TRUE)
-
+  ic.names <- grep( pattern=count.pattern,
+                   x=ic.names,perl=TRUE,value=TRUE,
+                   invert=TRUE)
 
   ## sort out the "mean variables" that are really sums at this point
-  mean.vars <- grep( pattern=mean.pattern,x=ic.names,perl=TRUE,value=TRUE)
-  ## but to keep the matrix invertibe (I hope) keep all the double
-  ## counting weights, speeds, lengths out (hh, lh, and over type
-  ## vars)
-  ## nasty.vars <- grep( pattern=mean.exclude.pattern,x=mean.vars ,perl=TRUE,value=TRUE)
+  mean.vars <- grep(pattern=mean.pattern,
+                    x=ic.names,
+                    perl=TRUE,value=TRUE)
+  ## exclude the "mean exclude" variables from mean vars
+  mean.vars <- grep(pattern=mean.exclude.pattern,
+                    x=mean.vars,
+                    perl=TRUE,value=TRUE,
+                    invert=TRUE)
 
-  mean.vars <- grep( pattern=mean.exclude.pattern,x=mean.vars ,perl=TRUE,value=TRUE,invert=TRUE)
 
   M <- 10000000000  #arbitrary bignum for max limits
 
   ## now build up all the final variables for the amelia call
 
-  ## first get all the names in the data frame
-  ic.names <- names(df.wim)
 
-  ## make sure there are not dupes
+    ic.names <- names(df.wim)
 
-  ## the count variables
-  new.cnt.vs <- intersect(count.vars,ic.names)
+    ## generate the position of each count variable
+    pos.count <- (1:length(ic.names))[is.element(ic.names, c(count.vars))]
 
-  ## generate the position of each count variable
-  pos.count <- (1:length(ic.names))[is.element(ic.names, c(new.cnt.vs))]
+    ## for the count variables,
+    ## make a max allowed value of 110% of observed values and a min value of 0
+    max.vals <- apply( df.wim[,count.vars], 2, max ,na.rm=TRUE)
+    min.vals <- apply( df.wim[,count.vars], 2, min ,na.rm=TRUE)
+    pos.bds <- cbind(pos.count,min.vals,1.10*max.vals)
 
-  ## for the count variables,
-  ## make a max allowed value of 110% of observed values and a min value of 0
-  max.val <- max(df.wim[,new.cnt.vs],na.rm=TRUE)
-  pos.bds <- cbind(pos.count,0,1.10*max.val)
+    ## for axles, we need to limit min of zero, max of observed?
+    ## because it isn't per truck it is per sum of trucks
+    pos.means <- (1:length(ic.names))[is.element(ic.names, c(mean.vars))]
+    max.vals <- apply( df.wim[,mean.vars], 2, max ,na.rm=TRUE)
+    min.vals <- apply( df.wim[,mean.vars], 2, min ,na.rm=TRUE)
+    pos.bds <- rbind(pos.bds,cbind(pos.means,min.vals,max.vals))
 
-  ## for axles, we need to limit at 2 axles? to M? to 10?
-  axle.vs <- grep(pattern="axle",x=mean.vars,perl=TRUE,value=TRUE)
-  pos.axle <- (1:length(ic.names))[is.element(ic.names, c(axle.vs))]
-  pos.bds <- rbind(pos.bds,cbind(pos.axle,0,10))
-
-  ## hackity hack
-  ## I can't get the axles to stay above 2, so, force it
-######  df.wim[,axle.vs] <- df.wim[,axle.vs] - 2
-
-
-  ## for other variables, make a looser bound of zero to M
-  ## this fairly loose bound
-  ## generate the position of each count variable
-  other.mean.vars <- grep(pattern="axle",x=mean.vars,perl=TRUE,value=TRUE,invert=TRUE)
-  pos.count <- (1:length(ic.names))[is.element(ic.names, other.mean.vars)]
-  pos.bds <- rbind(pos.bds,cbind(pos.count,0,M))
+    sqrt.vars <- c(count.vars,mean.vars)
+    sqrt.vars <- grep(pattern='all_veh_speed',
+                      x=sqrt.vars,
+                      perl=TRUE,
+                      value=TRUE,
+                      invert=TRUE)
 
   print("bounds:")
   print(pos.bds)
@@ -274,20 +264,29 @@ fill.wim.gaps <- function(df.wim
 
   ## so instead of listing each, figure out which aren't
 
-  exclude.as.id.vars <- setdiff(ic.names,c(mean.vars,new.cnt.vs,'tod','day'))
+  exclude.as.id.vars <- setdiff(ic.names,c(mean.vars,count.vars,'tod','day'))
 
   print(paste("excluded:",  paste(exclude.as.id.vars,collapse=' ')))
 
   df.truckamelia.b <-
-    Amelia::amelia(df.wim,idvars=exclude.as.id.vars,
-           ts="tod",splinetime=6,
-           lags =new.cnt.vs,leads=new.cnt.vs,sqrts=c(new.cnt.vs,axle.vs),
-           cs="day",intercs=TRUE,emburn=c(2,200),
-           bounds = pos.bds, max.resample=10) ## ,empri = 0.05 *nrow(df.wim))
+      Amelia::amelia(df.wim,
+                     idvars=exclude.as.id.vars,
+                     ts="tod",
+                     splinetime=6,
+                     lags =count.vars,
+                     leads=count.vars,
+                     sqrts=sqrt.vars,
+                     cs="day",intercs=TRUE,
+                     emburn=c(2,50),
+                     bounds = pos.bds,
+                     max.resample=10
+                     ## ,empri = 0.05 *nrow(df.wim)
+                     )
 
   ## make plots if requested
 
   if(plotfile!=''){
+      print('plotting result')
       plotfile <- fixup.plotfile.name(plotfile)
       png(filename = plotfile,
           width=1600,
@@ -295,11 +294,9 @@ fill.wim.gaps <- function(df.wim
           bg="transparent",
           pointsize=24)
       plot(df.truckamelia.b,compare=TRUE,overimpute=TRUE,ask=FALSE)
+      dev.off()
   }
-####  replace the 2 axles I subtracted
-#### for(i in 1:5){
-####     df.truckamelia.b$imputations[[i]][,axle.vs] <- df.truckamelia.b$imputations[[i]][,axle.vs] + 2
-  ## }
+
   df.truckamelia.b
 }
 

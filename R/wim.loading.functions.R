@@ -513,6 +513,10 @@ process.wim.2 <- function(df.wim){
   df.wim$gross_weight[df.wim$weight_status=='B'] <- NA
   df.wim$veh_class[df.wim$class_status=='B'] <- NA
 
+  ## negative weights are stupid
+  neg.weight <- df.wim$gross_weight < 0
+  df.wim$gross_weight[neg.weight] <- NA  ## make missing
+
   ## now doing most of this in the db query
   df.wim$truck <- 1
   ## code up the ARB classification scheme

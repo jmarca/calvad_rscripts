@@ -30,85 +30,6 @@ load_imputed_wim <- function(wim.site,year,direction,wim.path='/data/backup/wim'
     df.wim.amelia
 }
 
-#' handle a wim site, direction.  This function loads the imputed wim
-#' data, then makes a merged file, makes truck plots, and attaches
-#' them to the couchdb
-#'
-#' @param wim.site the WIM site id
-#' @param year the year
-#' @param direction the direction for this data
-#' @param wim.path where are the saved files to be found on the local file system
-#' @param seconds how much the WIM data was aggregated up for the
-#' Amelia runs...defaults to one hour, or 3600 seconds
-#' @param trackingdb defaults to the usual 'vdsdata\%2ftracking'
-#' @return nothing or nothing.  run this for the side effect of
-#' generating plots to couchdb
-handle_wim_dir <- function(wim.site,
-                           year,
-                           direction,
-                           wim.path='/data/backup/wim',
-                           seconds=3600,
-                           trackingdb='vdsdata%2ftracking'){
-    cdb.wimid <- paste('wim',wim.site,direction,sep='.')
-    df.wim.amelia <- load_imputed_wim(wim.site,year,direction,wim.path,seconds)
-    if(length(df.wim.amelia) == 1){
-        print(paste("amelia run for wim not good",df.wim.amelia))
-        return(NULL)
-    }else if(!length(df.wim.amelia)>0 ||
-             !length(df.wim.amelia$imputations)>0 ||
-             df.wim.amelia$code!=1 ){
-        print("amelia run for vds not good")
-        return(NULL)
-    }
-    df.wim.amelia.c <- NULL
-    for(i in 1:length(df.wim.amelia$imputations)){
-        df.wim.amelia.c <- rbind(df.wim.amelia.c,df.wim.amelia$imputations[[i]])
-    }
-    df.merged <- medianed.aggregate.df(df.wim.amelia.c)
-    print('make plots')
-    files.to.attach <- make.truck.plots(df.merged,year,wim.site,
-                                        direction,cdb.wimid,imputed=TRUE)
-
-    upload.plots.couchdb(trackingdb=trackingdb,
-                         files.to.attach=files.to.attach)
-    1
-}
-
-#' Generate the post imputation plots for a WIM site
-#'
-#' will run through all directions of flow defined for this WIM site
-#' for the given year
-#'
-#' @param wim.site the WIM site id
-#' @param year the year
-#' @param wim.path where is the data stashed
-#' @param seconds the number of seconds aggregated in the data,
-#' defaults to one hour or 3600
-#' @param trackingdb where to shove the plots as attachments, defaults
-#' to the usual couchdb trackingdb of 'vdsdata\%2ftracking'
-#' @param con the connection to the postgresql database so I can get
-#' the directions for this wim site
-#' @return 1 Run this for the side effect or generating plots for all
-#' directions at this WIM site
-#'
-post.impute.plots <- function(wim.site,
-                              year,
-                              wim.path='/data/backup/wim',
-                              seconds=3600,
-                              trackingdb='vdsdata%2ftracking',
-                              con){
-    ## no need to load raw data
-    df.directions <- get.wim.directions(wim.site,con)
-    directions = df.directions$direction
-    print(paste(directions,collapse=','))
-    for(direction in directions){
-        handle_wim_dir(wim.site,year,direction,wim.path,seconds)
-    }
-    1
-}
-
-
-
 ## must modularize this more
 
 #' Process a WIM site's data, including pre-plots, imputation of
@@ -123,10 +44,13 @@ post.impute.plots <- function(wim.site,
 #' @param preplot TRUE or FALSE, defaults to TRUE
 #' @param postplot TRUE or FALSE, defaults to TRUE
 #' @param impute TRUE or FALSE, defaults to TRUE
+#' @param force.plot TRUE or FALSE.  whether to redo the plots even if
+#' they are already in couchdb
 #' @param wim.path where the WIM data can be found on the local file
 #' @param trackingdb the usual "vdsdata\%2ftracking"
 #' system.  Default is '/data/backup/wim' because that is the
 #' directory on the machine I developed this function on
+#' @param con a postgresql db connection for loading WIM data
 #' @return either 0, 1, or the result of running the imputation if it failed.  Also check the trackingdb for any mention of issues.
 #' @export
 process.wim.site <- function(wim.site,
@@ -135,8 +59,10 @@ process.wim.site <- function(wim.site,
                              preplot=TRUE,
                              postplot=TRUE,
                              impute=TRUE,
+                             force.plot=FALSE,
                              wim.path='/data/backup/wim/',
-                             trackingdb='vdsdata%2ftracking'){
+                             trackingdb='vdsdata%2ftracking',
+                             con){
 
     print(paste('wim path is ',wim.path))
 
@@ -152,7 +78,7 @@ process.wim.site <- function(wim.site,
     ## impute step.  Two, I need to hit the db directly.  Figure it
     ## out by checking if I can load the data from the file
 
-    df.wim <- load.wim.data.straight(wim.site,year)
+    df.wim <- load.wim.data.straight(wim.site=wim.site,year=year,con=con)
     ## only continue if I have real data
     if(dim(df.wim)[1]==0){
         print(paste('problem, dim df.wim is',dim(df.wim)))
@@ -165,12 +91,11 @@ process.wim.site <- function(wim.site,
 
     df.wim.split <- split(df.wim, df.wim$direction)
     directions <- names(df.wim.split)
-    df.wim.speed <- get.wim.speed.from.sql(wim.site,seconds,year)
+    df.wim.speed <- get.wim.speed.from.sql(wim.site=wim.site,year=year,con=con)
     df.wim.speed.split <- split(df.wim.speed, df.wim.speed$direction)
     rm(df.wim)
     rm(df.wim.speed)
 
-    df.wim.dir <- list()
     for(direction in directions){
         print(paste('processing direction',direction))
         ## direction <- names(df.wim.split)[1]
@@ -190,10 +115,6 @@ process.wim.site <- function(wim.site,
             next
         }
 
-        ## for output files
-        if(!file.exists(paste("images",direction,sep='/'))){
-            dir.create(paste("images",direction,sep='/'))
-        }
         df.wim.d <- process.wim.2(df.wim.split[[direction]])
         df.wim.s <- df.wim.speed.split[[direction]]
 
@@ -204,14 +125,14 @@ process.wim.site <- function(wim.site,
 
         df.wim.split[[direction]] <- NULL
         df.wim.speed.split[[direction]] <- NULL
-        ## gc()
 
         df.wim.d <- wim.additional.variables(df.wim.d)
 
         ## aggregate over time
         print(' aggregate ')
-        df.wim.dagg <-wim.lane.and.time.aggregation(df.wim.d)
-        ## hack around broken speed summaries but instead aborting above.
+        df.wim.dagg <- wim.lane.and.time.aggregation(df.wim.d)
+
+        ## ... instead aborting above.
         ## The one such instance so far had junk measurements
         if(length(df.wim.s)==0){
             ## insert one dummy record per lane
@@ -221,64 +142,53 @@ process.wim.site <- function(wim.site,
             df.wim.s$ts <- dummytime
             df.wim.s$veh_speed <- NA
             df.wim.s$veh_count <- NA
-
         }
+
         df.wim.sagg <- make.speed.aggregates(df.wim.s)
 
-        df.wim.d.joint <- merge(df.wim.dagg,df.wim.sagg)
+        df.wim.d.joint <- merge(df.wim.dagg,df.wim.sagg,all=TRUE)
+
         rm(df.wim.dagg, df.wim.sagg,df.wim.s,df.wim.d )
-        gc()
 
-        col.names <- names(df.wim.d.joint)
-        local.df.wim.agg.ts <- as.ts(df.wim.d.joint)
-        rm(df.wim.d.joint)
-        ts.ts <- unclass(time(local.df.wim.agg.ts))+ISOdatetime(1970,1,1,0,0,0,tz='UTC')
-        local.df.wim.agg <- data.frame(ts=ts.ts)
-        local.df.wim.agg[col.names] <- local.df.wim.agg.ts ## [,col.names]
-        rm(local.df.wim.agg.ts)
-        local.df.wim.agg <- add.time.of.day(local.df.wim.agg)
-        ##    df.wim.dir[[direction]] <- local.df.wim.agg
+        df.wim.d.joint <- add.time.of.day(df.wim.d.joint)
 
-        ## gc()
         if(preplot){
-            preplot(wim.site,direction,year,local.df.wim.agg)
+            attach.files <- plot_wim.data(df.wim.d.joint
+                                         ,wim.site
+                                         ,direction
+                                         ,year
+                                         ,fileprefix='raw'
+                                         ,subhead='\npre imputation'
+                                         ,force.plot=force.plot
+                                         ,trackingdb=trackingdb)
+            if(attach.files != 1){
+                for(f2a in c(attach.files)){
+                    rcouchutils::couch.attach(trackingdb,cdb.wimid,f2a)
+                }
+            }
         }
+
+        ## save wim data for next time
+
+        savepath <- paste(wim.path,year,sep='/')
+        if(!file.exists(savepath)){dir.create(savepath)}
+        savepath <- paste(savepath,wim.site,sep='/')
+        if(!file.exists(savepath)){dir.create(savepath)}
+        savepath <- paste(savepath,direction,sep='/')
+        if(!file.exists(savepath)){dir.create(savepath)}
+        filepath <- paste(savepath,'wim.agg.RData',sep='/')
+        print(filepath)
+
+        db.legal.names  <- gsub("\\.", "_", names(df.wim.d.joint))
+
+        names(df.wim.d.joint) <- db.legal.names
+        save(df.wim.d.joint,file=filepath,compress='xz')
+        print(paste('saved to',filepath))
         if(impute){
 
-            ## direction <- names(df.wim.split)[1]
-            print(paste(year,wim.site,direction))
-            rcouchutils::couch.set.state(year=year,
-                            id=cdb.wimid,
-                            doc=list('imputed'='started'),
-                            db=trackingdb)
-
-            ## save and move on to the next one
-
-            ## but save where?
-            ## to couchdb as hourly data??
-            ## no, to fs on lysithia.  brief digression to write that into my node server.
-
-            savepath <- paste(wim.path,year,sep='/')
-            if(!file.exists(savepath)){dir.create(savepath)}
-            savepath <- paste(savepath,wim.site,sep='/')
-            if(!file.exists(savepath)){dir.create(savepath)}
-            savepath <- paste(savepath,direction,sep='/')
-            if(!file.exists(savepath)){dir.create(savepath)}
-            filepath <- paste(savepath,'wim.agg.RData',sep='/')
-            print(filepath)
-
-            db.legal.names  <- gsub("\\.", "_", names(local.df.wim.agg))
-
-            names(local.df.wim.agg) <- db.legal.names
-            save(local.df.wim.agg,file=filepath,compress='xz')
-            print(paste('saved to',filepath))
-
-            print('amelia run')
-
+            print(paste('imputing',year,wim.site,direction))
             r <- try(
-                df.wim.amelia <- fill.wim.gaps(local.df.wim.agg
-                                               ,count.pattern='^(not_heavyheavy|heavyheavy|count_all_veh_speed)'
-                                               )
+                df.wim.amelia <- fill.wim.gaps(df.wim.d.joint)
                 )
             if(class(r) == "try-error") {
                 returnval <- paste(r,'')
@@ -300,143 +210,40 @@ process.wim.site <- function(wim.site,
                                 id=cdb.wimid,
                                 doc=list('imputed'='finished'),
                                 db=trackingdb)
-                returnval <- 1
+                returnval <- df.wim.amelia
+
+                if(postplot){
+                    df.wim.agg.amelia <- wim.medianed.aggregate.df(df.wim.amelia)
+                    attach.files <- plot_wim.data(df.wim.agg.amelia
+                                                 ,wim.site
+                                                 ,direction
+                                                 ,year
+                                                 ,fileprefix='imputed'
+                                                 ,subhead='\npost imputation'
+                                                 ,force.plot=force.plot
+                                                 ,trackingdb=trackingdb)
+                    if(attach.files != 1){
+                        for(f2a in c(attach.files)){
+                            rcouchutils::couch.attach(trackingdb,cdb.wimid,f2a)
+                        }
+                    }
+                }
             }else{
                 returnval <- paste(df.wim.amelia$code,
                                    'message',df.wim.amelia$message)
                 print(paste("amelia not happy:",returnval))
                 rcouchutils::couch.set.state(year=year,
-                                id=cdb.wimid,
-                                doc=list('imputed'=paste('error:',returnval)),
-                                db=trackingdb)
+                                             id=cdb.wimid,
+                                             doc=list('imputed'=
+                                                          paste('error:',
+                                                                returnval)),
+                                             db=trackingdb)
             }
-            rm(df.wim.amelia,local.df.wim.agg)
-            gc()
         }
 
     }
 
     returnval
-}
-
-#' Generate the plots before imputation
-#'
-#' That's why it is called "pre"
-#'
-#' @param wim.site the WIM site id
-#' @param direction the direction of flow for this data
-#' @param year the year
-#' @param df.wim the WIM data dataframe
-#' @param imagepath where to stash the images generated, defaults to "./images/"
-#' @param trackingdb defaults to the usual 'vdsdata\%2ftracking'
-#' @return falls of the end and dies.  Run for the side effect of
-#' generating files in the local filesystem that then also get
-#' uploaded to CouchDB tracking database document for this wim site as
-#' attachments
-preplot <- function(wim.site,direction,year,df.wim,imagepath="images/",
-                    trackingdb='vdsdata%2ftracking'){
-
-    file.pattern <- paste(wim.site,direction,year,'agg.redo',sep='_')
-
-    file.path <- paste(paste(imagepath,direction,'/',sep=''),file.pattern,sep='')
-
-    png(filename = paste(file.path,'%03d.png',sep='_'), width=900, height=600, bg="transparent",pointsize=18)
-
-    plotvars <- grep('not_heavyheavy_',x=names(df.wim),perl=TRUE,value=TRUE)
-    f <- formula(paste('I(', paste(plotvars,collapse='+' ),') ~ tod | day'))
-    a <- lattice::xyplot(f
-               ,data=df.wim
-               ,main=paste("Scatterplot non-heavy heavy duty truck counts",year," by time of day at site",wim.site,direction,"\nRevised method, pre-imputation")
-               ,strip=strip.function.a
-               ,xlab="Hour of the day"
-               ,ylab="Non HHD truck counts per hour"
-               ,panel=pf
-               ,auto.key=TRUE)
-    print(a)
-    plotvars <- grep('^heavyheavy_',x=names(df.wim),perl=TRUE,value=TRUE)
-    f <- formula(paste('I(', paste(plotvars,collapse='+' ),') ~ tod | day'))
-    a <- lattice::xyplot(f
-               ,data=df.wim
-               ,main=paste("Scatterplot heavy heavy duty truck counts",year," by time of day at site",wim.site,direction,"\nRevised method, pre-imputation")
-               ,strip=strip.function.a
-               ,xlab="Hour of the day"
-               ,ylab="HHD truck counts per hour"
-               ,panel=pf
-               ,auto.key=TRUE)
-    print(a)
-
-    plotvars <- grep('^count_all',x=names(df.wim),perl=TRUE,value=TRUE)
-    f <- formula(paste('I(', paste(plotvars,collapse='+' ),') ~ tod | day'))
-    a <- lattice::xyplot(f
-               ,data=df.wim
-               ,main=paste("Scatterplot counts from summary reports,",year,"  by time of day at site",wim.site,direction,"\nRevised method, pre-imputation")
-               ,strip=strip.function.a
-               ,xlab="Hour of the day"
-               ,ylab="Hourly vehicle counts, all classes"
-               ,panel=pf
-               ,auto.key=TRUE)
-    print(a)
-
-    splotvars <- grep('^wgt',x=names(df.wim),perl=TRUE,value=TRUE)
-    f <- formula(paste('I( (', paste(splotvars,collapse='+' ),') / (', paste(plotvars,collapse='+' ),')) ~ tod | day'))
-    a <- lattice::xyplot(f
-               ,data=df.wim
-               ,main=paste("Scatterplot mean speeds from summary reports,",year," by time of day at site",wim.site,direction,"\nRevised method, pre-imputation")
-               ,strip=strip.function.a
-               ,xlab="Hour of the day"
-               ,ylab="Hourly mean speeds"
-               ,panel=pf
-               ,auto.key=TRUE)
-    print(a)
-
-    ## add plots of data over time
-
-    plotvars <- grep('not_heavyheavy_',x=names(df.wim),perl=TRUE,value=TRUE)
-    f <- formula(paste('I(', paste(plotvars,collapse='+' ),') ~ ts'))
-    a <- lattice::xyplot(f
-               ,data=df.wim
-               ,main=paste("Scatterplot non-heavy heavy duty truck counts",year," over time at site",wim.site,direction,"\nRevised method, pre-imputation")
-               ,strip=strip.function.a
-               ,xlab="Date"
-               ,ylab="non HHD truck counts per hour"
-               ,auto.key=TRUE)
-    print(a)
-
-    plotvars <- grep('^heavyheavy_',x=names(df.wim),perl=TRUE,value=TRUE)
-    f <- formula(paste('I(', paste(plotvars,collapse='+' ),') ~ ts'))
-    a <- lattice::xyplot(f
-               ,data=df.wim
-               ,main=paste("Scatterplot heavy heavy duty truck counts",year," over time at site",wim.site,direction,"\nRevised method, pre-imputation")
-               ,strip=strip.function.a
-               ,xlab="Date"
-               ,ylab="HHD truck counts per hour"
-               ,auto.key=TRUE)
-    print(a)
-
-    plotvars <- grep('^count_all',x=names(df.wim),perl=TRUE,value=TRUE)
-    f <- formula(paste('I(', paste(plotvars,collapse='+' ),') ~ ts'))
-    a <- lattice::xyplot(f
-               ,data=df.wim
-               ,main=paste("Scatterplot counts from summary reports,",year," over time at site",wim.site,direction,"\nRevised method, pre-imputation")
-               ,strip=strip.function.a
-               ,xlab="Date"
-               ,ylab="Hourly vehicle counts, all classes"
-               ,auto.key=TRUE)
-    print(a)
-
-    splotvars <- grep('^wgt',x=names(df.wim),perl=TRUE,value=TRUE)
-    f <- formula(paste('I( (', paste(splotvars,collapse='+' ),') / (', paste(plotvars,collapse='+' ),')) ~ ts'))
-    a <- lattice::xyplot(f
-               ,data=df.wim
-               ,main=paste("Scatterplot mean speeds from summary reports,",year," over time at site",wim.site,direction,"\nRevised method, pre-imputation")
-               ,strip=strip.function.a
-               ,xlab="Date"
-               ,ylab="Hourly mean speeds"
-               ,auto.key=TRUE)
-    print(a)
-
-    dev.off()
-    upload.plots.couchdb(wim.site,direction,year,imagepath,trackingdb=trackingdb)
 }
 
 ##' upload plots to couchdb
@@ -482,4 +289,288 @@ upload.plots.couchdb <- function(wim.site
                                  ,attfile=f2a
                                   )
     }
+}
+
+#' Plot WIM data and save the resulting plots to the files system and
+#' CouchDB tracking database
+#'
+#' This is more or less a generic function to plot data either before
+#' or after running Amelia.  Similar to the VDS version, but this one
+#' works for WIM data, but it doesn't care if imputations have been
+#' done or not, so indicate so by including a note in the fileprefix
+#' parameter
+#'
+#'
+#' @param df.merged the dataframe to plot
+#' @param site_no the WIM site number
+#' @param direction the direction of flow at the site
+#' @param year the year
+#' @param fileprefix helps name the output file, and also to find it.
+#' By default the plot file will be named via the pattern
+#'
+#'     imagefileprefix <- paste(site_no,direction,year,sep='_')
+#'
+#' But if you include the fileprefix parameter, then the image file
+#' naming will have the pattern
+#'
+#'     imagefileprefix <- paste(site_no,direction,year,fileprefix,sep='_')
+#'
+#' So you can add something like "imputed" to the file name to
+#' differentiate the imputed plots from the input data plots.
+#' @param subhead Written on the plot
+#' @param force.plot defaults to FALSE.  If FALSE, and a file exists
+#' @param trackingdb defaults to 'vdsdata\%2ftracking' for checking if
+#' plots already done
+#' @return files.to.attach the files that you need to send off to
+#' couchdb tracking database.
+plot_wim.data  <- function(df.merged,site_no,direction,year,fileprefix=NULL,subhead='\npost imputation',force.plot=FALSE,trackingdb){
+    cdb.wimid <- paste('wim',site_no,direction,sep='.')
+    if(!force.plot){
+        testfile <- paste(site_no,direction,year,sep='_')
+        if(!is.null(fileprefix)){
+            testfile <- paste(testfile,fileprefix,sep='_')
+        }
+        testfile <- paste(testfile,'006.png',sep='_')
+        have.plot <- rcouchutils::couch.has.attachment(trackingdb
+                                                      ,docname = cdb.wimid
+                                                      ,testfile)
+        if(have.plot){
+            return (1)
+        }
+    }
+    ## print('need to make plots')
+    varnames <- names(df.merged)
+    ## make some diagnostic plots
+
+    ## set up a reconfigured dataframe
+    recoded <- recode.df.wim( df.merged )
+
+    nh_spds <- recoded$nh_speed/recoded$not_heavyheavy
+    ## for coloring
+    daymidpoint <- 12
+    nh_midpoint <- mean(recoded$not_heavyheavy,na.rm=TRUE)
+    hh_midpoint <- mean(recoded$heavyheavy,na.rm=TRUE)
+    nh_spds_iles <- quantile(nh_spds,
+                      probs=c(0.01,0.25,0.5,0.75,0.99),na.rm=TRUE)
+    hhspd_midpoint <- median(recoded$hh_speed/recoded$heavyheavy,na.rm=TRUE)
+
+    savepath <- 'images'
+    if(!file.exists(savepath)){dir.create(savepath)}
+    savepath <- paste(savepath,site_no,sep='/')
+    if(!file.exists(savepath)){dir.create(savepath)}
+    savepath <- paste(savepath,direction,sep='/')
+    if(!file.exists(savepath)){dir.create(savepath)}
+
+    imagefileprefix <- paste(site_no,direction,year,sep='_')
+    if(!is.null(fileprefix)){
+        imagefileprefix <- paste(site_no,direction,year,fileprefix,sep='_')
+    }
+
+    imagefilename <- paste(savepath,paste(imagefileprefix,'%03d.png',sep='_'),sep='/')
+
+    ## print(paste('plotting to',imagefilename))
+
+    numlanes <- length(levels(recoded$lane))
+    plotheight = 400 * numlanes
+    png(filename = imagefilename, width=1600, height=plotheight, bg="transparent",pointsize=24)
+
+    p <- ggplot2::ggplot(recoded)
+
+    q <- p +
+        ggplot2::labs(list(title=paste("Scatterplot not heavy heavy duty truck hourly counts in each lane, by time of day and day of week, for",year,"at site",site_no,direction,subhead),
+                           x="time of day",
+                           y="hourly counts per lane"))
+
+    q <- q + ggplot2::geom_point(
+        ggplot2::aes(x = tod
+                    ,y = not_heavyheavy
+                    ,colour= heavyheavy
+                     )
+       ,alpha=0.5
+        )
+    q <- q + ggplot2::facet_grid(lane~day)
+
+    q <- q + ggplot2::scale_color_gradient2('heavy heavy trucks',
+                                            midpoint=hh_midpoint,
+                                            high=("blue"),
+                                            mid=("red"),
+                                            low=("yellow"))
+
+    print(q)
+
+    q <- p +
+        ggplot2::labs(list(title=paste("Scatterplot not heavy heavy duty truck hourly counts in each lane, for",year,"at site",site_no,direction,subhead),
+                           x="date",
+                           y="hourly counts per lane"))
+
+    q <- q + ggplot2::geom_point(
+        ggplot2::aes(x = ts
+                    ,y = not_heavyheavy
+                    ,colour= heavyheavy
+                     )
+       ,alpha=0.5
+        )
+    q <- q + ggplot2::facet_grid(lane ~ .)
+
+    q <- q + ggplot2::scale_color_gradient2('heavy heavy trucks',
+                                            midpoint=hh_midpoint,
+                                            high=("blue"),
+                                            mid=("red"),
+                                            low=("yellow"))
+
+    print(q)
+
+    q <- p +
+        ggplot2::labs(list(title=paste("Scatterplot heavy heavy duty truck hourly counts in each lane, by time of day and day of week, for",year,"at site",site_no,direction,subhead),
+                           x="time of day",
+                           y="hourly counts per lane"))
+
+    q <- q + ggplot2::geom_point(
+        ggplot2::aes(x = tod
+                    ,y = heavyheavy
+                    ,colour= not_heavyheavy
+                     )
+       ,alpha=0.5
+        )
+    q <- q + ggplot2::facet_grid(lane~day)
+
+    q <- q + ggplot2::scale_color_gradient2('not heavy heavy trucks',
+                                            midpoint=nh_midpoint,
+                                            high=("blue"),
+                                            mid=("red"),
+                                            low=("yellow"))
+
+    print(q)
+
+    q <- p +
+        ggplot2::labs(list(title=paste("Scatterplot heavy heavy duty truck hourly counts in each lane, for",year,"at site",site_no,direction,subhead),
+                           x="date",
+                           y="hourly counts per lane"))
+    q <- q + ggplot2::geom_point(
+        ggplot2::aes(x = ts
+                    ,y = heavyheavy
+                    ,colour= not_heavyheavy
+                     )
+       ,alpha=0.5
+        )
+    q <- q + ggplot2::facet_grid(lane ~ .)
+    q <- q + ggplot2::scale_color_gradient2('not heavy heavy trucks',
+                                            midpoint=nh_midpoint,
+                                            high=("blue"),
+                                            mid=("red"),
+                                            low=("yellow"))
+    print(q)
+
+    q <- p +
+        ggplot2::labs(list(title=paste("Scatterplot count of all vehciles from WIM summary reports, in each lane by time of day and day of week, for",year,"at site",site_no,direction,subhead),
+                           x="time of day",
+                           y="hourly counts per lane"))
+
+    q <- q + ggplot2::geom_point(
+        ggplot2::aes(x = tod
+                    ,y = count_all_veh_speed
+                    ,colour= wgt_spd_all_veh_speed/count_all_veh_speed
+                     )
+       ,alpha=0.5
+        )
+    q <- q + ggplot2::facet_grid(lane~day)
+
+    q <- q + ggplot2::scale_color_gradient2('average speed',
+                                            midpoint=65,
+                                            high=("blue"),
+                                            mid=("red"),
+                                            low=("yellow"))
+
+    print(q)
+
+    q <- p +
+        ggplot2::labs(list(title=paste("Scatterplot hourly speeds of all vehciles from WIM summary reports, in each lane by time of day and day of week, for",year,"at site",site_no,direction,subhead),
+                           x="time of day",
+                           y="hourly speed per lane, miles per hour"))
+
+    q <- q + ggplot2::geom_point(
+        ggplot2::aes(x = tod
+                    ,y = wgt_spd_all_veh_speed/count_all_veh_speed
+                    ,colour=count_all_veh_speed )
+       ,alpha=0.7
+        )
+    q <- q + ggplot2::facet_grid(lane~day)
+
+    q <- q + ggplot2::scale_color_gradient2('vehicle counts',
+                                            midpoint=mean(recoded$count_all_veh_speed,na.rm=TRUE),
+                                            high=("blue"),
+                                            mid=("red"),
+                                            low=("yellow"))
+
+    print(q)
+
+    dev.off()
+
+    files.to.attach <- dir(savepath,pattern=paste(imagefileprefix,'0',sep='_'),full.names=TRUE)
+
+    files.to.attach
+}
+##' recode the wim data for plotting
+##'
+##' @title recode.df.wim
+##' @param df the dataframe of data
+##' @return a recoded dataframe, using melt and all that
+##' @author James E. Marca
+recode.df.wim <- function( df ){
+    varnames <- names(df)
+    keepvars <- grep('_(r|l)\\d+$',x=varnames,perl=TRUE,value=TRUE)
+    unlaned_vars <- unique(substr(keepvars,start=1,stop=nchar(keepvars)-3))
+
+    melded <- NA
+    for(i in 1:length(unlaned_vars)){
+        measure.vars <- grep(pattern=paste('^',unlaned_vars[i],sep=''),x=varnames,value=TRUE)
+        melt_1 <- reshape2::melt(data=df,
+                                 measure.vars=measure.vars,
+                                 id.vars=c('ts','tod','day')
+                                ,variable.name='lane'
+                                ,value.name=unlaned_vars[i])
+        start_lane_part <- nchar(levels(melt_1$lane)[1])-1
+        end_lane_part   <- nchar(levels(melt_1$lane)[1])
+
+        melt_1$lane <- as.factor(substr(melt_1$lane,
+                                        start_lane_part,
+                                        end_lane_part))
+
+        if(i == 1){
+            melded <- melt_1
+        }else{
+            melded <- merge(x=melded,y=melt_1,all=TRUE)
+        }
+    }
+    ## some useful factor things
+    melded$day <- factor(melded$day,
+                         labels=c('Su','Mo','Tu','We','Th','Fr','Sa'))
+
+    ## lanes?
+
+    lanes <- levels(as.factor(melded$lane))
+
+    lane.names <- c("left","right")
+    if(length(lanes)==1){
+        lane.names <- c("right")
+    }else{
+        numbering <- length(lanes)
+        if(length(lanes)>2){
+            for(i in 3:numbering){
+                lane.names[i]=paste("lane",(numbering-i+2))
+            }
+            ## a little switcheroo here
+            lanes <- c(lanes[1],rev(lanes[-1]))
+            lane.names <- c(lane.names[1],rev(lane.names[-1]))
+
+        }
+    }
+
+
+    melded$lane <- factor(melded$lane,
+                          levels=lanes,
+                          labels=lane.names)
+
+    melded
+
 }

@@ -9,3 +9,9 @@ is to test the difference between using the summary report data and
 not using the summary report data when produing the imputed values.
 
 Frankly, I can't see how it might help, but it is worth testing.
+
+
+# another thing
+
+WIM self-imputation is broken.  Negative weights, speeds, way outliers
+in the input data.
