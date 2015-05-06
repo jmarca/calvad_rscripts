@@ -106,16 +106,16 @@ test_that('load wim from db works okay',{
 })
 
 test_that("process wim  site also works okay",{
-    df.wim.amelia <- process.wim.site(wim.site=wim.site,
-                                      year=year,
-                                      seconds=seconds,
-                                      preplot=TRUE,
-                                      postplot=TRUE,
-                                      force.plot=FALSE,
-                                      wim.path='./data',
-                                      trackingdb=parts,
-                                      con=con
-                                      )
+    list.df.wim.amelia <- process.wim.site(wim.site=wim.site,
+                                           year=year,
+                                           seconds=seconds,
+                                           preplot=TRUE,
+                                           postplot=TRUE,
+                                           force.plot=FALSE,
+                                           wim.path='./data',
+                                           trackingdb=parts,
+                                           con=con
+                                           )
     expect_that(list.df.wim.amelia,is_a('list'))
     directions <- c('S','N')
     for(direction in directions){
