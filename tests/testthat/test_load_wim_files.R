@@ -14,7 +14,6 @@ test_that(
                                 )
 
         expect_is(df.wim,'data.frame')
-        print(dim(df.wim))
         expect_that(dim(df.wim),equals(c(8784,29)))
         expect_that(sort(names(df.wim)),equals(
             c(
@@ -48,6 +47,8 @@ test_that(
                 'wgt_spd_all_veh_speed_r2',
                 'wgt_spd_all_veh_speed_r3'
                 )))
+        expect_that(table(is.na(df.wim$heavyheavy_r1)),
+                    equals(table(c(rep(FALSE,8784-801),rep(TRUE,801) ))))
     })
 
 test_that(
@@ -61,4 +62,14 @@ test_that(
         expect_is(df.wim.amelia,'amelia')
         expect_that(df.wim.amelia$code,equals(1))
         expect_that(length(df.wim.amelia$imputations),equals(5))
+
+        context('\nalso test that can merge the amelia output okay')
+        df.merged <- condense.amelia.output(df.wim.amelia)
+        expect_is(df.merged,'data.frame')
+
+        expect_that(dim(df.merged),equals(c(8784,29)))
+
+        expect_that(table(is.na(df.merged$heavyheavy_r1)),
+                    equals(table(rep(FALSE,8784))))
+
     })
