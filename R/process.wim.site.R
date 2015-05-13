@@ -4,31 +4,43 @@ pf <- function(x,y){lattice::panel.smoothScatter(x,y,nbin=c(200,200))}
 ## lane.defs <- c('left lane','right lane 1', 'right lane 2', 'right lane 3', 'right lane 4', 'right lane 5', 'right lane 6', 'right lane 7', 'right lane 8')
 strip.function.a <- lattice::strip.custom(which.given=1,factor.levels=day.of.week, strip.levels = TRUE )
 
-#' load the imputed WIM (Amelia) output object from the file system
+#' get Amelia WIM file from the local file system
 #'
-#' Will NOT aggregate or clean up the Amelia output.  Just gets it
+#' Rather than hitting a remote server, just get the Amelia output
+#' from the local file system.  Use this if everything is running on
+#' one machine, ya?
 #'
-#' @param wim.site the wim site
-#' @param year the year
-#' @param direction the direction of flow for this data you want
-#' @param wim.path default '/data/backup/wim' because that is where it
-#' goes on the machine I developed this on.
-#' @param seconds the number of seconds that were aggregated up for
-#' the Amelia run.  defaults to one hour, or 3600
-#' @return the amelia output object
-load_imputed_wim <- function(wim.site,year,direction,wim.path='/data/backup/wim',seconds=3600){
-    ## reload the imputed wim data
-    cdb.wimid <- paste('wim',wim.site,direction,sep='.')
-    savepath <- paste(wim.path,year,wim.site,direction,sep='/')
-    target.file <- make.amelia.output.file(savepath,
-                                           paste('wim',wim.site,direction,sep=''),
-                                           seconds,year)
-    print(paste('loading',target.file))
-    ## fs read
-    df.wim.amelia <- NULL
-    load.result <- load(file=target.file)
-    df.wim.amelia
+#' @param site_no the WIM site number
+#' @param direction the direction of the data for this WIM site
+#' @param path the root path of where the Amelia files are stashed
+#' @param year the year of the data
+#' @return either 'todo' indicating that the file is not on this
+#' machine or not yet done, or a dataframe containing the amelia
+#' output
+#' @export
+get.amelia.wim.file.local <- function(site_no
+                                     ,direction
+                                     ,path='/'
+                                     ,year){
+
+    wimid <- paste('wim',site_no,direction,sep='')
+
+    file_pattern <- make.amelia.output.pattern(wimid,year)
+    isa.df <- dir(path
+                 ,pattern=file_pattern
+                 ,full.names=TRUE
+                 ,ignore.case=TRUE
+                 ,recursive=TRUE)
+    if(length(isa.df)==0){
+        return('todo')
+    }
+
+    env <- new.env()
+    res <- load(file=isa.df[1],envir=env)
+    return (env[[res]])
+
 }
+
 
 ## must modularize this more
 
@@ -51,7 +63,8 @@ load_imputed_wim <- function(wim.site,year,direction,wim.path='/data/backup/wim'
 #' system.  Default is '/data/backup/wim' because that is the
 #' directory on the machine I developed this function on
 #' @param con a postgresql db connection for loading WIM data
-#' @return either 0, 1, or the result of running the imputation if it failed.  Also check the trackingdb for any mention of issues.
+#' @return either 0, 1, or the result of running the imputation if it
+#' failed.  Also check the trackingdb for any mention of issues.
 #' @export
 process.wim.site <- function(wim.site,
                              year,

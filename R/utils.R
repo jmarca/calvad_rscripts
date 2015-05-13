@@ -185,5 +185,5 @@ make.amelia.output.file <- function(path,fname,seconds,year){
 #' @return a string you can pass to the dir command
 #'
 make.amelia.output.pattern <- function(fname,year){
-  paste(fname,'.*',year,'.*imputed.RData',sep='')
+  paste(fname,'.*','.*imputed.RData',sep='')
 }

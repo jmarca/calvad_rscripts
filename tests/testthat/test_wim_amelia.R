@@ -2,7 +2,7 @@ config <- rcouchutils::get.config(Sys.getenv('RCOUCHUTILS_TEST_CONFIG'))
 parts <- c('wim','amelia','trials')
 rcouchutils::couch.makedb(parts)
 
-test_that("wim amelia is sane",{
+test_that("running amelia on wim is sane",{
 
     file  <- './files/37/S/wim.agg.RData'
     site_no <- 37
