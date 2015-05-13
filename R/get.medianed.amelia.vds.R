@@ -246,6 +246,7 @@ medianed.aggregate.df <- function(df_combined,op=median){
 #' much ignored for now and you're stuck with median.
 #' @return a dataframe containing the aggregated results of the Amelia
 #' imputations, combined one per timestamp with median.
+#' @export
 condense.amelia.output <- function(aout,op=median){
     ## as with the with WIM data, using median
 
