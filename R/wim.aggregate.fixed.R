@@ -7,8 +7,8 @@
 ##' @param seconds how many seconds to aggregate to
 ##' @return the aggregated speed data
 ##' @author James E. Marca
-make.speed.aggregates <- function(df.spd,seconds){
-    hour <-  3600 ## seconds per hour
+make.speed.aggregates <- function(df.spd,seconds=3600){
+    hour <-  seconds ## seconds per hour
     df.spd$hourly <- as.numeric(df.spd$ts) - as.numeric(df.spd$ts) %% hour
     lane.agg <- split(df.spd,df.spd$lane)
     for(l in names(lane.agg)){
@@ -35,7 +35,16 @@ make.speed.aggregates <- function(df.spd,seconds){
                               sep=' ',collapse=' ')
         df_hourly <- sqldf::sqldf(sqlstatement,drv="SQLite")
         attr(df_hourly$ts,'tzone') <- 'UTC'
-        df_hourly$ts <- trunc(df_hourly$ts,units='hours')
+        ## guess the units for truncate
+        units <- 'mins'
+        if(seconds %% 3600 == 0){
+            units <- 'hours'
+        }else{
+            if(seconds %% 60 != 0){
+                units <- 'secs'
+            }
+        }
+        df_hourly$ts <- trunc(df_hourly$ts,units=units)
         df_hourly$ts <- as.POSIXct(df_hourly$ts)
 
         lane.agg[[l]] <- df_hourly

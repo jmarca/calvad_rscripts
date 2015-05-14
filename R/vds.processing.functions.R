@@ -468,6 +468,16 @@ impute.aggregate <- function(aout,hour=3600){
     ## print(sqlstatement)
     df.agg <- sqldf::sqldf(sqlstatement,drv="RSQLite")
     ## fix time
+    ## guess the units for truncate
+    units <- 'mins'
+    if(hour %% 3600 == 0){
+        units <- 'hours'
+    }else{
+        if(hour %% 60 != 0){
+            units <- 'secs'
+        }
+    }
+    df.agg$ts <- trunc(df.agg$ts,units=units)
     attr(df.agg$ts,'tzone') <- 'UTC'
 
     ## fix the occ

@@ -197,6 +197,7 @@ medianed.aggregate.df <- function(df_combined,op=median){
     df_hourly[,o.names] <- df_hourly[,o.names]/df_hourly[,'tick']
 
     ## assign the correct timezone again
+    df_hourly$ts <- trunc(df_hourly$ts,units='hours')
     attr(df_hourly$ts,'tzone') <- 'UTC'
 
     df_hourly$tick <- NULL

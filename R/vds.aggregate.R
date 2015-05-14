@@ -57,6 +57,18 @@ vds.aggregate <- function(df,ts,lanes=0,seconds){
     ## do it
     df.agg <- sqldf::sqldf(sqlstatement,drv="RSQLite")
     ## fix time
+
+    ## guess the units for truncate
+    units <- 'mins'
+    if(seconds %% 3600 == 0){
+        units <- 'hours'
+    }else{
+        if(seconds %% 60 != 0){
+            units <- 'secs'
+        }
+    }
+    df.agg$ts <- trunc(df.agg$ts,units=units)
+
     attr(df.agg$ts,'tzone') <- 'UTC'
 
     ## print(table(df.agg$obs_count))
