@@ -68,6 +68,7 @@ get.amelia.vds.file <- function(vdsid,path='/',year,server='http://lysithia.its.
 #' @return either 'todo' indicating that the file is not on this
 #' machine or not yet done, or a dataframe containing the amelia
 #' output
+#' @export
 get.amelia.vds.file.local <- function(vdsid,path='/',year,server,serverfile){
   df.vds.agg.imputed <- NULL
 

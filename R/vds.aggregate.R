@@ -40,7 +40,10 @@ vds.aggregate <- function(df,ts,lanes=0,seconds){
 
     mm$timeslot <- as.numeric(mm$ts) - as.numeric(mm$ts) %% seconds
 
-    all.names <- c(n.idx,o.idx,s.idx)
+    ## do NOT include speed here
+    ## all.names <- c(n.idx,o.idx,s.idx)
+
+    all.names <- c(n.idx,o.idx)
 
     sqlstatement <- paste("select min(ts) as ts,",
                           paste ("total(",all.names,") as "
@@ -58,7 +61,9 @@ vds.aggregate <- function(df,ts,lanes=0,seconds){
     ## print(table(df.agg$obs_count))
 
     ## properly do the aggregation of speed, occupancy
-    df.agg[,c(o.idx,s.idx)] <- df.agg[,c(o.idx,s.idx)] / df.agg[,'obs_count']
+    ## again, skip speed
+    ## df.agg[,c(o.idx,s.idx)] <- df.agg[,c(o.idx,s.idx)] / df.agg[,'obs_count']
+    df.agg[,c(o.idx)] <- df.agg[,c(o.idx)] / df.agg[,'obs_count']
 
 
     keep <- !is.na(df.agg$obs_count) & df.agg$obs_count == seconds/30
