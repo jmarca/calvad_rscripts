@@ -176,8 +176,7 @@ medianed.aggregate.df <- function(df_combined,op=median){
 
     ## aggregate up to one hour
     hour <-  3600 ## seconds per hour
-    temp_df$tstemp_df$hourly <- trunc(temp_df$ts,units='hours')
-    ##  <- as.numeric(temp_df$ts) - as.numeric(temp_df$ts) %% hour
+    temp_df$hourly <- as.numeric(temp_df$ts) - as.numeric(temp_df$ts) %% hour
 
     temp_df$tick <- 1 ## a value to sum up # of records per hour, to
                       ## compute averages of occupancy (because summed
