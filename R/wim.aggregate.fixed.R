@@ -9,7 +9,9 @@
 ##' @author James E. Marca
 make.speed.aggregates <- function(df.spd,seconds){
     hour <-  3600 ## seconds per hour
-    df.spd$hourly <- as.numeric(df.spd$ts) - as.numeric(df.spd$ts) %% hour
+    df.spd$hourly <- trunc(df.spd$ts,units='hours')
+    ## leaves seconds hanging
+    ##    as.numeric(df.spd$ts) - as.numeric(df.spd$ts) %% hour
     lane.agg <- split(df.spd,df.spd$lane)
     for(l in names(lane.agg)){
         if(dim(lane.agg[[l]])[1]==0){
@@ -108,7 +110,8 @@ wim.lane.and.time.aggregation <- function(lane.data){
 
 
     hour <-  3600 ## seconds per hour
-    lane.data$hourly <- as.numeric(lane.data$ts) - as.numeric(lane.data$ts) %% hour
+    lane.data$hourly <- trunc(lane.data$ts,units='hours')
+    ## <- as.numeric(lane.data$ts) - as.numeric(lane.data$ts) %% hour
 
     lane.data.agg <- split(lane.data,lane.data$lane)
     for (l in names(lane.data.agg)){
@@ -235,7 +238,8 @@ wim.medianed.aggregate.df <- function(df_combined,op=median){
     ## at one hour.  But keep it because it might be useful in the
     ## future
     hour <-  3600 ## seconds per hour
-    temp_df$hourly <- as.numeric(temp_df$ts) - as.numeric(temp_df$ts) %% hour
+    temp_df$hourly <- trunc(temp_df$ts,units='hours')
+    ##  <- as.numeric(temp_df$ts) - as.numeric(temp_df$ts) %% hour
 
     temp_df$tick <- 1 ## a value to sum up # of records per hour, to
                       ## compute averages of occupancy (because summed
