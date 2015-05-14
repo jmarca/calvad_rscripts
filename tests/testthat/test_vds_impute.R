@@ -104,3 +104,5 @@ test_that("ignoring speed in imputation works okay",{
 
 rcouchutils::couch.deletedb(parts)
 unlink('./vds_hour_agg.1211682.2012.dat')
+unlink('./files/1073210_ML_2012.120.imputed.RData')
+unlink('./vds_hour_agg.1073210.2012.dat')
