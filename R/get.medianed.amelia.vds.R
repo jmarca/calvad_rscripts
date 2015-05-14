@@ -359,10 +359,6 @@ get.aggregated.vds.amelia <- function(vdsid,
 #' local file system's root directory for Amelia output
 #' @param force.plot defaults to FALSE, if TRUE will replot even if
 #' the plot appears to exist already
-#' @param aggregate.seconds if you want to aggregate the returned
-#' output to something other than the 120 seconds that the Amelia run
-#' used, then pass in some other number of seconds here.  For example,
-#' to aggregate up to hourly data, pass in 3600
 #' @param trackingdb the CouchDB database that is being used to track
 #' detector status.  Will push the generated plot files to this
 #' database as attached files
@@ -375,7 +371,6 @@ get.and.plot.vds.amelia <- function(pair,year,doplots=TRUE,
                                     server='http://lysithia.its.uci.edu',
                                     path,
                                     force.plot=FALSE,
-                                    aggregate.seconds=120,
                                     trackingdb){
     ## load the imputed file for this site, year
     aout <- NULL
@@ -432,11 +427,6 @@ get.and.plot.vds.amelia <- function(pair,year,doplots=TRUE,
             for(f2a in c(attach.files)){
                 rcouchutils::couch.attach(trackingdb,pair,f2a)
             }
-        }
-        if(aggregate.seconds>120){
-            df.vds.agg <- vds.aggregate(df=df.vds.agg,
-                                        ts=df.vds.agg$ts,
-                                        seconds=aggregate.seconds)
         }
     }
     df.vds.agg

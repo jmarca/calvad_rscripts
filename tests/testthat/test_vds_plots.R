@@ -91,20 +91,6 @@ test_that("plotting imputed data code works okay",{
     ## should also md5 check the dumped images?
 
 
-    ## while I'm at it, check that the aggregate argument works okay
-    df_agg <- get.and.plot.vds.amelia(
-        pair=vds.id,
-        year=year,
-        doplots=FALSE,
-        remote=FALSE,
-        path=path,
-        force.plot=FALSE,
-        aggregate.seconds=3600,
-        trackingdb=parts)
-
-    expect_that(mean(df_agg$nl1,na.rm=TRUE),equals(30*269.9333817216,tolerance = .00001))
-
-
 })
 
 
