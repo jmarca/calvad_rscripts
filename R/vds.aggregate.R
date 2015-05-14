@@ -9,6 +9,7 @@
 #' @param seconds the number of seconds to aggregate up to, from 30
 #' seconds (no aggregation) to whatever
 #' @return a dataframe suitable for passing to Amelia
+#' @export
 vds.aggregate <- function(df,ts,lanes=0,seconds){
   df.mi.input <-  NA
   if(lanes==0){
