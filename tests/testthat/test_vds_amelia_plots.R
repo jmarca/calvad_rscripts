@@ -3,7 +3,6 @@ config <- rcouchutils::get.config(Sys.getenv('RCOUCHUTILS_TEST_CONFIG'))
 parts <- c('vds','amelia','plots')
 result <- rcouchutils::couch.makedb(parts)
 
-
 context('get.and.plot.vds.amelia works okay')
 test_that("plotting imputed data code works okay",{
     file  <- './files/737237_ML_2012.df.2012.RData'

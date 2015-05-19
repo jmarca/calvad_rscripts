@@ -74,14 +74,25 @@ get.amelia.vds.file.local <- function(vdsid,path='/',year,server,serverfile){
 
   target.file <- make.amelia.output.pattern(vdsid,year)
   isa.df <- dir(path, pattern=target.file,full.names=TRUE, ignore.case=TRUE,recursive=TRUE)
-  ## print(paste(path,target.file,isa.df[1],sep=' : '))
+  print(paste(path,target.file,paste(isa.df,collapse=','),sep=' : '))
   if(length(isa.df)==0){
       return('todo')
   }
-  ## print (paste('loading', isa.df[1]))
-  load.result <-  load(file=isa.df[1])
-  ## print(load.result)
-  df.vds.agg.imputed
+    ## keep the file with the correct year
+    right_file <- grep(pattern=year,x=isa.df,value=TRUE)
+    if(length(right_file) == 0){
+        print(paste('failed to find year',year,'in list',paste(isa.df,collapse=',')))
+        return('todo')
+
+    }
+    if(length(right_file) > 1){
+        print(paste('failed to isolate one file from list',paste(isa.df,collapse=','),'got',paste(right_file,collapse=',')))
+        stop(2)
+
+    }
+    env <- new.env()
+    res <- load(file=right_file,envir=env)
+    return (env[[res]])
 
 }
 
