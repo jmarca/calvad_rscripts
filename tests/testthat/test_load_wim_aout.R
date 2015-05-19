@@ -12,8 +12,14 @@ test_that(
         my_df <- get.amelia.wim.file.local(site_no=site_no,
                                            direction=direction,
                                            path='./files',
-                                           year=2012)
+                                           year=year)
         expect_that(my_df,is_a('amelia'))
+        year <- 2011
+        my_df <- get.amelia.wim.file.local(site_no=site_no,
+                                           direction=direction,
+                                           path='./files',
+                                           year=year)
+        expect_that(my_df,equals('todo'))
 
 
     })
