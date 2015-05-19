@@ -3,6 +3,23 @@ parts <- c('wim','amelia','trials')
 rcouchutils::couch.makedb(parts)
 
 test_that(
+    "can find amelia output",{
+
+        site_no <- 37
+        direction <- 'S'
+        year <- 2012
+
+        my_df <- get.amelia.wim.file.local(site_no=site_no,
+                                           direction=direction,
+                                           path='./files',
+                                           year=2012)
+        expect_that(my_df,is_a('amelia'))
+
+
+    })
+
+
+test_that(
     "can load wim amelia output",{
 
         file  <- './files/2012/37/S/wim37S.3600.imputed.RData'

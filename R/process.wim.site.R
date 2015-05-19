@@ -35,8 +35,20 @@ get.amelia.wim.file.local <- function(site_no
         return('todo')
     }
 
+    ## keep the file with the correct year
+    right_file <- grep(pattern=year,x=isa.df,value=TRUE)
+    if(length(right_file) == 0){
+        print(paste('failed to find year',year,'in list',paste(isa.df,collapse=',')))
+        return('todo')
+
+    }
+    if(length(right_file) > 1){
+        print(paste('failed to isolate one file from list',paste(isa.df,collapse=','),'got',paste(right_file,collapse=',')))
+        stop(2)
+
+    }
     env <- new.env()
-    res <- load(file=isa.df[1],envir=env)
+    res <- load(file=right_file,envir=env)
     return (env[[res]])
 
 }

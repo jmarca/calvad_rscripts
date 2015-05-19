@@ -169,7 +169,7 @@ add.time.of.day <- function(df){
 #' @param year the year
 #' @return a string representing the full path that you can save this
 #' amelia result to
-#' @export
+#'
 make.amelia.output.file <- function(path,fname,seconds,year){
   paste(path,'/',fname,'.',seconds,'.imputed.RData',sep='')
 }
@@ -185,5 +185,5 @@ make.amelia.output.file <- function(path,fname,seconds,year){
 #' @return a string you can pass to the dir command
 #' @export
 make.amelia.output.pattern <- function(fname,year){
-    paste(fname,'.*',year,'.*imputed.RData',sep='')
+  paste(fname,'.*imputed.RData',sep='')
 }
