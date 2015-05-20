@@ -391,7 +391,7 @@ get.and.plot.vds.amelia <- function(pair,year,doplots=TRUE,
     }else{
         aout <- get.amelia.vds.file.local(vdsid=pair,year=year,path=path)
     }
-    if(is.null(aout)){
+    if(is.null(aout) || is.data.frame(aout)){
         return (NULL)
     }
 
