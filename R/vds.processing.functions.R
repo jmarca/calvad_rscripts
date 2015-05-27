@@ -159,6 +159,7 @@ sanity.check <- function(data,ts,year=0,vdsid='missing',db='vdsdata%2ftracking')
 #'
 #' @param data the data for the year
 #' @return the number of lanes for this VDS site
+#' @export
 longway.guess.lanes <- function(data){
     vds.lanes <- 1
     nms <-  names(data);
