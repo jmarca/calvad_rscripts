@@ -37,14 +37,6 @@ test_that('store amelia chains output will work',{
 
 })
 
-## test_that('process wim site stores a buncha stuff to couchdb',{
-
-## })
-
-## test_that('load.wim.pair.data stores wim vds infor state to couchdb',{
-
-## })
-
 context('sanity check')
 test_that('sanity check saves problems to couchdb statedb',{
     dbname <- rcouchutils::couch.makedbname(parts)
