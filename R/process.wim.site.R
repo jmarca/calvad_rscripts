@@ -384,9 +384,10 @@ plot_wim.data  <- function(df.merged,site_no,direction,year,fileprefix=NULL,subh
     if(!file.exists(savepath)){dir.create(savepath)}
     savepath <- paste(savepath,site_no,sep='/')
     if(!file.exists(savepath)){dir.create(savepath)}
-    savepath <- paste(savepath,direction,sep='/')
-    if(!file.exists(savepath)){dir.create(savepath)}
-
+    if(direction != ''){
+        savepath <- paste(savepath,direction,sep='/')
+        if(!file.exists(savepath)){dir.create(savepath)}
+    }
     imagefileprefix <- paste(site_no,direction,year,sep='_')
     if(!is.null(fileprefix)){
         imagefileprefix <- paste(site_no,direction,year,fileprefix,sep='_')
