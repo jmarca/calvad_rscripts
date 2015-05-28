@@ -663,6 +663,7 @@ plot_amelia.plots  <- function(aout,plotvars,vdsid,year,force.plot=FALSE,
 #' plots already done
 #' @return files.to.attach the files that you need to send off to
 #' couchdb tracking database.
+#' @export
 plot_vds.data  <- function(df.merged,vdsid,year,fileprefix=NULL,subhead='\npost imputation',force.plot=FALSE,trackingdb){
     if(!force.plot){
         have.plot <- check.for.plot.attachment(vdsid,year,

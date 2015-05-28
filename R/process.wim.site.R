@@ -348,6 +348,7 @@ upload.plots.couchdb <- function(wim.site
 #' plots already done
 #' @return files.to.attach the files that you need to send off to
 #' couchdb tracking database.
+#' @export
 plot_wim.data  <- function(df.merged,site_no,direction,year,fileprefix=NULL,subhead='\npost imputation',force.plot=FALSE,trackingdb){
     cdb.wimid <- paste('wim',site_no,direction,sep='.')
     if(!force.plot){

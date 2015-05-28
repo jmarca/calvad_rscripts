@@ -213,6 +213,7 @@ wim.lane.and.time.aggregation <- function(lane.data){
 ##' hour by summing the counts and averaging the occupancies
 ##'
 ##' @author James E. Marca
+##' @export
 wim.medianed.aggregate.df <- function(df_combined,op=median){
     if(class(df_combined) == 'amelia'){
         ## fix that
