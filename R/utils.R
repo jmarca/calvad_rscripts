@@ -78,6 +78,7 @@ unzoo.incantation <- function(df.z){
 #' @return an expanded dataframe, with lane data slotted into rows,
 #' rather than spread out over multiple columns.
 #'
+#' @export
 transpose.lanes.to.rows <- function(df){
 
   varnames <- names(df)
@@ -113,6 +114,24 @@ transpose.lanes.to.rows <- function(df){
     }
   }
   recode
+}
+##' extract unique lanes
+##'
+##' @title extract_unique_lanes
+##' @param df a data frame with lane names like nl1, etc
+##' @return a list
+##' @author James E. Marca
+extract_unique_lanes <- function(df){
+    varnames <- names(df)
+    keepvars <- grep('[r|l]\\d+$',x=varnames,perl=TRUE,value=TRUE)
+    res <- regexpr("([rl]\\d+)",keepvars,perl=TRUE)
+    c(unique(do.call(rbind, lapply(seq_along(res), function(i) {
+        if(res[i] == -1) return("")
+        stt <- attr(res, "capture.start")[i, ]
+        stp <- stt + attr(res, "capture.length")[i, ] - 1
+        substring(keepvars[i],stt,stp)
+    }))))
+
 }
 
 #' district from vdsid

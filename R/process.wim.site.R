@@ -579,22 +579,31 @@ recode.df.wim <- function( df ){
 
     lanes <- levels(as.factor(melded$lane))
 
-    lane.names <- c("left","right")
-    if(length(lanes)==1){
-        lane.names <- c("right")
-    }else{
-        numbering <- length(lanes)
-        if(length(lanes)>2){
-            for(i in 3:numbering){
-                lane.names[i]=paste("lane",(numbering-i+2))
-            }
-            ## a little switcheroo here
-            lanes <- c(lanes[1],rev(lanes[-1]))
-            lane.names <- c(lane.names[1],rev(lane.names[-1]))
+    ## this is a hack, is stupid, and is wrong
+    ## Often with WIM sites, there are in fact multiple right lanes and no data in the left lane
+    ## lane.names <- c("left","right")
+    ## if(length(lanes)==1){
+    ##     lane.names <- c("right")
+    ## }else{
+    ##     numbering <- length(lanes)
+    ##     if(length(lanes)>2){
+    ##         for(i in 3:numbering){
+    ##             lane.names[i]=paste("lane",(numbering-i+2))
+    ##         }
+    ##         ## a little switcheroo here
+    ##         lanes <- c(lanes[1],rev(lanes[-1]))
+    ##         lane.names <- c(lane.names[1],rev(lane.names[-1]))
+    ##     }
+    ## }
 
-        }
+    ## instead, iterate over each "level" of lanes.  if it has an R, then make it a right lane.  If it has an l1, then make it lane 1.
+    ##
+    ## I guess two passes will work.  One to suss out left right lanes, max right lane number, second to assign.
+    maxright <- 0
+    haveleft <- FALSE
+    for (l in lanes){
+
     }
-
 
     melded$lane <- factor(melded$lane,
                           levels=lanes,
