@@ -121,6 +121,7 @@ transpose.lanes.to.rows <- function(df){
 ##' @param df a data frame with lane names like nl1, etc
 ##' @return a list
 ##' @author James E. Marca
+##' @export
 extract_unique_lanes <- function(df){
     varnames <- names(df)
     keepvars <- grep('[r|l]\\d+$',x=varnames,perl=TRUE,value=TRUE)
