@@ -131,7 +131,9 @@ process.wim.site <- function(wim.site,
             rm(df.wim.speed)
         }
     }else{
-        directions <- get.wim.directions(wim.site=wim.site,con=con)
+        db_result <- get.wim.directions(wim.site=wim.site,con=con)
+        directions <- c(db_result$directions)
+        print(directions)
     }
 
     for(direction in directions){
