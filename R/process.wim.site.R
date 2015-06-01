@@ -211,6 +211,7 @@ process.wim.site <- function(wim.site,
         }else{
             ## load from filesystem
             df.wim.d.joint <- get.wim.rdata(wim.site=wim.site,
+                                            direction=direction,
                                             year=year,
                                             wim.path=wim.path
                                             )
