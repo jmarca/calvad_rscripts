@@ -132,8 +132,7 @@ process.wim.site <- function(wim.site,
         }
     }else{
         db_result <- get.wim.directions(wim.site=wim.site,con=con)
-        directions <- c(db_result$directions)
-        print(directions)
+        directions <- db_result$direction
     }
 
     for(direction in directions){
