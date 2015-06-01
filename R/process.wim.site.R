@@ -223,7 +223,8 @@ process.wim.site <- function(wim.site,
                                             )
             ##print(summary(df.wim.d.joint))
             if(is.null(dim(df.wim.d.joint))){
-                stop("failed to load from filesystem")
+                print("failed to load from filesystem")
+                next
             }
         }
         print(paste("going to plot",preplot))
