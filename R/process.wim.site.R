@@ -209,7 +209,7 @@ process.wim.site <- function(wim.site,
             save(df.wim.d.joint,file=filepath,compress='xz')
             print(paste('saved to',filepath))
         }else{
-            // load from filesystem
+            ## load from filesystem
             df.wim.d.joint <- get.wim.rdata(wim.site=wim.site,
                                             year=year,
                                             wim.path=wim.path
