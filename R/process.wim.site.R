@@ -219,7 +219,10 @@ process.wim.site <- function(wim.site,
                 stop("failed to load from filesystem")
             }
         }
+
         if(preplot){
+            print('plotting raw data, pre impute')
+            print(dim(df.wim.d.joint))
             attach.files <- plot_wim.data(df.wim.d.joint
                                          ,wim.site
                                          ,direction
@@ -278,7 +281,7 @@ process.wim.site <- function(wim.site,
         }else{
             ## not imputing this run, but maybe post plotting
             if(postplot){
-                ## load from filesystem
+                print('load imputed data from filesystem')
                 df.wim.amelia <- get.amelia.wim.file.local(site_no=wim.site
                                                           ,year=year
                                                           ,direction=direction
@@ -289,6 +292,7 @@ process.wim.site <- function(wim.site,
         }
 
         if(postplot){
+            print('plotting post-imputation')
             df.wim.agg.amelia <- wim.medianed.aggregate.df(df.wim.amelia)
             attach.files <- plot_wim.data(df.wim.agg.amelia
                                          ,wim.site
