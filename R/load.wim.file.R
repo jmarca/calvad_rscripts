@@ -27,9 +27,10 @@ get.wim.rdata <- function(wim.site,year,direction,
                           ,filename.pattern='wim.agg.RData'){
     ## reload the saved, pre-imputation wim data
     search.path <- paste(wim.path,year,wim.site,direction,sep='/')
+    print(search.path)
     isa.df <- dir(search.path, pattern=filename.pattern,
                   full.names=TRUE, ignore.case=TRUE,recursive=TRUE)
-
+    print(isa.df)
     if(length(isa.df)==0){
         return('todo')
     }
