@@ -109,9 +109,9 @@ process.wim.site <- function(wim.site,
     }
 
     ## stupid globals
-    df.wim.split <- null
-    directions <- null
-    df.wim.speed.split <- null
+    df.wim.split <- NULL
+    directions <- NULL
+    df.wim.speed.split <- NULL
 
     if(load.from.db){
         df.wim <- load.wim.data.straight(wim.site=wim.site,year=year,con=con)
