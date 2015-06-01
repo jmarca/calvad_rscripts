@@ -97,7 +97,7 @@ process.wim.site <- function(wim.site,
         return(0)
     }
 
-    print(paste('starting to process  wim site ',wim.site))
+    print(paste('starting to process  wim site ',wim.site,'| preplot',preplot,'| postplot,postplot,'| impute',impute))
 
     ## two cases.  One, I'm redoing work and can just skip to the
     ## impute step.  Two, I need to hit the db directly.  Figure it
@@ -220,7 +220,7 @@ process.wim.site <- function(wim.site,
                 stop("failed to load from filesystem")
             }
         }
-
+        print(paste("going to plot",preplot))
         if(preplot){
             print('plotting raw data, pre impute')
             print(dim(df.wim.d.joint))
