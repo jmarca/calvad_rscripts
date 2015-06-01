@@ -97,7 +97,10 @@ process.wim.site <- function(wim.site,
         return(0)
     }
 
-    print(paste('starting to process  wim site ',wim.site,'| preplot',preplot,'| postplot,postplot,'| impute',impute))
+    print(paste('starting to process  wim site ',wim.site,
+                'preplot',preplot,
+                'postplot',postplot,
+                'impute',impute))
 
     ## two cases.  One, I'm redoing work and can just skip to the
     ## impute step.  Two, I need to hit the db directly.  Figure it
@@ -140,6 +143,7 @@ process.wim.site <- function(wim.site,
         ## direction <- names(df.wim.split)[1]
         cdb.wimid <- paste('wim',wim.site,direction,sep='.')
         if(load.from.db){
+            print('load from database')
             if(length(df.wim.split[[direction]]$ts)<100){
                 rcouchutils::couch.set.state(year=year,
                                              id=cdb.wimid,
@@ -211,12 +215,14 @@ process.wim.site <- function(wim.site,
             print(paste('saved to',filepath))
         }else{
             ## load from filesystem
+            print('load from filesystem')
             df.wim.d.joint <- get.wim.rdata(wim.site=wim.site,
                                             direction=direction,
                                             year=year,
                                             wim.path=wim.path
                                             )
-            if(df.wim.d.joint == 'todo'){
+            ##print(summary(df.wim.d.joint))
+            if(is.null(dim(df.wim.d.joint))){
                 stop("failed to load from filesystem")
             }
         }
