@@ -102,81 +102,122 @@ process.wim.site <- function(wim.site,
     ## two cases.  One, I'm redoing work and can just skip to the
     ## impute step.  Two, I need to hit the db directly.  Figure it
     ## out by checking if I can load the data from the file
-
-    df.wim <- load.wim.data.straight(wim.site=wim.site,year=year,con=con)
-    ## only continue if I have real data
-    if(dim(df.wim)[1]==0){
-        print(paste('problem, dim df.wim is',dim(df.wim)))
-        rcouchutils::couch.set.state(year=year,
-                        id=paste('wim',wim.site,sep='.'),
-                        doc=list('imputed'='no wim data in database'),
-                        db=trackingdb)
-        return(0)
+    load.from.db <- FALSE
+    if(impute){
+        ## in this case, I need to load from the db, to be safe
+        load.from.db <- TRUE
     }
 
-    df.wim.split <- split(df.wim, df.wim$direction)
-    directions <- names(df.wim.split)
-    df.wim.speed <- get.wim.speed.from.sql(wim.site=wim.site,year=year,con=con)
-    df.wim.speed.split <- split(df.wim.speed, df.wim.speed$direction)
-    rm(df.wim)
-    rm(df.wim.speed)
+    ## stupid globals
+    df.wim.split <- null
+    directions <- null
+    df.wim.speed.split <- null
+
+    if(load.from.db){
+        df.wim <- load.wim.data.straight(wim.site=wim.site,year=year,con=con)
+        ## only continue if I have real data
+        if(dim(df.wim)[1]==0){
+            print(paste('problem, dim df.wim is',dim(df.wim)))
+            rcouchutils::couch.set.state(year=year,
+                                         id=paste('wim',wim.site,sep='.'),
+                                         doc=list('imputed'='no wim data in database'),
+                                         db=trackingdb)
+            return(0)
+            df.wim.split <- split(df.wim, df.wim$direction)
+            directions <- names(df.wim.split)
+            df.wim.speed <- get.wim.speed.from.sql(wim.site=wim.site,year=year,con=con)
+            df.wim.speed.split <- split(df.wim.speed, df.wim.speed$direction)
+            rm(df.wim)
+            rm(df.wim.speed)
+        }
+    }else{
+        directions <- get.wim.directions(wim.site=wim.site,con=con)
+    }
 
     for(direction in directions){
         print(paste('processing direction',direction))
         ## direction <- names(df.wim.split)[1]
         cdb.wimid <- paste('wim',wim.site,direction,sep='.')
-        if(length(df.wim.split[[direction]]$ts)<100){
-            rcouchutils::couch.set.state(year=year,
-                            id=cdb.wimid,
-                            doc=list('imputed'='less than 100 timestamps for raw data in db'),
-                            db=trackingdb)
-            next
+        if(load.from.db){
+            if(length(df.wim.split[[direction]]$ts)<100){
+                rcouchutils::couch.set.state(year=year,
+                                             id=cdb.wimid,
+                                             doc=list('imputed'='less than 100 timestamps for raw data in db'),
+                                             db=trackingdb)
+                next
+            }
+            if(length(df.wim.speed.split[[direction]]$ts)<100){
+                rcouchutils::couch.set.state(year=year,
+                                             id=cdb.wimid,
+                                             doc=list('imputed'='less than 100 timestamps for speed data in db'),
+                                             db=trackingdb)
+                next
+            }
+
+            df.wim.d <- process.wim.2(df.wim.split[[direction]])
+            df.wim.s <- df.wim.speed.split[[direction]]
+
+            ## fix for site 16, counts of over 100,000 per hour (actually 30 million)
+            too.many <- df.wim.s$veh_count > 10000 ## 10,000 veh in 5 minutes!
+            df.wim.s <- df.wim.s[!too.many,]
+
+
+            df.wim.split[[direction]] <- NULL
+            df.wim.speed.split[[direction]] <- NULL
+
+            df.wim.d <- wim.additional.variables(df.wim.d)
+
+            ## aggregate over time
+            print(' aggregate ')
+            df.wim.dagg <- wim.lane.and.time.aggregation(df.wim.d)
+
+            ## ... instead aborting above.
+            ## The one such instance so far had junk measurements
+            if(length(df.wim.s)==0){
+                ## insert one dummy record per lane
+                lastlane <- max(df.wim.d$lane)
+                dummytime <- df.wim.d$ts[1]
+                df.wim.s <- data.frame(cbind(lane=c('l1',paste('r',2:lastlane,sep=''))))
+                df.wim.s$ts <- dummytime
+                df.wim.s$veh_speed <- NA
+                df.wim.s$veh_count <- NA
+            }
+
+            df.wim.sagg <- make.speed.aggregates(df.wim.s)
+
+            df.wim.d.joint <- merge(df.wim.dagg,df.wim.sagg,all=TRUE)
+
+            rm(df.wim.dagg, df.wim.sagg,df.wim.s,df.wim.d )
+
+            df.wim.d.joint <- add.time.of.day(df.wim.d.joint)
+
+
+            ## save wim data for next time
+
+            savepath <- paste(wim.path,year,sep='/')
+            if(!file.exists(savepath)){dir.create(savepath)}
+            savepath <- paste(savepath,wim.site,sep='/')
+            if(!file.exists(savepath)){dir.create(savepath)}
+            savepath <- paste(savepath,direction,sep='/')
+            if(!file.exists(savepath)){dir.create(savepath)}
+            filepath <- paste(savepath,'wim.agg.RData',sep='/')
+            print(filepath)
+
+            db.legal.names  <- gsub("\\.", "_", names(df.wim.d.joint))
+
+            names(df.wim.d.joint) <- db.legal.names
+            save(df.wim.d.joint,file=filepath,compress='xz')
+            print(paste('saved to',filepath))
+        }else{
+            // load from filesystem
+            df.wim.d.joint <- get.wim.rdata(wim.site=wim.site,
+                                            year=year,
+                                            wim.path=wim.path
+                                            )
+            if(df.wim.d.join == 'todo'){
+                stop("failed to load from filesystem")
+            }
         }
-        if(length(df.wim.speed.split[[direction]]$ts)<100){
-            rcouchutils::couch.set.state(year=year,
-                            id=cdb.wimid,
-                            doc=list('imputed'='less than 100 timestamps for speed data in db'),
-                            db=trackingdb)
-            next
-        }
-
-        df.wim.d <- process.wim.2(df.wim.split[[direction]])
-        df.wim.s <- df.wim.speed.split[[direction]]
-
-        ## fix for site 16, counts of over 100,000 per hour (actually 30 million)
-        too.many <- df.wim.s$veh_count > 10000 ## 10,000 veh in 5 minutes!
-        df.wim.s <- df.wim.s[!too.many,]
-
-
-        df.wim.split[[direction]] <- NULL
-        df.wim.speed.split[[direction]] <- NULL
-
-        df.wim.d <- wim.additional.variables(df.wim.d)
-
-        ## aggregate over time
-        print(' aggregate ')
-        df.wim.dagg <- wim.lane.and.time.aggregation(df.wim.d)
-
-        ## ... instead aborting above.
-        ## The one such instance so far had junk measurements
-        if(length(df.wim.s)==0){
-            ## insert one dummy record per lane
-            lastlane <- max(df.wim.d$lane)
-            dummytime <- df.wim.d$ts[1]
-            df.wim.s <- data.frame(cbind(lane=c('l1',paste('r',2:lastlane,sep=''))))
-            df.wim.s$ts <- dummytime
-            df.wim.s$veh_speed <- NA
-            df.wim.s$veh_count <- NA
-        }
-
-        df.wim.sagg <- make.speed.aggregates(df.wim.s)
-
-        df.wim.d.joint <- merge(df.wim.dagg,df.wim.sagg,all=TRUE)
-
-        rm(df.wim.dagg, df.wim.sagg,df.wim.s,df.wim.d )
-
-        df.wim.d.joint <- add.time.of.day(df.wim.d.joint)
-
         if(preplot){
             attach.files <- plot_wim.data(df.wim.d.joint
                                          ,wim.site
@@ -193,38 +234,22 @@ process.wim.site <- function(wim.site,
             }
         }
 
-        ## save wim data for next time
+        df.wim.amelia <- NULL
 
-        savepath <- paste(wim.path,year,sep='/')
-        if(!file.exists(savepath)){dir.create(savepath)}
-        savepath <- paste(savepath,wim.site,sep='/')
-        if(!file.exists(savepath)){dir.create(savepath)}
-        savepath <- paste(savepath,direction,sep='/')
-        if(!file.exists(savepath)){dir.create(savepath)}
-        filepath <- paste(savepath,'wim.agg.RData',sep='/')
-        print(filepath)
-
-        db.legal.names  <- gsub("\\.", "_", names(df.wim.d.joint))
-
-        names(df.wim.d.joint) <- db.legal.names
-        save(df.wim.d.joint,file=filepath,compress='xz')
-        print(paste('saved to',filepath))
         if(impute){
 
             print(paste('imputing',year,wim.site,direction))
             r <- try(
                 df.wim.amelia <- fill.wim.gaps(df.wim.d.joint)
-                )
+            )
             if(class(r) == "try-error") {
                 returnval[[direction]] <- paste(r,'')
                 print(paste('try error:',r))
                 rcouchutils::couch.set.state(year=year,
-                                id=cdb.wimid,
-                                doc=list('imputed'=paste('try error',r)),
-                                db=trackingdb)
+                                             id=cdb.wimid,
+                                             doc=list('imputed'=paste('try error',r)),
+                                             db=trackingdb)
             }
-
-            returnval[[direction]] <- df.wim.amelia
             if(df.wim.amelia$code==1){
                 ## that means good imputation
                 ## have a WIM site data with no gaps.  save it
@@ -233,26 +258,10 @@ process.wim.site <- function(wim.site,
                 ## fs write
                 save(df.wim.amelia,file=target.file,compress="xz")
                 rcouchutils::couch.set.state(year=year,
-                                id=cdb.wimid,
-                                doc=list('imputed'='finished'),
-                                db=trackingdb)
+                                             id=cdb.wimid,
+                                             doc=list('imputed'='finished'),
+                                             db=trackingdb)
 
-                if(postplot){
-                    df.wim.agg.amelia <- wim.medianed.aggregate.df(df.wim.amelia)
-                    attach.files <- plot_wim.data(df.wim.agg.amelia
-                                                 ,wim.site
-                                                 ,direction
-                                                 ,year
-                                                 ,fileprefix='imputed'
-                                                 ,subhead='\npost imputation'
-                                                 ,force.plot=force.plot
-                                                 ,trackingdb=trackingdb)
-                    if(attach.files != 1){
-                        for(f2a in c(attach.files)){
-                            rcouchutils::couch.attach(trackingdb,cdb.wimid,f2a)
-                        }
-                    }
-                }
             }else{
                 errdoc <- paste(df.wim.amelia$code,
                                 'message',df.wim.amelia$message)
@@ -264,8 +273,36 @@ process.wim.site <- function(wim.site,
                                                                 errdoc)),
                                              db=trackingdb)
             }
+
+        }else{
+            ## not imputing this run, but maybe post plotting
+            if(postplot){
+                ## load from filesystem
+                df.wim.amelia <- get.amelia.wim.file.local(site_no=wim.site
+                                                          ,year=year
+                                                          ,direction=direction
+                                                          ,path=wim.path)
+
+            }
+            returnval[[direction]] <- df.wim.amelia
         }
 
+        if(postplot){
+            df.wim.agg.amelia <- wim.medianed.aggregate.df(df.wim.amelia)
+            attach.files <- plot_wim.data(df.wim.agg.amelia
+                                         ,wim.site
+                                         ,direction
+                                         ,year
+                                         ,fileprefix='imputed'
+                                         ,subhead='\npost imputation'
+                                         ,force.plot=force.plot
+                                         ,trackingdb=trackingdb)
+            if(attach.files != 1){
+                for(f2a in c(attach.files)){
+                    rcouchutils::couch.attach(trackingdb,cdb.wimid,f2a)
+                }
+            }
+        }
     }
 
     returnval
