@@ -216,7 +216,7 @@ process.wim.site <- function(wim.site,
                                             year=year,
                                             wim.path=wim.path
                                             )
-            if(df.wim.d.join == 'todo'){
+            if(df.wim.d.joint == 'todo'){
                 stop("failed to load from filesystem")
             }
         }
