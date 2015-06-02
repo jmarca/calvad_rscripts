@@ -118,12 +118,20 @@ transpose.lanes.to.rows <- function(df){
 ##' extract unique lanes
 ##'
 ##' @title extract_unique_lanes
+##' @param varnames a vector of variable names to sift through.  If
+##'     you're lazy, you can pass in a data frame as the second
+##'     argument, and I'll call names on it to get varnames.  The
+##'     advantage of passing varnames is maybe you don't want to pass
+##'     around copies of the full dataframe.
 ##' @param df a data frame with lane names like nl1, etc
 ##' @return a list
 ##' @author James E. Marca
 ##' @export
-extract_unique_lanes <- function(df){
-    varnames <- names(df)
+##'
+extract_unique_lanes <- function(varnames=NULL,df=NULL){
+    if(missing(varnames)){
+        varnames <- names(df)
+    }
     keepvars <- grep('[r|l]\\d+$',x=varnames,perl=TRUE,value=TRUE)
     res <- regexpr("([rl]\\d+)",keepvars,perl=TRUE)
     c(unique(do.call(rbind, lapply(seq_along(res), function(i) {

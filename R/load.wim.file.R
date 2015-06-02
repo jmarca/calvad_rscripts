@@ -13,24 +13,24 @@
 ##' @param year the year
 ##' @param direction the direction
 ##' @param wim.path the root path in the file system to start looking
-##' for the RData files.  The code will add in the year, then the site
-##' number, then the direction, so that the file can be found in the
-##' expected place
+##'     for the RData files.  The code will add in the year, then the
+##'     site number, then the direction, so that the file can be found
+##'     in the expected place
 ##' @param filename.pattern the pattern to use when searching.  Will
-##' look for wim.agg.RData by default, but if, say, you want to load
-##' the imputation output file, then pass in "imputed.RData" or
-##' similar
+##'     look for wim.agg.RData by default, but if, say, you want to
+##'     load the imputation output file, then pass in "imputed.RData"
+##'     or similar
 ##' @return a dataframe with the raw, unimputed data, or NULL
 ##' @author James E. Marca
+##' @export
+##'
 get.wim.rdata <- function(wim.site,year,direction,
                           wim.path='/data/backup/wim'
                           ,filename.pattern='wim.agg.RData'){
     ## reload the saved, pre-imputation wim data
     search.path <- paste(wim.path,year,wim.site,direction,sep='/')
-    print(search.path)
     isa.df <- dir(search.path, pattern=filename.pattern,
                   full.names=TRUE, ignore.case=TRUE,recursive=TRUE)
-    print(isa.df)
     if(length(isa.df)==0){
         return('todo')
     }
