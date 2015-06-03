@@ -37,8 +37,6 @@ get.wim.rdata <- function(wim.site,year,direction,
 
     env <- new.env()
     res <- load(file=isa.df,envir=env)
-    print(res)
-
     return (env[[res]])
 
 }
