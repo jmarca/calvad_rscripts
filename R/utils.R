@@ -132,6 +132,9 @@ extract_unique_lanes <- function(varnames=NULL,df=NULL){
     if(missing(varnames)){
         varnames <- names(df)
     }
+    if(is.data.frame(varnames)){
+        varnames <- names(varnames)
+    }
     keepvars <- grep('[r|l]\\d+$',x=varnames,perl=TRUE,value=TRUE)
     res <- regexpr("([rl]\\d+)",keepvars,perl=TRUE)
     c(unique(do.call(rbind, lapply(seq_along(res), function(i) {

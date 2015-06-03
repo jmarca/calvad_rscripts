@@ -46,4 +46,17 @@ test_that("can extract unique lanes from vds data",{
 
 })
 
+test_that("passing a data.frame as unnamed first arg isn't fatal",{
+    site_no <- 37
+    direction <- 'S'
+
+    my_df <- get.wim.rdata(wim.site=site_no,
+                           direction=direction,
+                           wim.path=path,
+                           year=year)
+    lanes <- extract_unique_lanes(my_df)
+    expect_that(sort(lanes),equals(c('r1','r2','r3')))
+
+})
+
 result <- rcouchutils::couch.deletedb(parts)
