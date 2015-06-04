@@ -6,12 +6,13 @@
 #' @param year the year
 #' @param detector.id the detector id
 #' @param imputation.name which imputation is this? self, raw, truck,
-#' whatever.  will be used in the couchdb stored row
+#'     whatever.  will be used in the couchdb stored row
 #' @param maxiter default 100
 #' @param db the couchdb tracking db, defaults to vdsdata\%2ftracking
-#' @return itercount, the total count of iterations that hit the "max
-#' iteration" limit.  Ideally this will be zero.  If not, the
-#' imputation that hit maxiter is likely unusable
+#' @return itercount, the total count of iterations that hit the
+#'     "max iteration" limit.  Ideally this will be zero.  If not, the
+#'     imputation that hit maxiter is likely unusable
+#' @export
 #'
 store.amelia.chains <- function(df.amelia,year,detector.id,
                                 imputation.name='',maxiter=100,
