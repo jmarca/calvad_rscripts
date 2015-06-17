@@ -219,3 +219,53 @@ make.amelia.output.file <- function(path,fname,seconds,year){
 make.amelia.output.pattern <- function(fname,year){
   paste(fname,'.*imputed.RData',sep='')
 }
+
+##' extract the detector id, year, from a filename
+##'
+##' This function will inspect the passed in filepath to extract the
+##' year and site information.  If it is a WIM output file, it will
+##' return site_no, direction and year.  If it is a VDS site, it will
+##' return the vds_id, year.
+##' @title decode_amelia_output_file
+##' @param filepath the full filename.  the path is required for
+##'     proper WIM file decoding
+##' @return a named vector.  A WIM file will have the names 'site_no,
+##'     direction, year', and a VDS file will have the names 'vds_id,
+##'     year'
+##'
+##' @author James E. Marca
+##' @export
+##'
+decode_amelia_output_file <- function(filepath){
+    ## for vds, pattern is vdsid, "ML" year, seconds, imputed.RData
+    ## for wim, the year is buried in the path, as in
+    ## 2012/37/S/wim37S.3600.imputed.RData
+    haswim <- grep(pattern='wim',x=filepath,perl=TRUE,ignore.case=TRUE)
+    result <- list()
+
+    if(length(haswim)>0){
+        ## a wim site, parse accordingly
+        wimpattern <- '(?<year>\\d{4})\\/(?<site_no>\\d+)\\/(?<direction>[[:alpha:]])\\/.*imputed.RData'
+
+        captures <- regexpr(pattern=wimpattern,text=filepath,perl=TRUE)
+        starts <- attr(captures,'capture.start')
+        ends <- starts + attr(captures,'capture.length')-1
+        result <- data.frame(t(substring (text=filepath,first=starts,last=ends)),
+                             stringsAsFactors = FALSE)
+        names(result) <- attr(captures,'capture.names')
+        result[,c('site_no','year')] <- as.numeric(result[,c('site_no','year')])
+    }else{
+        ## a vds site
+        ## example: 1211682_ML_2012.120.imputed.RData
+        ## all the info is in the filename part. no need to use path
+        vdspattern <- '(?<vds_id>\\d+)_ML_(?<year>\\d{4}).*imputed.RData'
+        captures <- regexpr(pattern=vdspattern,text=filepath,perl=TRUE)
+        starts <- attr(captures,'capture.start')
+        ends <- starts + attr(captures,'capture.length')-1
+        result <- data.frame(t(substring (text=filepath,first=starts,last=ends)),
+                             stringsAsFactors = FALSE)
+        names(result) <- attr(captures,'capture.names')
+        result[,c('vds_id','year')] <- as.numeric(result[,c('vds_id','year')])
+    }
+    result
+}
