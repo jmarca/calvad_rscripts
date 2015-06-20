@@ -1,4 +1,3 @@
-## library('Zelig')
 
 #' dump tsdf to a database file via write.csv
 #'
