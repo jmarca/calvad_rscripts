@@ -238,9 +238,12 @@ db.ready.dump <- function(imps,vds.id,path='.',year,con){
                        obs_count=imps$obs_count,
                        imputation=imps$imputation,
                        vol=imps$vol,
-                       occ=imps$occ,
-                       spd=imps$spd
+                       occ=imps$occ
+                       ##spd=imps$spd
                        )
+    if(length(imps$spd)>0){
+        dump$spd <- imps$spd
+    }
     dump$sd_vol <- NA
     dump$sd_occ <- NA
     dump$sd_spd <- NA
