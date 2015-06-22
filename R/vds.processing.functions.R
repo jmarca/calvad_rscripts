@@ -212,59 +212,59 @@ recode.lanes <- function(df){
   df
 }
 
-#' db ready dump: Dump out a CSV file that is ready for copying
-#' straight into a database
-#'
-#' @param imps the aggregated result of the amelia imputation run.  I
-#' expect that there wil be the following fields: ts, obs_count,
-#' imputation, vol, occ, and maybe speed.  I will assume that the
-#' sd_vol, sd_occ_and sd_spd are not there, and anyway are
-#' uninteresting and wrong so I long ago started just stashing NA in
-#' those columns.
-#' @param vds.id the detector's id
-#' @param path where to save the output CSV file
-#' @param year the year
-#' @param con a connection to the database so that I can determine
-#' database-friendly column names
-#' @return just falls off the end.  Generates a CSV file that you can
-#' copy into the database under the directory "path"
-db.ready.dump <- function(imps,vds.id,path='.',year,con){
-    target.file <- make.db.dump.output.file(path,vds.id,year)
-    dump.file.size <- file.info(target.file)$size
+## #' db ready dump: Dump out a CSV file that is ready for copying
+## #' straight into a database
+## #'
+## #' @param imps the aggregated result of the amelia imputation run.  I
+## #' expect that there wil be the following fields: ts, obs_count,
+## #' imputation, vol, occ, and maybe speed.  I will assume that the
+## #' sd_vol, sd_occ_and sd_spd are not there, and anyway are
+## #' uninteresting and wrong so I long ago started just stashing NA in
+## #' those columns.
+## #' @param vds.id the detector's id
+## #' @param path where to save the output CSV file
+## #' @param year the year
+## #' @param con a connection to the database so that I can determine
+## #' database-friendly column names
+## #' @return just falls off the end.  Generates a CSV file that you can
+## #' copy into the database under the directory "path"
+## db.ready.dump <- function(imps,vds.id,path='.',year,con){
+##     target.file <- make.db.dump.output.file(path,vds.id,year)
+##     dump.file.size <- file.info(target.file)$size
 
-    ## do this to get the order the same as last time
-    dump <- data.frame(vds_id=vds.id,
-                       ts=imps$ts,
-                       obs_count=imps$obs_count,
-                       imputation=imps$imputation,
-                       vol=imps$vol,
-                       occ=imps$occ
-                       ##spd=imps$spd
-                       )
-    if(length(imps$spd)>0){
-        dump$spd <- imps$spd
-    }
-    dump$sd_vol <- NA
-    dump$sd_occ <- NA
-    dump$sd_spd <- NA
+##     ## do this to get the order the same as last time
+##     dump <- data.frame(vds_id=vds.id,
+##                        ts=imps$ts,
+##                        obs_count=imps$obs_count,
+##                        imputation=imps$imputation,
+##                        vol=imps$vol,
+##                        occ=imps$occ
+##                        ##spd=imps$spd
+##                        )
+##     if(length(imps$spd)>0){
+##         dump$spd <- imps$spd
+##     }
+##     dump$sd_vol <- NA
+##     dump$sd_occ <- NA
+##     dump$sd_spd <- NA
 
-    db.legal.names  <- RPostgreSQL::make.db.names(con,names(dump),
-                                     unique=TRUE,
-                                     allow.keywords=FALSE)
-    names(dump) <- db.legal.names
-    ## fs write
+##     db.legal.names  <- RPostgreSQL::make.db.names(con,names(dump),
+##                                      unique=TRUE,
+##                                      allow.keywords=FALSE)
+##     names(dump) <- db.legal.names
+##     ## fs write
 
-    ## need to append, not overwrite the target file for each imputation
+##     ## need to append, not overwrite the target file for each imputation
 
-    if(is.na(dump.file.size)){
-        write.csv(dump,file=target.file,row.names = FALSE,
-                  col.names=TRUE,append=FALSE)
-    }else{
-        write.csv(dump,file=target.file,row.names = FALSE,
-                  col.names=FALSE,append=TRUE)
-    }
-    target.file
-}
+##     if(is.na(dump.file.size)){
+##         write.csv(dump,file=target.file,row.names = FALSE,
+##                   col.names=TRUE,append=FALSE)
+##     }else{
+##         write.csv(dump,file=target.file,row.names = FALSE,
+##                   col.names=FALSE,append=TRUE)
+##     }
+##     target.file
+## }
 
 #' verify imputation was okay
 #'
