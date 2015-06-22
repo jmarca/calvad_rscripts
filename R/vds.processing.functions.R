@@ -260,6 +260,7 @@ db.ready.dump <- function(imps,vds.id,path='.',year,con){
         write.csv(dump,file=target.file,row.names = FALSE,
                   col.names=FALSE,append=TRUE)
     }
+    target.file
 }
 
 #' verify imputation was okay
