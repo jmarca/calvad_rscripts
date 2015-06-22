@@ -298,56 +298,56 @@ verify.imputation.was.okay <- function(fname,path,year,seconds,df.vds.agg.impute
   okay
 }
 
-#' verify db dump
-#'
-#' rather horrid little script with a difficult purpose.
-#'
-#' as far as I can tell, the idea is that if the output file saved
-#' okay, then write out a different version that can be easily
-#' ingested into a database of some sort as a "dat' file using the
-#' function db.ready.dump
-#'
-#' But if the file write wasn't okay, and/or if the imputed data does
-#' not have multipleimputations and if the imputed data result code
-#' does not equal 1, then do not write out the data as a dat file
-#'
-#' @param fname the important part of the file name
-#' @param path the path
-#' @param year the year
-#' @param seconds the seconds of aggregation
-#' @param con the postgresql database connection
-#' @param df.vds.agg.imputed optional, if empty, then this will be read
-#' from the file data you just passed in.  If not empty, then the file
-#' will be checked to make sure it ihas a reasonable, nonzero size,
-#' but otherwise will not be read.
-#' @return not sure what.  just falls off the end
-#'
-verify.db.dump <- function(fname,path,year,seconds,df.vds.agg.imputed,con){
-    vds.id <-  get.vdsid.from.filename(fname)
-    target.file <- make.db.dump.output.file(path,vds.id,year)
-    if(is.na(file.info(target.file)$size)){
-        ## no ticket, no pass
-        ## load the fname, get the amelia output, dump it
-        if(missing(df.vds.agg.imputed)){
-            df.vds.agg.imputed <- get.amelia.vds.file.local(vds.id,
-                                                            path=path,
-                                                            year=year)
-        }
+## #' verify db dump
+## #'
+## #' rather horrid little script with a difficult purpose.
+## #'
+## #' as far as I can tell, the idea is that if the output file saved
+## #' okay, then write out a different version that can be easily
+## #' ingested into a database of some sort as a "dat' file using the
+## #' function db.ready.dump
+## #'
+## #' But if the file write wasn't okay, and/or if the imputed data does
+## #' not have multipleimputations and if the imputed data result code
+## #' does not equal 1, then do not write out the data as a dat file
+## #'
+## #' @param fname the important part of the file name
+## #' @param path the path
+## #' @param year the year
+## #' @param seconds the seconds of aggregation
+## #' @param con the postgresql database connection
+## #' @param df.vds.agg.imputed optional, if empty, then this will be read
+## #' from the file data you just passed in.  If not empty, then the file
+## #' will be checked to make sure it ihas a reasonable, nonzero size,
+## #' but otherwise will not be read.
+## #' @return not sure what.  just falls off the end
+## #'
+## verify.db.dump <- function(fname,path,year,seconds,df.vds.agg.imputed,con){
+##     vds.id <-  get.vdsid.from.filename(fname)
+##     target.file <- make.db.dump.output.file(path,vds.id,year)
+##     if(is.na(file.info(target.file)$size)){
+##         ## no ticket, no pass
+##         ## load the fname, get the amelia output, dump it
+##         if(missing(df.vds.agg.imputed)){
+##             df.vds.agg.imputed <- get.amelia.vds.file.local(vds.id,
+##                                                             path=path,
+##                                                             year=year)
+##         }
 
-        aout.agg <- NULL
-        if(df.vds.agg.imputed$code == 1 &&
-           length(df.vds.agg.imputed$imputations)>1){
-            aout.agg <- condense.amelia.output(df.vds.agg.imputed)
-            db.ready.dump(aout.agg,vds.id,path,year,con=con)
-        }else{
-            print(paste('not writing dat file to',target.file,'as the imputation is not any good.  Code:',df.vds.agg.imputed$code,'imputations:',length(df.vds.agg.imputed$imputations)))
-            target.file <- NULL
-        }
-    }else{
-        print(paste('not writing dat file to',target.file,'as it already exists'))
-    }
-    target.file
-}
+##         aout.agg <- NULL
+##         if(df.vds.agg.imputed$code == 1 &&
+##            length(df.vds.agg.imputed$imputations)>1){
+##             aout.agg <- condense.amelia.output(df.vds.agg.imputed)
+##             db.ready.dump(aout.agg,vds.id,path,year,con=con)
+##         }else{
+##             print(paste('not writing dat file to',target.file,'as the imputation is not any good.  Code:',df.vds.agg.imputed$code,'imputations:',length(df.vds.agg.imputed$imputations)))
+##             target.file <- NULL
+##         }
+##     }else{
+##         print(paste('not writing dat file to',target.file,'as it already exists'))
+##     }
+##     target.file
+## }
 
 
 ## #' get.vds.file: get the Amelia-imputed VDS file from the filesystem

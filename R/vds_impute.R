@@ -158,7 +158,17 @@ self.agg.impute.VDS.site.no.plots <- function(fname,f,path,year,seconds,goodfact
 
             if(df.vds.agg.imputed$code==1){
                 ## that means good imputation
-                verify.db.dump(fname,path,year,seconds,df.vds.agg.imputed,con)
+                ##
+                ## verify.db.dump writes out the imputation, sort of.
+                ## It ignores lanes and instead sums up all volume and
+                ## occupancy for the hour at the site.  Not sure what
+                ## it's purpose is these days, as I NEVER ingest the
+                ## data into postgresql any more, so I am commenting
+                ## it out and generally moving towards striking it
+                ## from this repository.
+                ##
+                ## verify.db.dump(fname,path,year,seconds,df.vds.agg.imputed,con)
+                ##
                 returnval <- 1
             }else{
                 returnval <- paste(df.vds.agg.imputed$code,'message',df.vds.agg.imputed$message)
