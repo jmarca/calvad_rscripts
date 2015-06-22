@@ -400,99 +400,99 @@ get.vdsid.from.filename <- function(filename){
 }
 
 
-#' impute aggregate
-#'
-#' this function will take an amelia output object, and then return
-#' a data frame with the imputed data aggregated up to one hour
-#' (3600 seconds)
-#'
-#' It does not combine imputations.  Rather, the short period
-#' imputations are bunched up to one hour, but the various imputations
-#' themselves are left all independent.
-#'
-#' This probably is mathematically different from first merging at the
-#' lower time period finding the predicted median, then aggregating up
-#' to an hour.
-#'
-#' @param aout the amelia output object
-#' @param hour what an hour is.  number of seconds defaults to 3600,
-#' but hey, if you want a different aggregate you can use something
-#' else
-#' @return the aggregated data as a dataframe
-impute.aggregate <- function(aout,hour=3600){
-    lanes <- longway.guess.lanes(aout$imputations[[1]])
-    print(paste('in impute.aggregate, with lanes=',lanes))
-    n.idx <- vds.lane.numbers(lanes,c("n"))
-    o.idx <- vds.lane.numbers(lanes,c("o"))
-    s.idx <- vds.lane.numbers(lanes,c("s"))
-    s.idx <- names(aout$imputations[[1]])[is.element(
-        names(aout$imputations[[1]]),
-        s.idx)]
-    ## if there are not speeds, then s.idx[1] is NA
-    allimp <- NULL
-    for(i in 1:(length(aout$imputations))){
-        aout$imputations[[i]][,'imputation']=i
-        allimp <- rbind(allimp,aout$imputations[[i]])
-    }
+## #' impute aggregate
+## #'
+## #' this function will take an amelia output object, and then return
+## #' a data frame with the imputed data aggregated up to one hour
+## #' (3600 seconds)
+## #'
+## #' It does not combine imputations.  Rather, the short period
+## #' imputations are bunched up to one hour, but the various imputations
+## #' themselves are left all independent.
+## #'
+## #' This probably is mathematically different from first merging at the
+## #' lower time period finding the predicted median, then aggregating up
+## #' to an hour.
+## #'
+## #' @param aout the amelia output object
+## #' @param hour what an hour is.  number of seconds defaults to 3600,
+## #' but hey, if you want a different aggregate you can use something
+## #' else
+## #' @return the aggregated data as a dataframe
+## impute.aggregate <- function(aout,hour=3600){
+##     lanes <- longway.guess.lanes(aout$imputations[[1]])
+##     print(paste('in impute.aggregate, with lanes=',lanes))
+##     n.idx <- vds.lane.numbers(lanes,c("n"))
+##     o.idx <- vds.lane.numbers(lanes,c("o"))
+##     s.idx <- vds.lane.numbers(lanes,c("s"))
+##     s.idx <- names(aout$imputations[[1]])[is.element(
+##         names(aout$imputations[[1]]),
+##         s.idx)]
+##     ## if there are not speeds, then s.idx[1] is NA
+##     allimp <- NULL
+##     for(i in 1:(length(aout$imputations))){
+##         aout$imputations[[i]][,'imputation']=i
+##         allimp <- rbind(allimp,aout$imputations[[i]])
+##     }
 
-    ## aggregate
-    ## print(paste('aggregate using sqldf'))
-    allimp$timeslot <- as.numeric(allimp$ts) - as.numeric(allimp$ts) %% hour
-    allimp$tick <- 1
-    all.names <- c(n.idx,o.idx,s.idx,'tick')
+##     ## aggregate
+##     ## print(paste('aggregate using sqldf'))
+##     allimp$timeslot <- as.numeric(allimp$ts) - as.numeric(allimp$ts) %% hour
+##     allimp$tick <- 1
+##     all.names <- c(n.idx,o.idx,s.idx,'tick')
 
-    select <- paste("select min(ts) as ts,imputation,",
-                    "total(tick) as tick,",
-                    "total(obs_count) as obs_count,",
-                    "total(",
-                    paste(n.idx,sep=' ',collapse='+'),
-                    ") as vol,",
-                    "total( (",
-                    paste(o.idx,sep=' ',collapse='+'),
-                    ")/", lanes," ) as occ"
-                    )
-    speed_select <- ""
+##     select <- paste("select min(ts) as ts,imputation,",
+##                     "total(tick) as tick,",
+##                     "total(obs_count) as obs_count,",
+##                     "total(",
+##                     paste(n.idx,sep=' ',collapse='+'),
+##                     ") as vol,",
+##                     "total( (",
+##                     paste(o.idx,sep=' ',collapse='+'),
+##                     ")/", lanes," ) as occ"
+##                     )
+##     speed_select <- ""
 
-    if(!is.na(s.idx[1])){
+##     if(!is.na(s.idx[1])){
 
-        speed_select <- paste(
-            ",total( (",
-            paste(s.idx,n.idx,sep='*',collapse='+'),
-            ") ) as spd"
-            )
-    }
+##         speed_select <- paste(
+##             ",total( (",
+##             paste(s.idx,n.idx,sep='*',collapse='+'),
+##             ") ) as spd"
+##             )
+##     }
 
-    from_clause <- 'from allimp group by timeslot, imputation'
+##     from_clause <- 'from allimp group by timeslot, imputation'
 
-    sqlstatement <- paste(select,speed_select,from_clause)
+##     sqlstatement <- paste(select,speed_select,from_clause)
 
-    ## print(sqlstatement)
-    df.agg <- sqldf::sqldf(sqlstatement,drv="RSQLite")
-    ## fix time
-    ## guess the units for truncate
-    units <- 'mins'
-    if(hour %% 3600 == 0){
-        units <- 'hours'
-    }else{
-        if(hour %% 60 != 0){
-            units <- 'secs'
-        }
-    }
-    df.agg$ts <- trunc(df.agg$ts,units=units)
-    attr(df.agg$ts,'tzone') <- 'UTC'
+##     ## print(sqlstatement)
+##     df.agg <- sqldf::sqldf(sqlstatement,drv="RSQLite")
+##     ## fix time
+##     ## guess the units for truncate
+##     units <- 'mins'
+##     if(hour %% 3600 == 0){
+##         units <- 'hours'
+##     }else{
+##         if(hour %% 60 != 0){
+##             units <- 'secs'
+##         }
+##     }
+##     df.agg$ts <- trunc(df.agg$ts,units=units)
+##     attr(df.agg$ts,'tzone') <- 'UTC'
 
-    ## fix the occ
-    df.agg[,'occ'] <- df.agg[,'occ']/df.agg[,'tick']
+##     ## fix the occ
+##     df.agg[,'occ'] <- df.agg[,'occ']/df.agg[,'tick']
 
-    ## fix up speed if needed
-    if(!is.na(s.idx[1])){
-        df.agg$spd <- df.agg$spd / df.agg$vol
-    }else{
-        df.agg$spd <- NA
-    }
-    df.agg$tick <- NULL
-    df.agg
-}
+##     ## fix up speed if needed
+##     if(!is.na(s.idx[1])){
+##         df.agg$spd <- df.agg$spd / df.agg$vol
+##     }else{
+##         df.agg$spd <- NA
+##     }
+##     df.agg$tick <- NULL
+##     df.agg
+## }
 
 #' hourly aggregate VDS site data for a year
 #'
