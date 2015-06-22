@@ -343,31 +343,32 @@ verify.db.dump <- function(fname,path,year,seconds,df.vds.agg.imputed=NA,con){
 }
 
 
-#' get.vds.file: get the Amelia-imputed VDS file from the filesystem
-#'
-#' This will create the right file name, then search for the right
-#' file below the passed in path.  Then it will load that file and
-#' return it.
-#'
-#' In the case that the Amelia run was rejected, the returned value
-#' will be NULL, not an amelia object.
-#'
-#' @param vds.id the VDS id
-#' @param path the root directory to search
-#' @param year the year
-#' @return an Amelia output object, or NULL if a file can't be found
-get.vds.file <- function(vds.id,path,year){
+## #' get.vds.file: get the Amelia-imputed VDS file from the filesystem
+## #'
+## #' This will create the right file name, then search for the right
+## #' file below the passed in path.  Then it will load that file and
+## #' return it.
+## #'
+## #' In the case that the Amelia run was rejected, the returned value
+## #' will be NULL, not an amelia object.
+## #'
+## #' @param vds.id the VDS id
+## #' @param path the root directory to search
+## #' @param year the year
+## #' @return an Amelia output object, or NULL if a file can't be found
+## get.vds.file <- function(vds.id,path,year){
+##
+##   amelia.dump.file <- make.amelia.output.pattern(vds.id,year)
+##   files <- dir(path, pattern=amelia.dump.file,
+##                    full.names=TRUE, ignore.case=TRUE,recursive=TRUE)
+##   df.vds.agg.imputed <- NULL
+##   if(length(files)>0){
+##     print(paste('loading stored vds amelia object from file',files[1]))
+##     load.result <-  load(file=files[1])
+##   }
+##   df.vds.agg.imputed
+## }
 
-  amelia.dump.file <- make.amelia.output.pattern(vds.id,year)
-  files <- dir(path, pattern=amelia.dump.file,
-                   full.names=TRUE, ignore.case=TRUE,recursive=TRUE)
-  df.vds.agg.imputed <- NULL
-  if(length(files)>0){
-    print(paste('loading stored vds amelia object from file',files[1]))
-    load.result <-  load(file=files[1])
-  }
-  df.vds.agg.imputed
-}
 
 #' Make a file name for the DB dump routine
 #'
