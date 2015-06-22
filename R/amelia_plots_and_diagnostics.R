@@ -1,4 +1,3 @@
-## library('lattice')
 
 pf <- function(x,y){lattice::panel.smoothScatter(x,y,nbin=c(200,200))}
 day.of.week <- c('Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday')

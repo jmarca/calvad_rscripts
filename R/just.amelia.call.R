@@ -1,4 +1,3 @@
-## library('Amelia')
 ## everything options are:
 ## ,count.pattern = "^(not|empty|heavyheavy|nl|nr)"
 ## ,mean.pattern="(^ol|^or|_weight|_axle|_length|_speed)"

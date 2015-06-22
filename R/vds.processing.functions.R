@@ -212,55 +212,59 @@ recode.lanes <- function(df){
   df
 }
 
-#' db ready dump: Dump out a CSV file that is ready for copying
-#' straight into a database
-#'
-#' @param imps the aggregated result of the amelia imputation run.  I
-#' expect that there wil be the following fields: ts, obs_count,
-#' imputation, vol, occ, and maybe speed.  I will assume that the
-#' sd_vol, sd_occ_and sd_spd are not there, and anyway are
-#' uninteresting and wrong so I long ago started just stashing NA in
-#' those columns.
-#' @param vds.id the detector's id
-#' @param path where to save the output CSV file
-#' @param year the year
-#' @param con a connection to the database so that I can determine
-#' database-friendly column names
-#' @return just falls off the end.  Generates a CSV file that you can
-#' copy into the database under the directory "path"
-db.ready.dump <- function(imps,vds.id,path='.',year,con){
-    target.file <- make.db.dump.output.file(path,vds.id,year)
-    dump.file.size <- file.info(target.file)$size
+## #' db ready dump: Dump out a CSV file that is ready for copying
+## #' straight into a database
+## #'
+## #' @param imps the aggregated result of the amelia imputation run.  I
+## #' expect that there wil be the following fields: ts, obs_count,
+## #' imputation, vol, occ, and maybe speed.  I will assume that the
+## #' sd_vol, sd_occ_and sd_spd are not there, and anyway are
+## #' uninteresting and wrong so I long ago started just stashing NA in
+## #' those columns.
+## #' @param vds.id the detector's id
+## #' @param path where to save the output CSV file
+## #' @param year the year
+## #' @param con a connection to the database so that I can determine
+## #' database-friendly column names
+## #' @return just falls off the end.  Generates a CSV file that you can
+## #' copy into the database under the directory "path"
+## db.ready.dump <- function(imps,vds.id,path='.',year,con){
+##     target.file <- make.db.dump.output.file(path,vds.id,year)
+##     dump.file.size <- file.info(target.file)$size
 
-    ## do this to get the order the same as last time
-    dump <- data.frame(vds_id=vds.id,
-                       ts=imps$ts,
-                       obs_count=imps$obs_count,
-                       imputation=imps$imputation,
-                       vol=imps$vol,
-                       occ=imps$occ,
-                       spd=imps$spd
-                       )
-    dump$sd_vol <- NA
-    dump$sd_occ <- NA
-    dump$sd_spd <- NA
+##     ## do this to get the order the same as last time
+##     dump <- data.frame(vds_id=vds.id,
+##                        ts=imps$ts,
+##                        obs_count=imps$obs_count,
+##                        imputation=imps$imputation,
+##                        vol=imps$vol,
+##                        occ=imps$occ
+##                        ##spd=imps$spd
+##                        )
+##     if(length(imps$spd)>0){
+##         dump$spd <- imps$spd
+##     }
+##     dump$sd_vol <- NA
+##     dump$sd_occ <- NA
+##     dump$sd_spd <- NA
 
-    db.legal.names  <- RPostgreSQL::make.db.names(con,names(dump),
-                                     unique=TRUE,
-                                     allow.keywords=FALSE)
-    names(dump) <- db.legal.names
-    ## fs write
+##     db.legal.names  <- RPostgreSQL::make.db.names(con,names(dump),
+##                                      unique=TRUE,
+##                                      allow.keywords=FALSE)
+##     names(dump) <- db.legal.names
+##     ## fs write
 
-    ## need to append, not overwrite the target file for each imputation
+##     ## need to append, not overwrite the target file for each imputation
 
-    if(is.na(dump.file.size)){
-        write.csv(dump,file=target.file,row.names = FALSE,
-                  col.names=TRUE,append=FALSE)
-    }else{
-        write.csv(dump,file=target.file,row.names = FALSE,
-                  col.names=FALSE,append=TRUE)
-    }
-}
+##     if(is.na(dump.file.size)){
+##         write.csv(dump,file=target.file,row.names = FALSE,
+##                   col.names=TRUE,append=FALSE)
+##     }else{
+##         write.csv(dump,file=target.file,row.names = FALSE,
+##                   col.names=FALSE,append=TRUE)
+##     }
+##     target.file
+## }
 
 #' verify imputation was okay
 #'
@@ -294,80 +298,84 @@ verify.imputation.was.okay <- function(fname,path,year,seconds,df.vds.agg.impute
   okay
 }
 
-#' verify db dump
-#'
-#' rather horrid little script with a difficult purpose.
-#'
-#' as far as I can tell, the idea is that if the output file saved
-#' okay, then write out a different version that can be easily
-#' ingested into a database of some sort as a "dat' file using the
-#' function db.ready.dump
-#'
-#' But if the file write wasn't okay, and/or if the imputed data does
-#' not have multipleimputations and if the imputed data result code
-#' does not equal 1, then do not write out the data as a dat file
-#'
-#' @param fname the important part of the file name
-#' @param path the path
-#' @param year the year
-#' @param seconds the seconds of aggregation
-#' @param con the postgresql database connection
-#' @param df.vds.agg.imputed optional, if empty, then this will be read
-#' from the file data you just passed in.  If not empty, then the file
-#' will be checked to make sure it ihas a reasonable, nonzero size,
-#' but otherwise will not be read.
-#' @return not sure what.  just falls off the end
-#'
-verify.db.dump <- function(fname,path,year,seconds,df.vds.agg.imputed=NA,con){
-    vds.id <-  get.vdsid.from.filename(fname)
-    target.file <- make.db.dump.output.file(path,vds.id,year)
-    load.result='okay'
-    if(is.na(file.info(target.file)$size)){
-        ## no ticket, no pass
-        ## load the fname, get the amelia output, dump it
-        if(is.na(df.vds.agg.imputed)){
-            df.vds.agg.imputed <- get.vds.file(vds.id,path,year)
-        }
+## #' verify db dump
+## #'
+## #' rather horrid little script with a difficult purpose.
+## #'
+## #' as far as I can tell, the idea is that if the output file saved
+## #' okay, then write out a different version that can be easily
+## #' ingested into a database of some sort as a "dat' file using the
+## #' function db.ready.dump
+## #'
+## #' But if the file write wasn't okay, and/or if the imputed data does
+## #' not have multipleimputations and if the imputed data result code
+## #' does not equal 1, then do not write out the data as a dat file
+## #'
+## #' @param fname the important part of the file name
+## #' @param path the path
+## #' @param year the year
+## #' @param seconds the seconds of aggregation
+## #' @param con the postgresql database connection
+## #' @param df.vds.agg.imputed optional, if empty, then this will be read
+## #' from the file data you just passed in.  If not empty, then the file
+## #' will be checked to make sure it ihas a reasonable, nonzero size,
+## #' but otherwise will not be read.
+## #' @return not sure what.  just falls off the end
+## #'
+## verify.db.dump <- function(fname,path,year,seconds,df.vds.agg.imputed,con){
+##     vds.id <-  get.vdsid.from.filename(fname)
+##     target.file <- make.db.dump.output.file(path,vds.id,year)
+##     if(is.na(file.info(target.file)$size)){
+##         ## no ticket, no pass
+##         ## load the fname, get the amelia output, dump it
+##         if(missing(df.vds.agg.imputed)){
+##             df.vds.agg.imputed <- get.amelia.vds.file.local(vds.id,
+##                                                             path=path,
+##                                                             year=year)
+##         }
 
-        aout.agg <- data.frame(vds_id=vds.id)
-        ## only go if df.vds.agg.imputed is sane
-        if(load.result!='reject' &
-           ( length(df.vds.agg.imputed$imputations)>1 &
-                df.vds.agg.imputed$code==1)){
-            aout.agg <- impute.aggregate(df.vds.agg.imputed)
-        }
-        db.ready.dump(aout.agg,vds.id,path,year,con=con)
-    }else{
-        print(paste('not writing dat file to',target.file,'as it already exists'))
-    }
-}
+##         aout.agg <- NULL
+##         if(df.vds.agg.imputed$code == 1 &&
+##            length(df.vds.agg.imputed$imputations)>1){
+##             aout.agg <- condense.amelia.output(df.vds.agg.imputed)
+##             db.ready.dump(aout.agg,vds.id,path,year,con=con)
+##         }else{
+##             print(paste('not writing dat file to',target.file,'as the imputation is not any good.  Code:',df.vds.agg.imputed$code,'imputations:',length(df.vds.agg.imputed$imputations)))
+##             target.file <- NULL
+##         }
+##     }else{
+##         print(paste('not writing dat file to',target.file,'as it already exists'))
+##     }
+##     target.file
+## }
 
 
-#' get.vds.file: get the Amelia-imputed VDS file from the filesystem
-#'
-#' This will create the right file name, then search for the right
-#' file below the passed in path.  Then it will load that file and
-#' return it.
-#'
-#' In the case that the Amelia run was rejected, the returned value
-#' will be NULL, not an amelia object.
-#'
-#' @param vds.id the VDS id
-#' @param path the root directory to search
-#' @param year the year
-#' @return an Amelia output object, or NULL if a file can't be found
-get.vds.file <- function(vds.id,path,year){
+## #' get.vds.file: get the Amelia-imputed VDS file from the filesystem
+## #'
+## #' This will create the right file name, then search for the right
+## #' file below the passed in path.  Then it will load that file and
+## #' return it.
+## #'
+## #' In the case that the Amelia run was rejected, the returned value
+## #' will be NULL, not an amelia object.
+## #'
+## #' @param vds.id the VDS id
+## #' @param path the root directory to search
+## #' @param year the year
+## #' @return an Amelia output object, or NULL if a file can't be found
+## get.vds.file <- function(vds.id,path,year){
+##
+##   amelia.dump.file <- make.amelia.output.pattern(vds.id,year)
+##   files <- dir(path, pattern=amelia.dump.file,
+##                    full.names=TRUE, ignore.case=TRUE,recursive=TRUE)
+##   df.vds.agg.imputed <- NULL
+##   if(length(files)>0){
+##     print(paste('loading stored vds amelia object from file',files[1]))
+##     load.result <-  load(file=files[1])
+##   }
+##   df.vds.agg.imputed
+## }
 
-  amelia.dump.file <- make.amelia.output.pattern(vds.id,year)
-  files <- dir(path, pattern=amelia.dump.file,
-                   full.names=TRUE, ignore.case=TRUE,recursive=TRUE)
-  df.vds.agg.imputed <- NULL
-  if(length(files)>0){
-    print(paste('loading stored vds amelia object from file',files[1]))
-    load.result <-  load(file=files[1])
-  }
-  df.vds.agg.imputed
-}
 
 #' Make a file name for the DB dump routine
 #'
@@ -400,99 +408,99 @@ get.vdsid.from.filename <- function(filename){
 }
 
 
-#' impute aggregate
-#'
-#' this function will take an amelia output object, and then return
-#' a data frame with the imputed data aggregated up to one hour
-#' (3600 seconds)
-#'
-#' It does not combine imputations.  Rather, the short period
-#' imputations are bunched up to one hour, but the various imputations
-#' themselves are left all independent.
-#'
-#' This probably is mathematically different from first merging at the
-#' lower time period finding the predicted median, then aggregating up
-#' to an hour.
-#'
-#' @param aout the amelia output object
-#' @param hour what an hour is.  number of seconds defaults to 3600,
-#' but hey, if you want a different aggregate you can use something
-#' else
-#' @return the aggregated data as a dataframe
-impute.aggregate <- function(aout,hour=3600){
-    lanes <- longway.guess.lanes(aout$imputations[[1]])
-    print(paste('in impute.aggregate, with lanes=',lanes))
-    n.idx <- vds.lane.numbers(lanes,c("n"))
-    o.idx <- vds.lane.numbers(lanes,c("o"))
-    s.idx <- vds.lane.numbers(lanes,c("s"))
-    s.idx <- names(aout$imputations[[1]])[is.element(
-        names(aout$imputations[[1]]),
-        s.idx)]
-    ## if there are not speeds, then s.idx[1] is NA
-    allimp <- NULL
-    for(i in 1:(length(aout$imputations))){
-        aout$imputations[[i]][,'imputation']=i
-        allimp <- rbind(allimp,aout$imputations[[i]])
-    }
+## #' impute aggregate
+## #'
+## #' this function will take an amelia output object, and then return
+## #' a data frame with the imputed data aggregated up to one hour
+## #' (3600 seconds)
+## #'
+## #' It does not combine imputations.  Rather, the short period
+## #' imputations are bunched up to one hour, but the various imputations
+## #' themselves are left all independent.
+## #'
+## #' This probably is mathematically different from first merging at the
+## #' lower time period finding the predicted median, then aggregating up
+## #' to an hour.
+## #'
+## #' @param aout the amelia output object
+## #' @param hour what an hour is.  number of seconds defaults to 3600,
+## #' but hey, if you want a different aggregate you can use something
+## #' else
+## #' @return the aggregated data as a dataframe
+## impute.aggregate <- function(aout,hour=3600){
+##     lanes <- longway.guess.lanes(aout$imputations[[1]])
+##     print(paste('in impute.aggregate, with lanes=',lanes))
+##     n.idx <- vds.lane.numbers(lanes,c("n"))
+##     o.idx <- vds.lane.numbers(lanes,c("o"))
+##     s.idx <- vds.lane.numbers(lanes,c("s"))
+##     s.idx <- names(aout$imputations[[1]])[is.element(
+##         names(aout$imputations[[1]]),
+##         s.idx)]
+##     ## if there are not speeds, then s.idx[1] is NA
+##     allimp <- NULL
+##     for(i in 1:(length(aout$imputations))){
+##         aout$imputations[[i]][,'imputation']=i
+##         allimp <- rbind(allimp,aout$imputations[[i]])
+##     }
 
-    ## aggregate
-    ## print(paste('aggregate using sqldf'))
-    allimp$timeslot <- as.numeric(allimp$ts) - as.numeric(allimp$ts) %% hour
-    allimp$tick <- 1
-    all.names <- c(n.idx,o.idx,s.idx,'tick')
+##     ## aggregate
+##     ## print(paste('aggregate using sqldf'))
+##     allimp$timeslot <- as.numeric(allimp$ts) - as.numeric(allimp$ts) %% hour
+##     allimp$tick <- 1
+##     all.names <- c(n.idx,o.idx,s.idx,'tick')
 
-    select <- paste("select min(ts) as ts,imputation,",
-                    "total(tick) as tick,",
-                    "total(obs_count) as obs_count,",
-                    "total(",
-                    paste(n.idx,sep=' ',collapse='+'),
-                    ") as vol,",
-                    "total( (",
-                    paste(o.idx,sep=' ',collapse='+'),
-                    ")/", lanes," ) as occ"
-                    )
-    speed_select <- ""
+##     select <- paste("select min(ts) as ts,imputation,",
+##                     "total(tick) as tick,",
+##                     "total(obs_count) as obs_count,",
+##                     "total(",
+##                     paste(n.idx,sep=' ',collapse='+'),
+##                     ") as vol,",
+##                     "total( (",
+##                     paste(o.idx,sep=' ',collapse='+'),
+##                     ")/", lanes," ) as occ"
+##                     )
+##     speed_select <- ""
 
-    if(!is.na(s.idx[1])){
+##     if(!is.na(s.idx[1])){
 
-        speed_select <- paste(
-            ",total( (",
-            paste(s.idx,n.idx,sep='*',collapse='+'),
-            ") ) as spd"
-            )
-    }
+##         speed_select <- paste(
+##             ",total( (",
+##             paste(s.idx,n.idx,sep='*',collapse='+'),
+##             ") ) as spd"
+##             )
+##     }
 
-    from_clause <- 'from allimp group by timeslot, imputation'
+##     from_clause <- 'from allimp group by timeslot, imputation'
 
-    sqlstatement <- paste(select,speed_select,from_clause)
+##     sqlstatement <- paste(select,speed_select,from_clause)
 
-    ## print(sqlstatement)
-    df.agg <- sqldf::sqldf(sqlstatement,drv="RSQLite")
-    ## fix time
-    ## guess the units for truncate
-    units <- 'mins'
-    if(hour %% 3600 == 0){
-        units <- 'hours'
-    }else{
-        if(hour %% 60 != 0){
-            units <- 'secs'
-        }
-    }
-    df.agg$ts <- trunc(df.agg$ts,units=units)
-    attr(df.agg$ts,'tzone') <- 'UTC'
+##     ## print(sqlstatement)
+##     df.agg <- sqldf::sqldf(sqlstatement,drv="RSQLite")
+##     ## fix time
+##     ## guess the units for truncate
+##     units <- 'mins'
+##     if(hour %% 3600 == 0){
+##         units <- 'hours'
+##     }else{
+##         if(hour %% 60 != 0){
+##             units <- 'secs'
+##         }
+##     }
+##     df.agg$ts <- trunc(df.agg$ts,units=units)
+##     attr(df.agg$ts,'tzone') <- 'UTC'
 
-    ## fix the occ
-    df.agg[,'occ'] <- df.agg[,'occ']/df.agg[,'tick']
+##     ## fix the occ
+##     df.agg[,'occ'] <- df.agg[,'occ']/df.agg[,'tick']
 
-    ## fix up speed if needed
-    if(!is.na(s.idx[1])){
-        df.agg$spd <- df.agg$spd / df.agg$vol
-    }else{
-        df.agg$spd <- NA
-    }
-    df.agg$tick <- NULL
-    df.agg
-}
+##     ## fix up speed if needed
+##     if(!is.na(s.idx[1])){
+##         df.agg$spd <- df.agg$spd / df.agg$vol
+##     }else{
+##         df.agg$spd <- NA
+##     }
+##     df.agg$tick <- NULL
+##     df.agg
+## }
 
 #' hourly aggregate VDS site data for a year
 #'

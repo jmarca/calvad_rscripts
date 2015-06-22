@@ -172,6 +172,10 @@ medianed.aggregate.df <- function(df_combined,op=median){
 
     ## use sqldf...so much faster than zoo, aggregate
 
+    ## fix ts to make sure it is  POSIXct
+    df_combined$ts <- as.POSIXct(df_combined$ts)
+    attr(df_combined$ts,'tzone') <- 'UTC'
+
     sqlstatement <- paste("select ts,",
                           paste('median(',varnames,') as ',varnames,sep=' ',collapse=','),
                           'from df_combined group by ts',

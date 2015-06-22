@@ -1,4 +1,3 @@
-## library('Zelig')
 
 
 #' find wim gaps
