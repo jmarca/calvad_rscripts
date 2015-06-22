@@ -318,23 +318,23 @@ verify.imputation.was.okay <- function(fname,path,year,seconds,df.vds.agg.impute
 #' but otherwise will not be read.
 #' @return not sure what.  just falls off the end
 #'
-verify.db.dump <- function(fname,path,year,seconds,df.vds.agg.imputed=NA,con){
+verify.db.dump <- function(fname,path,year,seconds,df.vds.agg.imputed,con){
     vds.id <-  get.vdsid.from.filename(fname)
     target.file <- make.db.dump.output.file(path,vds.id,year)
     load.result='okay'
     if(is.na(file.info(target.file)$size)){
         ## no ticket, no pass
         ## load the fname, get the amelia output, dump it
-        if(is.na(df.vds.agg.imputed)){
-            df.vds.agg.imputed <- get.vds.file(vds.id,path,year)
+        if(is.missing(df.vds.agg.imputed)){
+            df.vds.agg.imputed <- get.amelia.vds.file.local(vdsid,
+                                                            path=path,
+                                                            year=year)
         }
 
-        aout.agg <- data.frame(vds_id=vds.id)
-        ## only go if df.vds.agg.imputed is sane
-        if(load.result!='reject' &
-           ( length(df.vds.agg.imputed$imputations)>1 &
-                df.vds.agg.imputed$code==1)){
-            aout.agg <- impute.aggregate(df.vds.agg.imputed)
+        aout.agg <- NULL
+        if(df.vds.agg.imputed$code == 1 &&
+               length(df.vds.agg.imputed$imputations)>1){
+            aout.agg <- condense.amelia.output(df.vds.agg.imputed)
         }
         db.ready.dump(aout.agg,vds.id,path,year,con=con)
     }else{
