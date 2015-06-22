@@ -68,6 +68,9 @@ self.agg.impute.VDS.site.no.plots <- function(fname,f,path,year,seconds,goodfact
 
         if(length(df.vds.agg[good.periods,'obs_count' ]) < (length(df.vds.agg$obs_count)/goodfactor)){
 
+            ## junk shot !
+            junk.shot(vds.id,f,fname,seconds,year,df)
+
             print ('not imputing, not enough good periods versus bad periods or something')
             returnval <- paste(length(df.vds.agg[good.periods,'obs_count' ]),'good periods vs', length(df.vds.agg$obs_count),'total periods at agglevel of',seconds,'seconds')
 
