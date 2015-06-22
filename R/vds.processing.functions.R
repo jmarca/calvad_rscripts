@@ -322,25 +322,28 @@ verify.imputation.was.okay <- function(fname,path,year,seconds,df.vds.agg.impute
 verify.db.dump <- function(fname,path,year,seconds,df.vds.agg.imputed,con){
     vds.id <-  get.vdsid.from.filename(fname)
     target.file <- make.db.dump.output.file(path,vds.id,year)
-    load.result='okay'
     if(is.na(file.info(target.file)$size)){
         ## no ticket, no pass
         ## load the fname, get the amelia output, dump it
-        if(is.missing(df.vds.agg.imputed)){
-            df.vds.agg.imputed <- get.amelia.vds.file.local(vdsid,
+        if(missing(df.vds.agg.imputed)){
+            df.vds.agg.imputed <- get.amelia.vds.file.local(vds.id,
                                                             path=path,
                                                             year=year)
         }
 
         aout.agg <- NULL
         if(df.vds.agg.imputed$code == 1 &&
-               length(df.vds.agg.imputed$imputations)>1){
+           length(df.vds.agg.imputed$imputations)>1){
             aout.agg <- condense.amelia.output(df.vds.agg.imputed)
+            db.ready.dump(aout.agg,vds.id,path,year,con=con)
+        }else{
+            print(paste('not writing dat file to',target.file,'as the imputation is not any good.  Code:',df.vds.agg.imputed$code,'imputations:',length(df.vds.agg.imputed$imputations)))
+            target.file <- NULL
         }
-        db.ready.dump(aout.agg,vds.id,path,year,con=con)
     }else{
         print(paste('not writing dat file to',target.file,'as it already exists'))
     }
+    target.file
 }
 
 
