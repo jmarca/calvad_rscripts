@@ -428,6 +428,7 @@ get.and.plot.vds.amelia <- function(pair,year,doplots=TRUE,
                                               vdsid=pair,
                                               year=year,
                                               force.plot=force.plot,
+                                              path=path,
                                               trackingdb = trackingdb)
 
             for(f2a in c(attach.files)){
@@ -439,6 +440,7 @@ get.and.plot.vds.amelia <- function(pair,year,doplots=TRUE,
             attach.files <- plot_vds.data(df.vds.agg,pair,year,
                                           fileprefix,subhead,
                                           force.plot=force.plot,
+                                          path=path,
                                           trackingdb=trackingdb)
             for(f2a in c(attach.files)){
                 rcouchutils::couch.attach(trackingdb,pair,f2a)
@@ -458,26 +460,28 @@ get.and.plot.vds.amelia <- function(pair,year,doplots=TRUE,
 #' imputation step just aggregates up to two minutes these days) then
 #' will do the plots
 #'
-#' @param fname the base name of the file
-#' @param f the full file name
+#' @param fname the base name of the file, will be passed to load.file
+#' @param f (optional) the full file name of a raw text file, will be
+#'     passed to load.file
 #' @param path either 'none', the remote server's service path, or the
-#' local file system's root directory for Amelia output
+#'     local file system's root directory for Amelia output
 #' @param year the year
 #' @param vds.id the VDS id or the wim id or the vds wim pair, I guess
 #' @param remote default is FALSE, meaning hit the local server; pass
-#' TRUE if you want hit a remote server or
-#' Note that accessing remote file server stuff is currently disabled
-#' @param server defaults to http://lysithia.its.uci.edu
-#' Note that accessing remote file server stuff is currently disabled
+#'     TRUE if you want hit a remote server or Note that accessing
+#'     remote file server stuff is currently disabled
+#' @param server defaults to http://lysithia.its.uci.edu Note that
+#'     accessing remote file server stuff is currently disabled
 #' @param force.plot defaults to FALSE, if TRUE will replot even if
-#' the plot appears to exist already
+#'     the plot appears to exist already
 #' @param trackingdb the CouchDB database that is being used to track
-#' detector status.  Will push the generated plot files to this
-#' database as attached files
+#'     detector status.  Will push the generated plot files to this
+#'     database as attached files
 #' @return some sort of status if there are problems, but nothing
-#' really.  This function is run for the side effect that plots get
-#' made and saved
+#'     really.  This function is run for the side effect that plots
+#'     get made and saved
 #' @export
+#'
 plot_raw.data <- function(fname,f,path,year,vds.id,
                           remote=FALSE,
                           server='lysithia.its.uci.edu',
@@ -515,16 +519,47 @@ plot_raw.data <- function(fname,f,path,year,vds.id,
   ## break out ts
   ts <- df$ts
   df$ts <- NULL
-  ## aggregate up to an hour?
-  df.vds.agg <- vds.aggregate(df,ts,seconds=3600)
-  if(is.null(dim(df.vds.agg))) return (FALSE)
+
+    ## aggregate up to an hour?
+    ## sometimes with raw data, you get empty, so loop here
+    sec_seq <- c(3600,1800,600,120)
+    idx <- 1
+    ## going for a reasonable number of periods for plot
+    goodratio <- 10
+    df.vds.agg <- NULL
+    while(idx <=  length(sec_seq) && goodratio > 5 ){
+        seconds <- sec_seq[idx]
+        df.vds.agg <- vds.aggregate(df,ts,seconds=seconds)
+        have_enough <- df.vds.agg$obs_count == seconds/30
+        ## print(table(have_enough))
+        if(length(have_enough[have_enough]>0)){
+            goodratio <- length(have_enough)/length(have_enough[have_enough])
+        }
+        if(goodratio > 5){
+            print('trying smaller time aggregation')
+            idx <- idx + 1
+        }
+    }
+    have_enough <- df.vds.agg$obs_count == seconds/30
+    ## print(paste('goodratio',goodratio,'have enough len',length(have_enough[have_enough])))
+
+    if(goodratio == 10){
+        ## cannot plot nothing at all
+        rcouchutils::couch.set.state(year,
+                                     id=vds.id,
+                                     doc=list('raw_plots'='not enough good periods to plot')
+                                    ,db=trackingdb)
+
+        return (FALSE)
+    }
 
   subhead='\npre-imputation data'
-  attach.files <- plot_vds.data(df.vds.agg,
+    attach.files <- plot_vds.data(df.vds.agg,
                                   vds.id,
                                   year,
                                   fileprefix,subhead,
                                   force.plot=force.plot,
+                                  path=path,
                                   trackingdb=trackingdb)
 
   for(f2a in attach.files){
@@ -593,13 +628,14 @@ check.for.plot.attachment <- function(vdsid,year,
 #'
 #' So you can add something like "imputed" to the file name to
 #' differentiate the imputed plots from the input data plots.
+#' @param path where to put the plots
 #' @param trackingdb defaults to 'vdsdata\%2ftracking' for checking if
 #' plots already done
 #' @return files.to.attach the files that you need to send off to
 #' couchdb tracking database.
 #' @export
 plot_amelia.plots  <- function(aout,plotvars,vdsid,year,force.plot=FALSE,
-                               fileprefix='amelia',
+                               fileprefix='amelia',path='.',
                                trackingdb){
 
     if(!force.plot){
@@ -611,7 +647,7 @@ plot_amelia.plots  <- function(aout,plotvars,vdsid,year,force.plot=FALSE,
         }
     }
     ## print('need to make plots')
-    savepath <- 'images'
+    savepath <- paste(path,'images',sep='/')
     if(!file.exists(savepath)){dir.create(savepath)}
     savepath <- paste(savepath,vdsid,sep='/')
     if(!file.exists(savepath)){dir.create(savepath)}
@@ -659,16 +695,18 @@ plot_amelia.plots  <- function(aout,plotvars,vdsid,year,force.plot=FALSE,
 #'
 #'     imagefileprefix <- paste(vdsid,year,fileprefix,sep='_')
 #'
-#' So you can add something like "imputed" to the file name to
-#' differentiate the imputed plots from the input data plots.
+#'     So you can add something like "imputed" to the file name to
+#'     differentiate the imputed plots from the input data plots.
 #' @param subhead Written on the plot
 #' @param force.plot defaults to FALSE.  If FALSE, and a file exists
+#' @param path where to put the plots
 #' @param trackingdb defaults to 'vdsdata\%2ftracking' for checking if
-#' plots already done
+#'     plots already done
 #' @return files.to.attach the files that you need to send off to
-#' couchdb tracking database.
+#'     couchdb tracking database.
 #' @export
-plot_vds.data  <- function(df.merged,vdsid,year,fileprefix=NULL,subhead='\npost imputation',force.plot=FALSE,trackingdb){
+#'
+plot_vds.data  <- function(df.merged,vdsid,year,fileprefix=NULL,subhead='\npost imputation',force.plot=FALSE,path='.',trackingdb){
     if(!force.plot){
         have.plot <- check.for.plot.attachment(vdsid,year,
                                                fileprefix,
@@ -681,15 +719,24 @@ plot_vds.data  <- function(df.merged,vdsid,year,fileprefix=NULL,subhead='\npost 
     varnames <- names(df.merged)
     ## make some diagnostic plots
 
+    z <- difftime(df.merged$ts[2],df.merged$ts[1])
+    formatted_time <- format(z)
+    ## fix 1 hours irritant
+    if(as.numeric(z,units='secs') == 3600){
+        ## one hour
+        formatted_time <- '1 hour'
+    }
+
     ## set up a reconfigured dataframe
     recoded <- recode.df.vds( df.merged )
+    ## print(summary(recoded))
 
     ## for coloring occ
     occmidpoint <- mean(sqrt(recoded$occupancy),na.rm=TRUE)
     volmidpoint <- mean((recoded$volume),na.rm=TRUE)
     daymidpoint <- 12
 
-    savepath <- 'images'
+    savepath <- paste(path,'images',sep='/')
     if(!file.exists(savepath)){dir.create(savepath)}
     savepath <- paste(savepath,vdsid,sep='/')
     if(!file.exists(savepath)){dir.create(savepath)}
@@ -710,28 +757,27 @@ plot_vds.data  <- function(df.merged,vdsid,year,fileprefix=NULL,subhead='\npost 
     p <- ggplot2::ggplot(recoded)
 
     q <- p +
-        ggplot2::labs(list(title=paste("Scatterplot hourly volume in each lane, by time of day and day of week, for",year,"at site",vdsid,subhead),
+        ggplot2::labs(list(title=paste(formatted_time,"volume in each lane, by time of day and day of week, for",year,"at site",vdsid,subhead),
                            x="time of day",
                            y="hourly volume per lane")) +
-            ggplot2::geom_point(ggplot2::aes(x = tod, y = volume,  color=occupancy),alpha=0.7) +
-                ggplot2::facet_grid(lane~day)+
-                    ggplot2::scale_color_gradient2(midpoint=occmidpoint,high=("blue"), mid=("red"), low=("yellow"))
+        ggplot2::geom_point(ggplot2::aes(x = tod, y = volume,  color=occupancy),alpha=0.7) +
+        ggplot2::facet_grid(lane~day)+
+        ggplot2::scale_color_gradient2(midpoint=occmidpoint,high=("blue"), mid=("red"), low=("yellow"))
 
     print(q)
-
     q <- p +
-        ggplot2::labs(list(title=paste("Scatterplot average hourly occupancy in each lane, by time of day and day of week, for",year,"at site",vdsid,subhead),
+        ggplot2::labs(list(title=paste(formatted_time,"avg occupancy in each lane, by time of day and day of week, for",year,"at site",vdsid,subhead),
                            x="time of day",
                            y="hourly avg occupancy per lane")) +
-            ggplot2::geom_point(ggplot2::aes(x = tod, y = occupancy,  color=volume),alpha=0.7) +
-                ggplot2::facet_grid(lane~day)+
-                    ggplot2::scale_color_gradient2(midpoint=volmidpoint,high=("blue"), mid=("red"), low=("yellow"))
+        ggplot2::geom_point(ggplot2::aes(x = tod, y = occupancy,  color=volume),alpha=0.7) +
+        ggplot2::facet_grid(lane~day)+
+        ggplot2::scale_color_gradient2(midpoint=volmidpoint,high=("blue"), mid=("red"), low=("yellow"))
 
     print(q)
 
 
     q <- p +
-        ggplot2::labs(list(title=paste("Scatterplot hourly volume vs occupancy in each lane, by day of week, for",year,"at site",vdsid,subhead),
+        ggplot2::labs(list(title=paste(formatted_time,"volume vs occupancy in each lane, by day of week, for",year,"at site",vdsid,subhead),
                            y="hourly volume per lane",
                            x="hourly avg occupancy per lane")) +
             ggplot2::geom_point(ggplot2::aes(y = volume, x = occupancy,  color=tod),alpha=0.7) +
@@ -740,13 +786,27 @@ plot_vds.data  <- function(df.merged,vdsid,year,fileprefix=NULL,subhead='\npost 
 
     print(q)
 
-    q <- p +
-        ggplot2::labs(list(title=paste("Scatterplot hourly volume vs time in each lane, by hour of day, for",year,"at site",vdsid,subhead),
-                           y="hourly volume per lane",
-                           x="date")) +
+    ## this last plot is gross if too many time periods
+    if(length(levels(as.factor(recoded$tod)))<30){
+
+        q <- p +
+            ggplot2::labs(list(title=paste(formatted_time,"volume vs time in each lane, by hour of day, for",year,"at site",vdsid,subhead),
+                               y="hourly volume per lane",
+                               x="date")) +
             ggplot2::geom_point(ggplot2::aes(x = ts, y = volume,  color=lane),alpha=0.6) +
-                ggplot2::facet_wrap(~tod,ncol=4) +
-                    ggplot2::scale_color_hue()
+            ggplot2::facet_wrap(~tod,ncol=4) +
+            ggplot2::scale_color_hue()
+
+    }else{
+        q <- p +
+            ggplot2::labs(list(title=paste(formatted_time,"volume vs time in each lane, by hour of day, for",year,"at site",vdsid,subhead),
+                               y="hourly volume per lane",
+                               x="date")) +
+            ggplot2::geom_point(ggplot2::aes(x = ts, y = volume,  color=lane),alpha=0.6) +
+            ggplot2::facet_grid(lane ~ .) +
+            ggplot2::scale_color_hue()
+
+    }
 
     print(q)
 

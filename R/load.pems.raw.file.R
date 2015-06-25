@@ -31,16 +31,18 @@ load.raw.file <- function (file="",skip=0,nlines=0){
 ##' next time
 ##'
 ##' @title load.file
-##' @param f the full file name
+##' @param f the full file name for the raw text.  optional if there
+##'     is an RData file, but if there isn't an RData file you need this
 ##' @param fname the business end of the name.  Typically the part
-##' that identifies the device id and the year.  It will be passed to
-##' the dir() function as part of the pattern to match when looking
-##' for the RData file.
-##' @param year the year of data
+##'     that identifies the device id and the year.  It will be passed
+##'     to the dir() function as part of the pattern to match when
+##'     looking for the RData file.
+##' @param year the year of data.  Used when searching for RData file
 ##' @param path the path to the root of the thing.
 ##' @return a data frame with the data in it
 ##' @export
 ##' @author James E. Marca
+##'
 load.file <- function(f,fname,year,path){
   ## is there a df available?
   df <- data.frame()
