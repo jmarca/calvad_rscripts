@@ -290,11 +290,13 @@ decode_amelia_output_file <- function(filepath){
 ##' @param trackingdb the couchdb database for saving state
 ##' @return TRUE if the times are offset, FALSE if not
 ##' @author James E. Marca
-##' @export
 ##'
 detect_broken_imputed_time <- function(fname,year,path,delete_it=FALSE,trackingdb){
     vds.id <-  get.vdsid.from.filename(fname)
     input_data <- load.file(fname=fname,year=year,path=path)
+    if(dim(input_data)[1] == 0){
+        return (TRUE)
+    }
     amelia_data <- get.amelia.vds.file.local(vdsid=vds.id,year=year,path=path)
     impute1 <- amelia_data$imputations[[1]]
 

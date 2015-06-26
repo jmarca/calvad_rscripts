@@ -23,13 +23,16 @@
 ##' @param file a full filename to load for processing
 ##' @param db a couchdb database to save state.  Optional and unused
 ##'     at the moment
+##' @param check_times if TRUE, will also double check that times of
+##'     VDS type data line up with the raw data
+##' @param file a full filename to load for processing
 ##' @return 0 if the file holds a good imputation result; 1 if the
 ##'     file does not hold a good imputation result; and 2 if the file
 ##'     is not an amelia object
 ##' @author James E. Marca
 ##' @export
 ##'
-amelia_output_file_status <- function(file,db){
+amelia_output_file_status <- function(file,db,check_times=FALSE){
 
     env <- new.env()
     res <- load(file=file,envir=env)
@@ -46,12 +49,36 @@ amelia_output_file_status <- function(file,db){
         ## good result
         if(length(env[[res]]$imputations) == 5){
             ## good number of imputations
-            return (0)
+
+            if(check_times){
+                ## double check that time is not offset
+                path_parts <- strsplit(file,split="/")[[1]]
+                file_name <- path_parts[length(path_parts)]
+                file_name_parts <- strsplit(file_name,"\\.")[[1]]
+                fname <- file_name_parts[1]
+                year <- strsplit(fname,"_")[[1]][3]
+                ## fixup the path
+                path_parts <- path_parts[-length(path_parts)]
+                not_empty <- path_parts != ''
+                path <- paste(path_parts[not_empty],sep='',collapse='/')
+                path <- paste(path,'/',sep='')
+                result <- detect_broken_imputed_time(fname=fname,
+                                                     year=year,
+                                                     path=path,
+                                                     delete_it=FALSE,
+                                                     trackingdb=db)
+                if(!result){
+                    return (0)
+                }
+            }else{
+                return(0)
+            }
+
         }
     }
 
     ## if(!missing(db)){
-    ##     result <- decode_amelia_output_file(file)
+    ##     result <- decode_amelia_output_file(f)
     ##     docid <- NULL
     ##     if(is.null(result$site_no)){
     ##         ## vds site
