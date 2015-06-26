@@ -269,3 +269,74 @@ decode_amelia_output_file <- function(filepath){
     }
     result
 }
+##' Detect an offset between imputed data and original data
+##'
+##' A few imputations were performed with a broken time offset (I hate
+##' timezones and daylight savings time!).  This routine will use the
+##' passed in fname, year, and path to find the paired imputation and
+##' raw data, and then inspect the timestamp for the first
+##' **non-imputed** data entry.  It should match the raw data.
+##'
+##' @title detect broken imputed time
+##' @param fname the usual pattern for finding files.  typically the
+##'     detectorid_ML_year, but maybe something else.  Will be passed
+##'     to the standard file finding routines along with the year and
+##'     the path
+##' @param year the year
+##' @param path the root path to the data.  Used in the find command
+##'     (dir) so the closest to actual, the faster the search.
+##' @param delete_it if set to TRUE, then if this routine detects an
+##'     offset in the time, the offset imputed file will be deleted
+##' @param trackingdb the couchdb database for saving state
+##' @return TRUE if the times are offset, FALSE if not
+##' @author James E. Marca
+##'
+detect_broken_imputed_time <- function(fname,year,path,delete_it=FALSE,trackingdb){
+    vds.id <-  get.vdsid.from.filename(fname)
+    input_data <- load.file(fname=fname,year=year,path=path)
+    if(dim(input_data)[1] == 0){
+        return (TRUE)
+    }
+    amelia_data <- get.amelia.vds.file.local(vdsid=vds.id,year=year,path=path)
+    impute1 <- amelia_data$imputations[[1]]
+
+    ## use time diff in amelia_data to determine the number of seconds
+    ## in the aggregation performed
+    seconds <- as.numeric(difftime(time1=impute1$ts[2],
+                                   time2=impute1$ts[1],
+                                   units='secs'))
+    ## prep input data as if for imputation
+    lanes <- longway.guess.lanes(input_data)
+    df.vds.agg <- vds.aggregate(input_data,input_data$ts,lanes,seconds)
+
+    ## at this point, the time *should* match up
+    print('input data')
+    print(head(df.vds.agg))
+    print('imputed output')
+    print(head(impute1))
+
+    ## find the first non-imputed record
+    idx <- 1
+    no_impute_needed <- seconds/30
+    while(idx < length(impute1$ts) &&
+          impute1$obs_count[idx] != no_impute_needed){
+              idx <- idx+1
+          }
+
+    ## so the first non-imputed data point is at idx now
+    result <- impute1$ts[idx] != df.vds.agg$ts[idx]
+
+    if(delete_it && result){
+        ## mismatch, delete the file
+        ## copy and paste code block from get.amelia.vds.file.local
+        target.file <- make.amelia.output.pattern(vds.id,year)
+        isa.df <- dir(path, pattern=target.file,
+                      full.names=TRUE,
+                      ignore.case=TRUE,
+                      recursive=TRUE)
+        ## keep the file with the correct year
+        right_file <- grep(pattern=year,x=isa.df,value=TRUE)
+        unlink(right_file)
+    }
+    return (result)
+}

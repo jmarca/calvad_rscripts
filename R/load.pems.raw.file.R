@@ -53,21 +53,25 @@ load.file <- function(f,fname,year,path){
     print (paste('loading', isa.df[1]))
     load.result <-  load(file=isa.df[1])
   }else{
-    print (paste('scanning', f))
-    fileScan <- load.raw.file(f)
+      if(!missing(f)){
+          print (paste('scanning', f))
+          fileScan <- load.raw.file(f)
 
-    ## pre-process the vds data
-    ts <- as.POSIXct(strptime(fileScan$ts,"%m/%d/%Y %H:%M:%S",tz='GMT'))
-    df <- trim.empty.lanes(fileScan)
-    if(dim(df)[2]>0                    ## sometimes df is totally NA
-       & is.element("n1",names(df))    ## sometimes get random interior lanes
-       ){
-       df <- recode.lanes(df)
-    }
-    ## save for next time
-    df$ts <- ts
-    savepath <- get.save.path(f)
-    save(df,file=paste(savepath,'/',fname,'.df.',year,'.RData',sep=''),compress='xz')
+          ## pre-process the vds data
+          ts <- as.POSIXct(strptime(fileScan$ts,"%m/%d/%Y %H:%M:%S",tz='GMT'))
+          df <- trim.empty.lanes(fileScan)
+          if(dim(df)[2]>0                    ## sometimes df is totally NA
+             & is.element("n1",names(df))    ## sometimes get random interior lanes
+             ){
+              df <- recode.lanes(df)
+          }
+          ## save for next time
+          df$ts <- ts
+          savepath <- get.save.path(f)
+          save(df,
+               file=paste(savepath,'/',fname,'.df.',year,'.RData',sep=''),
+               compress='xz')
+      }
   }
   df
 }

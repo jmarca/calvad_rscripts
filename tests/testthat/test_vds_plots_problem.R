@@ -4,7 +4,7 @@ parts <- c('vds','plots','problems')
 result <- rcouchutils::couch.makedb(parts)
 
 path <- './files'
-mysavepath <- './files/images'
+mysavepath <- paste(path,'images',sep='/')
 if(!file.exists(mysavepath)){dir.create(mysavepath)}
 
 context('some problem data.frames')

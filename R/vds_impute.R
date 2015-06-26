@@ -27,7 +27,7 @@ junk.shot <- function(vds.id,f,fname,seconds,year,df){
 #' @param maxiter defaults to 100, currently using 20 as experiece
 #' shows that if it goes past 20, it isn't going to converge at 100 or
 #' 200 either, usually.
-#' @param con a database connection to postgresql
+#' @param con a database connection to postgresql...no longer used
 #' @param trackingdb the couchdb tracking db
 #' @return a string indicating what failed or success
 #' @export

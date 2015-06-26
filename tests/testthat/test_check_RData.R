@@ -7,6 +7,7 @@ goodfile  <- paste(path,'1108541_ML_2012.120.imputed.RData',sep='/')
 notamelia <- paste(path,'1211682_ML_2012.df.2012.RData',sep='/')
 badamelia <- paste(path,'801320_ML_2012.120.imputed.RData',sep='/')
 wimamelia <- paste(path,'2012/87/S/wim87S.3600.imputed.RData',sep='/')
+offset_goodfile  <- paste(path,'317676_ML_2012.120.imputed.RData',sep='/')
 
 test_that('decode amelia output works',{
     result <- decode_amelia_output_file(wimamelia)
@@ -34,4 +35,10 @@ test_that('check amelia works',{
 
 })
 
+test_that('incorporating offset check is okay',{
+    result <- amelia_output_file_status(offset_goodfile)
+    expect_that(result,equals(0))
+    result <- amelia_output_file_status(offset_goodfile,check_times=TRUE)
+    expect_that(result,equals(1))
+})
 result <- rcouchutils::couch.deletedb(parts)
