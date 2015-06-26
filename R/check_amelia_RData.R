@@ -46,9 +46,11 @@ amelia_output_file_status <- function(file,db,check_times=FALSE){
     ## print(message)
     match_it <- grep(pattern='^Normal EM',ignore.case=TRUE,perl=TRUE,x=message)
     if(match_it == 1){
+        print('good result')
         ## good result
         if(length(env[[res]]$imputations) == 5){
-            ## good number of imputations
+           print('good imputations number')
+           ## good number of imputations
 
             if(check_times){
                 ## double check that time is not offset
@@ -60,13 +62,22 @@ amelia_output_file_status <- function(file,db,check_times=FALSE){
                 ## fixup the path
                 path_parts <- path_parts[-length(path_parts)]
                 not_empty <- path_parts != ''
+
                 path <- paste(path_parts[not_empty],sep='',collapse='/')
+                if(! not_empty[1] ){
+                    ## meaning, the first element of path_parts is ''
+                    ## because it is an absolute path, need to put
+                    ## back the leading slash
+                    path <- paste('/',path,sep='')
+                }
                 path <- paste(path,'/',sep='')
+                print('checking time offset')
                 result <- detect_broken_imputed_time(fname=fname,
                                                      year=year,
                                                      path=path,
                                                      delete_it=FALSE,
                                                      trackingdb=db)
+                print(result)
                 if(!result){
                     return (0)
                 }

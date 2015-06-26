@@ -295,6 +295,7 @@ detect_broken_imputed_time <- function(fname,year,path,delete_it=FALSE,trackingd
     vds.id <-  get.vdsid.from.filename(fname)
     input_data <- load.file(fname=fname,year=year,path=path)
     if(dim(input_data)[1] == 0){
+        print(paste('did not find input data at',path,fname,year))
         return (TRUE)
     }
     amelia_data <- get.amelia.vds.file.local(vdsid=vds.id,year=year,path=path)
