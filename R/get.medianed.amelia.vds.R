@@ -729,7 +729,8 @@ plot_vds.data  <- function(df.merged,vdsid,year,fileprefix=NULL,subhead='\npost 
 
     ## set up a reconfigured dataframe
     recoded <- recode.df.vds( df.merged )
-    ## print(summary(recoded))
+    print('summary of data about to be plotted:')
+    print(summary(recoded))
 
     ## for coloring occ
     occmidpoint <- mean(sqrt(recoded$occupancy),na.rm=TRUE)
