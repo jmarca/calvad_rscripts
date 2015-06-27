@@ -67,6 +67,8 @@ load.file <- function(f,fname,year,path){
           }
           ## save for next time
           df$ts <- ts
+          keep <- ! is.na(df$ts)
+          df <- df[keep,]
           savepath <- get.save.path(f)
           save(df,
                file=paste(savepath,'/',fname,'.df.',year,'.RData',sep=''),
