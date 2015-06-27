@@ -59,6 +59,7 @@ amelia_output_file_status <- function(file,db,check_times=FALSE){
                 file_name_parts <- strsplit(file_name,"\\.")[[1]]
                 fname <- file_name_parts[1]
                 year <- strsplit(fname,"_")[[1]][3]
+                seconds <- as.numeric(file_name_parts[2])
                 ## fixup the path
                 path_parts <- path_parts[-length(path_parts)]
                 not_empty <- path_parts != ''
@@ -76,6 +77,7 @@ amelia_output_file_status <- function(file,db,check_times=FALSE){
                                                      year=year,
                                                      path=path,
                                                      delete_it=FALSE,
+                                                     seconds=seconds,
                                                      trackingdb=db)
                 print(result)
                 if(!result){

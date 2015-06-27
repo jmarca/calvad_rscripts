@@ -287,11 +287,14 @@ decode_amelia_output_file <- function(filepath){
 ##'     (dir) so the closest to actual, the faster the search.
 ##' @param delete_it if set to TRUE, then if this routine detects an
 ##'     offset in the time, the offset imputed file will be deleted
+##' @param seconds the number of seconds used when aggregating.  IF
+##'     not passed in will be detected from the amelia output file
+##'     name
 ##' @param trackingdb the couchdb database for saving state
 ##' @return TRUE if the times are offset, FALSE if not
 ##' @author James E. Marca
 ##'
-detect_broken_imputed_time <- function(fname,year,path,delete_it=FALSE,trackingdb){
+detect_broken_imputed_time <- function(fname,year,path,delete_it=FALSE,seconds,trackingdb){
     vds.id <-  get.vdsid.from.filename(fname)
     input_data <- load.file(fname=fname,year=year,path=path)
     if(dim(input_data)[1] == 0){
