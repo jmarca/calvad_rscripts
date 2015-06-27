@@ -306,9 +306,12 @@ detect_broken_imputed_time <- function(fname,year,path,delete_it=FALSE,seconds,t
 
     ## use time diff in amelia_data to determine the number of seconds
     ## in the aggregation performed
-    seconds <- as.numeric(difftime(time1=impute1$ts[2],
-                                   time2=impute1$ts[1],
-                                   units='secs'))
+    ## seconds <- as.numeric(difftime(time1=impute1$ts[2],
+    ##                                time2=impute1$ts[1],
+    ##                                units='secs'))
+
+    seconds <-  120
+
     ## prep input data as if for imputation
     lanes <- longway.guess.lanes(input_data)
     df.vds.agg <- vds.aggregate(input_data,input_data$ts,lanes,seconds)
