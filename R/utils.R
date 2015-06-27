@@ -331,7 +331,7 @@ detect_broken_imputed_time <- function(fname,year,path,delete_it=FALSE,seconds,t
           }
 
     ## so the first non-imputed data point is at idx now
-    result <- impute1$ts[idx] != df.vds.agg$ts[idx]
+    result <- abs(as.numeric(difftime(impute1$ts[idx],df.vds.agg$ts[idx],units='secs'))) > 60
 
     if(delete_it && result){
         ## mismatch, delete the file
