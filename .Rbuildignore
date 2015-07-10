@@ -8,3 +8,4 @@ node_modules$
 ^Rtest\.R$
 ^Rinstall\.R$
 .*scratch\.R$
+.*TODO.md
