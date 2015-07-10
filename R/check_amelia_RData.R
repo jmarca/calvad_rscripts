@@ -25,7 +25,6 @@
 ##'     at the moment
 ##' @param check_times if TRUE, will also double check that times of
 ##'     VDS type data line up with the raw data
-##' @param file a full filename to load for processing
 ##' @return 0 if the file holds a good imputation result; 1 if the
 ##'     file does not hold a good imputation result; and 2 if the file
 ##'     is not an amelia object
