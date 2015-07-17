@@ -279,7 +279,7 @@ recode.lanes <- function(df){
 verify.imputation.was.okay <- function(fname,path,year,seconds,df.vds.agg.imputed=NA){
   amelia.dump.file <- make.amelia.output.pattern(fname,year)
   done.file <- dir(path, pattern=amelia.dump.file,
-                   full.names=TRUE, ignore.case=TRUE,recursive=TRUE)
+                   full.names=TRUE, ignore.case=TRUE,recursive=TRUE,all.files=TRUE)
   load.result <-  load(file=done.file[1])
   okay <- TRUE
   if(load.result!='reject'){
@@ -367,7 +367,7 @@ verify.imputation.was.okay <- function(fname,path,year,seconds,df.vds.agg.impute
 ##
 ##   amelia.dump.file <- make.amelia.output.pattern(vds.id,year)
 ##   files <- dir(path, pattern=amelia.dump.file,
-##                    full.names=TRUE, ignore.case=TRUE,recursive=TRUE)
+##                    full.names=TRUE, ignore.case=TRUE,recursive=TRUE,all.files=TRUE)
 ##   df.vds.agg.imputed <- NULL
 ##   if(length(files)>0){
 ##     print(paste('loading stored vds amelia object from file',files[1]))
@@ -531,7 +531,7 @@ hourly.agg.VDS.site <- function(fname,f,path,year,vds.id,con){
   ts <- data.frame()
   df <- data.frame()
   target.file =paste(fname,'.df.*',year,'RData',sep='')
-  isa.df <- dir(path, pattern=target.file,full.names=TRUE, ignore.case=TRUE,recursive=TRUE)
+  isa.df <- dir(path, pattern=target.file,full.names=TRUE, ignore.case=TRUE,recursive=TRUE,all.files=TRUE)
   need.to.save <- FALSE
   if(length(isa.df)>0){
     print (paste('loading', isa.df[1]))
