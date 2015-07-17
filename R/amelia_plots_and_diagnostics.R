@@ -99,7 +99,7 @@ make.truck.plots <- function(df,year,site,dir,cdb.id,imputed=TRUE){
 
   dev.off()
 
-  files.to.attach <- dir(savepath,pattern=paste("^",file.pattern,sep=''),full.names=TRUE)
+  files.to.attach <- dir(savepath,pattern=paste("^",file.pattern,sep=''),full.names=TRUE,all.files=TRUE)
 
   files.to.attach
 }

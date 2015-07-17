@@ -30,7 +30,7 @@ get.amelia.wim.file.local <- function(site_no
                  ,pattern=file_pattern
                  ,full.names=TRUE
                  ,ignore.case=TRUE
-                 ,recursive=TRUE)
+                 ,recursive=TRUE,all.files=TRUE)
     if(length(isa.df)==0){
         return('todo')
     }
@@ -356,7 +356,7 @@ upload.plots.couchdb <- function(wim.site
         file.path <- paste(paste(imagepath,direction,'/',sep=''),sep='')
         files.to.attach <- dir(file.path,
                                pattern=paste("^",file.pattern,sep=''),
-                               full.names=TRUE)
+                               full.names=TRUE,all.files=TRUE)
     }
     for(f2a in files.to.attach){
         rcouchutils::couch.attach(db=trackingdb
@@ -585,7 +585,7 @@ plot_wim.data  <- function(df.merged,site_no,direction,year,fileprefix=NULL,subh
 
     dev.off()
 
-    files.to.attach <- dir(savepath,pattern=paste(imagefileprefix,'0',sep='_'),full.names=TRUE)
+    files.to.attach <- dir(savepath,pattern=paste(imagefileprefix,'0',sep='_'),full.names=TRUE,all.files=TRUE)
 
     files.to.attach
 }

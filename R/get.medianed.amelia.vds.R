@@ -665,7 +665,7 @@ plot_amelia.plots  <- function(aout,plotvars,vdsid,year,force.plot=FALSE,
 
     dev.off()
 
-    files.to.attach <- dir(savepath,pattern=paste(imagefileprefix,'0',sep='_'),full.names=TRUE)
+    files.to.attach <- dir(savepath,pattern=paste(imagefileprefix,'0',sep='_'),full.names=TRUE,all.files=TRUE)
 
     return(files.to.attach)
 
@@ -813,7 +813,7 @@ plot_vds.data  <- function(df.merged,vdsid,year,fileprefix=NULL,subhead='\npost 
 
     dev.off()
 
-    files.to.attach <- dir(savepath,pattern=paste(imagefileprefix,'0',sep='_'),full.names=TRUE)
+    files.to.attach <- dir(savepath,pattern=paste(imagefileprefix,'0',sep='_'),full.names=TRUE,all.files=TRUE)
 
     files.to.attach
 }
@@ -956,7 +956,7 @@ plot_vds.data  <- function(df.merged,vdsid,year,fileprefix=NULL,subhead='\npost 
 
 ##   dev.off()
 
-##   files.to.attach <- dir(savepath,pattern=paste(imagefileprefix,'0',sep='_'),full.names=TRUE)
+##   files.to.attach <- dir(savepath,pattern=paste(imagefileprefix,'0',sep='_'),full.names=TRUE,all.files=TRUE)
 ##   for(f2a in files.to.attach){
 ##     couch.attach(trackingdb,vdsid,f2a)
 ##   }
