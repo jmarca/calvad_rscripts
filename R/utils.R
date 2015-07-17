@@ -340,7 +340,7 @@ detect_broken_imputed_time <- function(fname,year,path,delete_it=FALSE,seconds,t
         isa.df <- dir(path, pattern=target.file,
                       full.names=TRUE,
                       ignore.case=TRUE,
-                      recursive=TRUE)
+                      recursive=TRUE,all.files=TRUE)
         ## keep the file with the correct year
         right_file <- grep(pattern=year,x=isa.df,value=TRUE)
         unlink(right_file)

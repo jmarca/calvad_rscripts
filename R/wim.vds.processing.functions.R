@@ -114,7 +114,7 @@ check.imputed.combined<- function(path,wim,vds,year){
     aout <- 'failed'
     fname <- paste('wim',wim,'vds',vds[vdsi],'imputed',year,'RData',sep='.')
     done.file <- dir(path, pattern=fname,
-                   full.names=TRUE, ignore.case=TRUE,recursive=TRUE)
+                   full.names=TRUE, ignore.case=TRUE,recursive=TRUE,all.files=TRUE)
     if(length(done.file)>0){
       result = TRUE;
       return(result);
@@ -144,7 +144,7 @@ load.imputed.combined <- function(path,wim,vds,year){
     aout <- 'failed'
     fname <- paste('wim',wim,'vds',vds[vdsi],'imputed',year,'RData',sep='.')
     done.file <- dir(path, pattern=fname,
-                   full.names=TRUE, ignore.case=TRUE,recursive=TRUE)
+                   full.names=TRUE, ignore.case=TRUE,recursive=TRUE,all.files=TRUE)
     if(length(done.file)>0){
       print(paste('loading imputed combined file',done.file[1]))
       load.result <-  load(file=done.file[1])
@@ -199,7 +199,7 @@ load.imputed.combined <- function(path,wim,vds,year){
 load.imputed.combined.prefetch <- function(path,pattern='wim.*reduced.*vds.*imputed.*RData',recursive=FALSE) {
 
 
-  existing.files <- dir(path, pattern=pattern, full.names=TRUE, ignore.case=TRUE, recursive=recursive)
+  existing.files <- dir(path, pattern=pattern, full.names=TRUE, ignore.case=TRUE, recursive=recursive,all.files=TRUE)
 
   ## return a function that can be called that searches from this list
 
