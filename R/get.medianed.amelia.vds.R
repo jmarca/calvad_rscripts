@@ -976,16 +976,17 @@ recode.df.vds <- function( df ){
     n.idx <- grep('^n',x=plotvars,perl=TRUE,value=TRUE)
     o.idx <- grep('^o',x=plotvars,perl=TRUE,value=TRUE)
 
+    id.vars <- intersect(c('ts','tod','day','obs_count'),varnames)
     melt_1 <- reshape2::melt(data=df,
                              measure.vars=n.idx,
-                             id.vars=c('ts','tod','day','obs_count'),
+                             id.vars=id.vars,
                              variable.name='lane',
                              value.name='volume')
     melt_1$lane <- as.factor(substr(melt_1$lane,2,3))
 
     melt_2 <- reshape2::melt(data=df,
                              measure.vars=o.idx,
-                             id.vars=c('ts','tod','day','obs_count'),
+                             id.vars=id.vars,
                              variable.name='lane',
                              value.name='occupancy')
 
