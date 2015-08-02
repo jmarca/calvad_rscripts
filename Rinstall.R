@@ -1,9 +1,11 @@
-dot_is <- getwd()
+dot_is <- paste(getwd(),'..',sep='/')
+
 node_paths <- dir(dot_is,pattern='\\.Rlibs',
                   full.names=TRUE,recursive=TRUE,
                   ignore.case=TRUE,include.dirs=TRUE,
                   all.files = TRUE)
-path <- normalizePath('../.Rlibs', winslash = "/", mustWork = FALSE)
+path <- normalizePath(paste(dot_is,'.Rlibs',sep='/')
+                    , winslash = "/", mustWork = FALSE)
 if(!file.exists('path')){
     dir.create(path)
 }
