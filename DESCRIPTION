@@ -2,8 +2,11 @@ Package: calvadrscripts
 Title: collection of R scripts for CalVAD
 Version: 1.0.1
 Authors@R: as.person(c("James Marca <jmarca@translab.its.uci.edu> [aut, cre]"))
-Description: A collection of R scripts that are used in the CalVAD imputation and analysis steps.
-Depends: R (>= 3.1.1), sqldf,
+Description: A collection of R scripts that are used in the CalVAD imputation
+    and analysis steps.
+Depends:
+    R (>= 3.1.1),
+    sqldf,
     Amelia,
     RPostgreSQL,
     reshape2,
@@ -13,8 +16,10 @@ Depends: R (>= 3.1.1), sqldf,
     zoo
 License: GPLv2
 LazyData: true
-Suggests: testthat
-Imports: sqldf,
+Suggests:
+    testthat
+Imports:
+    sqldf,
     Amelia,
     RPostgreSQL,
     reshape2,
@@ -22,3 +27,4 @@ Imports: sqldf,
     rcouchutils,
     lattice,
     zoo
+RoxygenNote: 5.0.1

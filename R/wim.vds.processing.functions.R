@@ -13,6 +13,7 @@
 #' @param ... additional arguments to write.csv
 #' @return The result of the call to write.csv
 #' @export
+#'
 dump.tsdf.to.DB.file <- function(vds.id,df,con,target.file,...){
   vds.lanes <- 1
   names.vds <- names(df)
@@ -195,6 +196,13 @@ load.imputed.combined <- function(path,wim,vds,year){
 #' from path.  Passed along to the dir argument; defaults to FALSE
 #' @return A function that can be called with vds and year to get the
 #' appropriate imputed combined file from the precached list of files
+#'
+#' The closure function that will use the prefeched directory reading
+#' results it has two parameters: vds = the vds ids, as a list or
+#' vector; and year = the year of the data
+#' @return the combined results of all the multiple imputations as a
+#'     dataframe.  See \code{\link{my_generated_function}}
+#'
 #' @export
 load.imputed.combined.prefetch <- function(path,pattern='wim.*reduced.*vds.*imputed.*RData',recursive=FALSE) {
 
@@ -203,10 +211,6 @@ load.imputed.combined.prefetch <- function(path,pattern='wim.*reduced.*vds.*impu
 
   ## return a function that can be called that searches from this list
 
-  #' A closure function that will use the prefeched directory reading results
-  #' @param vds  the vds ids, as a list or vector
-  #' @param year the year of the data
-  #' @return the combined results of all the multiple imputations as a dataframe
   callback <- function(vds,year){
 
     ## vds could be an array, or it might not, collapse handles that
@@ -236,4 +240,20 @@ load.imputed.combined.prefetch <- function(path,pattern='wim.*reduced.*vds.*impu
     alldata
   }
   return (callback)
+}
+
+
+#' A function to get the file(s) from the precached list of files
+#'
+#' This closure function will use the prefeched directory reading
+#' results, so if the underlying directory contents changes, this
+#' function will not reflect that case.  Use with caution
+#'
+#' @param vds the vds ids, as a list or vector; and
+#' @param year = the year of the data
+#'
+#' @return a single data frame containing the contents of the file or
+#'     files defined by the passed in vdsid(s) and year
+#'
+my_generated_function <- function(vds,year){
 }
