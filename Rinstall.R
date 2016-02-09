@@ -12,5 +12,6 @@ if(!file.exists('path')){
 lib_paths <- .libPaths()
 .libPaths(c(path,node_paths,lib_paths))
 ## ready to go
+devtools::install_deps()
 devtools::document()
 devtools::install()
