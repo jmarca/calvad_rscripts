@@ -126,17 +126,17 @@ process.wim.site <- function(wim.site,
                                          doc=list('imputed'='no wim data in database'),
                                          db=trackingdb)
             return(0)
-            df.wim.split <- split(df.wim, df.wim$direction)
-            directions <- names(df.wim.split)
-            df.wim.speed <- get.wim.speed.from.sql(wim.site=wim.site,year=year,con=con)
-            df.wim.speed.split <- split(df.wim.speed, df.wim.speed$direction)
-            rm(df.wim)
-            rm(df.wim.speed)
         }
-    }else{
-        db_result <- get.wim.directions(wim.site=wim.site,con=con)
-        directions <- db_result$direction
+
+        df.wim.speed <- get.wim.speed.from.sql(wim.site=wim.site,year=year,con=con)
+        df.wim.split <- split(df.wim, df.wim$direction)
+        df.wim.speed.split <- split(df.wim.speed, df.wim.speed$direction)
+        rm(df.wim)
+        rm(df.wim.speed)
     }
+
+    db_result <- get.wim.directions(wim.site=wim.site,con=con)
+    directions <- db_result$direction
 
     for(direction in directions){
         print(paste('processing direction',direction))
