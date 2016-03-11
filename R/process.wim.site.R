@@ -393,13 +393,14 @@ upload.plots.couchdb <- function(wim.site
 #' So you can add something like "imputed" to the file name to
 #' differentiate the imputed plots from the input data plots.
 #' @param subhead Written on the plot
-#' @param force.plot defaults to FALSE.  If FALSE, and a file exists
+#' @param force.plot defaults to FALSE.  If FALSE, and a file exists, abort
 #' @param trackingdb defaults to 'vdsdata\%2ftracking' for checking if
 #' plots already done
+#' @param wim.path where to save the files.  defaults to current working directory
 #' @return files.to.attach the files that you need to send off to
 #' couchdb tracking database.
 #' @export
-plot_wim.data  <- function(df.merged,site_no,direction,year,fileprefix=NULL,subhead='\npost imputation',force.plot=FALSE,trackingdb){
+plot_wim.data  <- function(df.merged,site_no,direction,year,fileprefix=NULL,subhead='\npost imputation',force.plot=FALSE,trackingdb,wim.path=){
     cdb.wimid <- paste('wim',site_no,direction,sep='.')
     if(!force.plot){
         testfile <- paste(site_no,direction,year,sep='_')
@@ -430,16 +431,19 @@ plot_wim.data  <- function(df.merged,site_no,direction,year,fileprefix=NULL,subh
                       probs=c(0.01,0.25,0.5,0.75,0.99),na.rm=TRUE)
     hhspd_midpoint <- median(recoded$hh_speed/recoded$heavyheavy,na.rm=TRUE)
 
-    savepath <- 'images'
+    savepath <- paste(wim.path,year,sep='/')
     if(!file.exists(savepath)){dir.create(savepath)}
-    savepath <- paste(savepath,site_no,sep='/')
+    savepath <- paste(savepath,wim.site,sep='/')
     if(!file.exists(savepath)){dir.create(savepath)}
-    imagefileprefix <- paste(site_no,year,sep='_')
     if(direction != ''){
         savepath <- paste(savepath,direction,sep='/')
         if(!file.exists(savepath)){dir.create(savepath)}
-        imagefileprefix <- paste(site_no,direction,year,sep='_')
     }
+    savepath <- paste(savepath,'images',sep='/')
+    if(!file.exists(savepath)){dir.create(savepath)}
+
+    imagefileprefix <- paste(site_no,year,sep='_')
+
     if(!is.null(fileprefix) && fileprefix != ''){
         imagefileprefix <- paste(imagefileprefix,fileprefix,sep='_')
     }
