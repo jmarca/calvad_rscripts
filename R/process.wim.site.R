@@ -199,6 +199,8 @@ process.wim.site <- function(wim.site,
 
             ## save wim data for next time
 
+            savepath <- wim.path
+            if(!file.exists(savepath)){dir.create(savepath)}
             savepath <- paste(wim.path,year,sep='/')
             if(!file.exists(savepath)){dir.create(savepath)}
             savepath <- paste(savepath,wim.site,sep='/')
@@ -238,7 +240,8 @@ process.wim.site <- function(wim.site,
                                          ,fileprefix='raw'
                                          ,subhead='\npre imputation'
                                          ,force.plot=force.plot
-                                         ,trackingdb=trackingdb)
+                                         ,trackingdb=trackingdb,
+                                         ,wim.path=wim.path)
             if(attach.files != 1){
                 for(f2a in c(attach.files)){
                     rcouchutils::couch.attach(trackingdb,cdb.wimid,f2a)
