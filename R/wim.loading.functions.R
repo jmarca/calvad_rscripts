@@ -347,7 +347,7 @@ get.wim.site.2 <- function(wim.siteno,
   ## total_axle_spacing
 
   wim.query <- paste(
-                     "select a.site_no , ws.weight_status,ws.class_status, EXTRACT(EPOCH FROM a.ts) as ts , b.lane_no as lane , veh_no , veh_class , gross_weight , veh_len , speed , violation_code ,"
+                     "select distinct a.site_no , ws.weight_status,ws.class_status, EXTRACT(EPOCH FROM a.ts) as ts , b.lane_no as lane , veh_no , veh_class , gross_weight , veh_len , speed , violation_code ,"
                      ,"coalesce( (axle_9_rt_weight + axle_9_lt_weight +axle_8_rt_weight + axle_8_lt_weight +axle_7_rt_weight + axle_7_lt_weight +axle_6_rt_weight + axle_6_lt_weight +axle_5_rt_weight + axle_5_lt_weight +axle_4_rt_weight + axle_4_lt_weight +axle_3_rt_weight + axle_3_lt_weight +axle_2_rt_weight + axle_2_lt_weight +axle_1_rt_weight + axle_1_lt_weight ),"
                      ,"(axle_8_rt_weight + axle_8_lt_weight +axle_7_rt_weight + axle_7_lt_weight +axle_6_rt_weight + axle_6_lt_weight +axle_5_rt_weight + axle_5_lt_weight +axle_4_rt_weight + axle_4_lt_weight +axle_3_rt_weight + axle_3_lt_weight +axle_2_rt_weight + axle_2_lt_weight +axle_1_rt_weight + axle_1_lt_weight ),"
                      ,"(axle_7_rt_weight + axle_7_lt_weight +axle_6_rt_weight + axle_6_lt_weight +axle_5_rt_weight + axle_5_lt_weight +axle_4_rt_weight + axle_4_lt_weight +axle_3_rt_weight + axle_3_lt_weight +axle_2_rt_weight + axle_2_lt_weight +axle_1_rt_weight + axle_1_lt_weight ),"
@@ -391,7 +391,8 @@ get.wim.site.2 <- function(wim.siteno,
                      ,"veh_class>3"
                      ,"and (ws.class_status in ('M','G') or ws.weight_status in ('M','G'))"
                      ,"and a.ts>='",start.time,"' and a.ts < '",end.time,
-                     "' and a.site_no=",wim.siteno)
+      "' and a.site_no=",wim.siteno
+  ,' order by ts')
 
   print(wim.query)
 
