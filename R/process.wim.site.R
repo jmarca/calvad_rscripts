@@ -196,6 +196,12 @@ process.wim.site <- function(wim.site,
 
             df.wim.d.joint <- add.time.of.day(df.wim.d.joint)
 
+            ## right here add sanity checks for data for example, if
+            ## the hourly values are super high compared to the
+            ## "usual" max value
+
+            ## look at the plots for WIM 103 S 2015 for example
+
 
             ## save wim data for next time
 
