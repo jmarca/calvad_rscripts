@@ -195,7 +195,7 @@ good.high.clustering <- function(df){
 
 sqldf_postgresql <- function(config){
     options(sqldf.RPostgreSQL.user = config$postgresql$auth$username,
-            sqldf.RPostgreSQL.dbname = 'test', #config$postgresql$db,
-            sqldf.RPostgreSQL.host = 'localhost' , #config$postgresql$host,
+            sqldf.RPostgreSQL.dbname = config$postgresql$db,
+            sqldf.RPostgreSQL.host = config$postgresql$host,
             sqldf.RPostgreSQL.port = config$postgresql$port)
 }
