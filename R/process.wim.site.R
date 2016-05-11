@@ -180,7 +180,7 @@ process.wim.site <- function(wim.site,
         if(preplot){
             print('plotting trimmed raw data, pre impute')
             print(dim(df.trimmed))
-            attach.files <- plot_wim.data(df.wim.d.joint
+            attach.files <- plot_wim.data(df.trimmed
                                          ,wim.site
                                          ,direction
                                          ,year
