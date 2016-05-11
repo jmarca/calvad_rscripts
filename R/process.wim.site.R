@@ -215,6 +215,25 @@ process.wim.site <- function(wim.site,
             if(df.wim.amelia$code==1){
                 ## that means good imputation
                 ## have a WIM site data with no gaps.  save it
+
+                ## note that maxiter is currently hardcoded at 50 in
+                ## wim.impute.functions, so that's why it says plain
+                ## '50' below
+                store.amelia.chains(
+                    df.amelia=df.wim.amelia,
+                    year=year,
+                    detector.id=cdb.wimid,
+                    imputation.name='wimraw',
+                    maxiter=50,
+                    db=trackingdb
+                )
+                savepath <- paste(wim.path,year,sep='/')
+                if(!file.exists(savepath)){dir.create(savepath)}
+                savepath <- paste(savepath,wim.site,sep='/')
+                if(!file.exists(savepath)){dir.create(savepath)}
+                savepath <- paste(savepath,direction,sep='/')
+                if(!file.exists(savepath)){dir.create(savepath)}
+
                 target.file <- make.amelia.output.file(savepath,paste('wim',wim.site,direction,sep=''),seconds,year)
                 print(paste('name is',target.file,'savepath is',savepath))
                 ## fs write
