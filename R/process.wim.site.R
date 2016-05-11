@@ -133,6 +133,13 @@ process.wim.site <- function(wim.site,
 
             df.wim.d.joint <- wim.data[[direction]]
 
+            if(length(dim(df.wim.d.joint)) !=  2){
+                ## probably have an issue here
+                print(paste("no data loaded from DB for",wim.site,direction,year," ---  skipping"))
+                next
+            }
+
+
         }else{
             ## load from filesystem
             print('load from filesystem')
