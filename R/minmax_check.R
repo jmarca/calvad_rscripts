@@ -135,7 +135,7 @@ good.high.clustering <- function(df){
                      ## pick whether to cluster on quart,mid,sept, or max
                      'pick_two as (',
                      '  select weday, ',
-                     paste(' a.sept_max_',varnames,'<1.9*a.quart_max_',varnames,' as oneclust_',varnames,sep='',collapse=', '),', ',
+                     paste(' a.max_max_',varnames,'<1.9*a.quart_max_',varnames,' as oneclust_',varnames,sep='',collapse=', '),', ',
                      paste(' CASE ',
                            ## don't care if the spread isn't all that big
                            ' WHEN a.max_max_',varnames,'<2*a.min_max_',varnames,' THEN a.mid_max_',varnames,
