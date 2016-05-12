@@ -59,14 +59,16 @@ load.file <- function(f,fname,year,path){
 
           ## pre-process the vds data
           ts <- as.POSIXct(strptime(fileScan$ts,"%m/%d/%Y %H:%M:%S",tz='GMT'))
+          fileScan$ts <- ts
           df <- trim.empty.lanes(fileScan)
-          if(dim(df)[2]>0                    ## sometimes df is totally NA
-             & is.element("n1",names(df))    ## sometimes get random interior lanes
+          if(dim(df)[2]>2                    ## sometimes df is totally NA
+             & is.element("n1",names(df))
+             & is.element("o1",names(df))    ## sometimes get random interior lanes
              ){
-              df <- recode.lanes(df)
+              df <- recode.lanes(df[,-1]) ## drop time for recode lanes
+              ## put back time
+              df$ts <- ts
           }
-          ## save for next time
-          df$ts <- ts
           keep <- ! is.na(df$ts)
           df <- df[keep,]
           savepath <- get.save.path(f)
@@ -99,7 +101,7 @@ trim.empty.lanes <- function(testScan){
   pattern <- rep(TRUE,dim(df)[2])
   names(pattern) <- colnames(df)
 
-  pattern[1]=FALSE ## don't need time twice
+  pattern[1]=FALSE ## keep time in the end, but ignore for now
   pattern[2]=FALSE ## don't need the vdsid for every record
   means <- colMeans(df[,pattern],na.rm=TRUE)
   pattern[pattern] <- ( ! is.nan(means) ) ## old way
@@ -121,6 +123,8 @@ trim.empty.lanes <- function(testScan){
       lanes <- lanes-1
     }
   }
+  ## keep time
+  pattern[1] <- TRUE
   df[,pattern]
 }
 ##' Determine the percent of entries that have NA values
