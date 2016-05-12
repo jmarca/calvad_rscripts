@@ -73,7 +73,7 @@ get.amelia.vds.file.local <- function(vdsid,path='/',year,server,serverfile){
   df.vds.agg.imputed <- NULL
 
   target.file <- make.amelia.output.pattern(vdsid,year)
-  isa.df <- dir(path, pattern=target.file,full.names=TRUE, ignore.case=TRUE,recursive=TRUE)
+  isa.df <- dir(path, pattern=target.file,full.names=TRUE, ignore.case=TRUE,recursive=TRUE,all.files=TRUE)
   ## print(paste(path,target.file,paste(isa.df,collapse=','),sep=' : '))
   if(length(isa.df)==0){
       return('todo')
