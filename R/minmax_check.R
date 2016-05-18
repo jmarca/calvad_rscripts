@@ -1,78 +1,6 @@
 ##' Modify the incoming df to set to NULL all values that fail the max check test
 ##'
 ##'
-##' The idea here is that the maximum daily hourly count for a
-##' variable is unlikely to exceed significantly the median daily
-##' hourly count for that variable for the year.  So compute the
-##' median maximum daily hourly count, and then compare, say, twice
-##' that value to the maximum value for each day.  If the day max
-##' exceeds twice the median of the maximums, then throw that day out.
-##'
-##' This test is done per lane for each variable indicated.  Not sure
-##' at the moment how to indicate variables, so I will do it for all
-##' variables except time and reduce and/or parameterize from there.
-##'
-##' @title max.check
-##' @param df a data frame in the usual idiom for CalVAD amelia stuff,
-##'     with variables and timestamp
-##' @return a modified dataframe
-##' @author James E. Marca
-max.check <- function(df){
-    ## copy and paste programming from wim.medianed.aggregate.df, to start off
-    varnames <- names(df)
-    varnames <- grep( pattern="^ts",x=varnames,perl=TRUE,invert=TRUE,value=TRUE)
-    varnames <- setdiff(varnames,c('tod','day'))
-
-    sqltst <-  paste('with dfdoy as (',
-                     '  select *,extract (doy from ts) as doy from df',
-                     '),',
-                     'dailymax as (',
-                     ' select a.*,',
-                     paste('max(',
-                           varnames,
-                           ') over (partition by doy order by doy) as max_',
-                           varnames,
-                           sep='',
-                           collapse=', '),
-                     ',',
-                     paste('min(',
-                           varnames,
-                           ') over (partition by doy order by doy) as min_',
-                           varnames,
-                           sep='',
-                           collapse=', '),
-                     'from dfdoy a',
-                     '),',
-                     'dailymedian as (',
-                     'select day,',
-                     paste('percentile_cont(0.5) within group (order by max_',varnames,' ) as median_max_',varnames,sep='',collapse=', '),
-                     ',',
-                     paste('percentile_cont(0.5) within group (order by min_',varnames,' ) as median_min_',varnames,sep='',collapse=', '),
-                     'from dailymax group by day order by day',
-                     ')',
-                     ## now find the entire days, variables, that exceed the above
-                     'select ts,',
-                     paste('CASE WHEN a.max_',varnames,' > 1.5*b.median_max_',varnames,
-                           ## '      AND a.min_',varnames,' > 1.5*b.median_min_',varnames,
-                           ' THEN NULL ELSE a.',varnames,' END as ',varnames,
-                           sep='',collapse = ', '
-                           ),
-                     ',tod,day',
-                     'from dailymax a join dailymedian b USING (day)',
-                     'order by ts'
-                     )
-
-    df.ts <- sqldf::sqldf(sqltst,drv="RPostgreSQL")
-
-
-
-    df.ts
-}
-
-
-##' Modify the incoming df to set to NULL all values that fail the max check test
-##'
-##'
 ##' The idea with this one is to use clusters of good and too high
 ##' data, versus a single cluster of all good data.  If the all good
 ##' assumption is valid, then that would mean that the spread of the
@@ -97,10 +25,19 @@ good.high.clustering <- function(df){
     varnames <- grep( pattern="^ts",x=varnames,perl=TRUE,invert=TRUE,value=TRUE)
     varnames <- setdiff(varnames,c('tod','day'))
 
-    sql_two_group <- paste('with dfdoy as (',
-                           '  select *,extract (doy from ts) as doy,',
-                           "  CASE WHEN EXTRACT(DOW FROM ts) IN (1,2,3,4,5) THEN 'weekday' ELSE 'weekend' END as weday ",
-                           ' from df ',
+    df2 <- df
+    df2$ts <- as.numeric(df2$ts)
+
+    sql_two_group <- paste('with',
+                           'fake_ts as (',
+                           '  select ts as numericts,',
+                           "  to_timestamp(ts) AT TIME ZONE 'UTC' as sqlts, * ",
+                           'from df2',
+                           '),',
+                           'dfdoy as (',
+                           '  select *,extract (doy from sqlts) as doy,',
+                           "  CASE WHEN EXTRACT(DOW FROM sqlts) IN (1,2,3,4,5) THEN 'weekday' ELSE 'weekend' END as weday ",
+                           ' from fake_ts ',
                      '),',
                      'dailymax as (',
                      ' select a.*,',
@@ -122,7 +59,7 @@ good.high.clustering <- function(df){
                      ## drop instances in which the daily max equals the daily min
                      ## because that's bad
                      'drop_flat as (',
-                     'select ts,tod,day,doy,weday,',
+                     'select numericts,tod,day,doy,weday,',
                      paste(' CASE when max_',varnames,'=min_',varnames,' THEN NULL ELSE ',varnames,' END as ',varnames,sep='',collapse=', '),
                      'from dailymax',
                      '),',
@@ -182,7 +119,7 @@ good.high.clustering <- function(df){
                      'FROM daily_iles a',
                      ')',
                      ## now guess whether to group by higher or lower
-                     'select ts, ',
+                     'select numericts, ',
                      paste(' CASE ',
                            ' WHEN b.oneclust_',varnames,' THEN a.',varnames,
                            ' WHEN ',
@@ -195,10 +132,14 @@ good.high.clustering <- function(df){
                      ' dailymax2 a join ',
                      ' pick_two b ',
                      ' USING (weday)',
-                      ' order by ts'
+                      ' order by numericts'
                      )
 
     df.minmax <- sqldf::sqldf(sql_two_group,drv="RPostgreSQL")
+    df.minmax$ts <- as.POSIXct(df.minmax$numericts,tz='UTC',origin='1970-01-01')
+    attr(df.minmax$ts,'tzone') <- 'UTC'
+
+    df.minmax$numericts <- NULL
 
     ## first two clusters
     ## distance metric is two dimensional I guess, daily min, daily max

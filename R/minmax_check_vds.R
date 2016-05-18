@@ -30,7 +30,7 @@ good.high.clustering.vds <- function(df){
     df2 <- df
     df2$ts <- as.numeric(df2$ts)
 
-    print(df2$ts[1:10])
+##    print(df2$ts[1:10])
 
     sql_drop_flat <- paste('with',
                            'fake_ts as (',
@@ -131,7 +131,7 @@ good.high.clustering.vds <- function(df){
     df.minmax$ts <- as.POSIXct(df.minmax$numericts,tz='UTC',origin='1970-01-01')
     attr(df.minmax$ts,'tzone') <- 'UTC'
 
-    print(df.minmax[1:10,])
+    ## print(df.minmax[1:10,])
 
     df.minmax
 }
