@@ -418,7 +418,10 @@ get.and.plot.vds.amelia <- function(pair,year,doplots=TRUE,
 
         config <- rcouchutils::get.config()
         sqldf_postgresql(config)
+        print('going to look for flat days of data')
+        print(summary(df.vds.agg$nr1))
         df.vds.agg <- good.high.clustering.vds(df.vds.agg)
+        print(summary(df.vds.agg$nr1))
 
 
         ## cruft, but may as well keep it up
