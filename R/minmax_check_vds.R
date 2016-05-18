@@ -32,11 +32,16 @@ good.high.clustering.vds <- function(df){
 
 ##    print(df2$ts[1:10])
 
+    randomnumber <- floor(runif(1, 100000,900000))
+
+    variablename <- paste('df',randomnumber,sep='_')
+    assign(variablename,df2)
+
     sql_drop_flat <- paste('with',
                            'fake_ts as (',
                            '  select ts as numericts,',
                            "  to_timestamp(ts) AT TIME ZONE 'UTC' as sqlts, * ",
-                           'from df2',
+                           'from ',variablename,
                            '),',
                            'dfdoy as (',
                            '  select *,extract (doy from sqlts) as doy,',
