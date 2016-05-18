@@ -27,94 +27,111 @@ good.high.clustering.vds <- function(df){
     onames <- grep( pattern="^o",x=varnames,perl=TRUE,invert=FALSE,value=TRUE)
     nnames <- grep( pattern="^n",x=varnames,perl=TRUE,invert=FALSE,value=TRUE)
 
+    df2 <- df
+    df2$ts <- as.numeric(df2$ts)
 
-    sql_drop_flat <- paste('with dfdoy as (',
-                           '  select *,extract (doy from ts) as doy,',
-                           "  CASE WHEN EXTRACT(DOW FROM ts) IN (1,2,3,4,5) THEN 'weekday' ELSE 'weekend' END as weday ",
-                           ' from df ',
-                     '),',
-                     'dailymax as (',
-                     ' select a.*,',
-                     paste('max(',
-                           nnames,
-                           ') over (partition by doy order by doy) as max_',
-                           nnames,
-                           sep='',
-                           collapse=', '),
-                     ',',
-                     paste('min(',
-                           nnames,
-                           ') over (partition by doy order by doy) as min_',
-                           nnames,
-                           sep='',
-                           collapse=', '),
-                     'from dfdoy a',
-                     '),',
-                     ## drop instances in which the daily max equals the daily min
-                     ## because that's bad
-                     'drop_flat as (',
-                     'select ',paste(c(others,onames),sep='',collapse=','),',doy,weday,',
-                     paste(' CASE when max_',nnames,'=min_',nnames,' THEN NULL ELSE ',nnames,' END as ',nnames,sep='',collapse=', '),
-                     'from dailymax',
-                     '),',
-                     ## do the max min thing again
-                     'dailymax2 as (',
-                     ' select a.*,',
-                     paste('max(',
-                           nnames,
-                           ') over (partition by doy order by doy) as max_',
-                           nnames,
-                           sep='',
-                           collapse=', '),
-                     ',',
-                     paste('min(',
-                           nnames,
-                           ') over (partition by doy order by doy) as min_',
-                           nnames,
-                           sep='',
-                           collapse=', '),
-                     'from drop_flat a',
-                     '),',
-                     'daily_iles as (',
-                     'select weday,',
-                     paste('percentile_cont(0.05) within group (order by max_',nnames,' ) as twentieth_max_',nnames,sep='',collapse=', '),
-                     ',',
-                     paste('percentile_cont(0.5) within group (order by max_',nnames,' ) as mid_max_',nnames,sep='',collapse=', '),
-                     ',',
-                     paste('max( max_',nnames,' ) as max_max_',nnames,sep='',collapse=', '),
-                     ',',
-                     paste('min( max_',nnames,' ) as min_max_',nnames,sep='',collapse=', '),
-                     'from dailymax2 group by weday order by weday',
-                     ')',
-                     ## now drop all superflat days
-                     'select ',
-                     paste(' CASE ',
-                           ' WHEN ',
-                           '     (a.max_',nnames,'<= b.twentieth_max_',nnames,') ',
-                           ' THEN NULL ELSE a.',nnames,' END as ',nnames,
-                           sep='',collapse = ', '
-                           ),
-                     ## also nullify occupancy for those days
-                     ',',
-                     paste(' CASE ',
-                           ' WHEN ',
-                           '     (a.max_',nnames,'<= b.twentieth_max_',nnames,') ',
-                           ' THEN NULL ELSE a.',onames,' END as ',onames,
-                           sep='',collapse = ', '
-                           ),
-                     ',',paste(others,sep='',collapse=','),
-                     'from ',
-                     ' dailymax2 a join ',
-                     ' daily_iles b ',
-                     ' USING (weday)',
-                      ' order by ts'
-                     )
+    print(df2$ts[1:10])
+
+    sql_drop_flat <- paste('with',
+                           'fake_ts as (',
+                           '  select ts as numericts,',
+                           "  to_timestamp(ts) AT TIME ZONE 'UTC' as sqlts, * ",
+                           'from df2',
+                           '),',
+                           'dfdoy as (',
+                           '  select *,extract (doy from sqlts) as doy,',
+                           '  CASE ',
+                           "WHEN EXTRACT(DOW FROM sqlts) IN (1,2,3,4,5) THEN 'weekday' ELSE 'weekend' END as weday ",
+                           ' from fake_ts ',
+                           '),',
+                           'dailymax as (',
+                           ' select a.*,',
+                           paste('max(',
+                                 nnames,
+                                 ') over (partition by doy order by doy) as max_',
+                                 nnames,
+                                 sep='',
+                                 collapse=', '),
+                           ',',
+                           paste('min(',
+                                 nnames,
+                                 ') over (partition by doy order by doy) as min_',
+                                 nnames,
+                                 sep='',
+                                 collapse=', '),
+                           'from dfdoy a',
+                           '),',
+                           ## drop instances in which the daily max equals the daily min
+                           ## because that's bad
+                           'drop_flat as (',
+                           'select ',paste(onames,sep='',collapse=','),',numericts,tod,day,obs_count,doy,weday,',
+                           paste(' CASE when max_',nnames,'=min_',nnames,' THEN NULL ELSE ',nnames,' END as ',nnames,sep='',collapse=', '),
+                           'from dailymax',
+                           '),',
+                           ## do the max min thing again
+                           'dailymax2 as (',
+                           ' select a.*,',
+                           paste('max(',
+                                 nnames,
+                                 ') over (partition by doy order by doy) as max_',
+                                 nnames,
+                                 sep='',
+                                 collapse=', '),
+                           ',',
+                           paste('min(',
+                                 nnames,
+                                 ') over (partition by doy order by doy) as min_',
+                                 nnames,
+                                 sep='',
+                                 collapse=', '),
+                           'from drop_flat a',
+                           '),',
+                           'daily_iles as (',
+                           'select weday,',
+                           paste('percentile_cont(0.05) within group (order by max_',nnames,' ) as twentieth_max_',nnames,sep='',collapse=', '),
+                           ',',
+                           paste('percentile_cont(0.5) within group (order by max_',nnames,' ) as mid_max_',nnames,sep='',collapse=', '),
+                           ',',
+                           paste('max( max_',nnames,' ) as max_max_',nnames,sep='',collapse=', '),
+                           ',',
+                           paste('min( max_',nnames,' ) as min_max_',nnames,sep='',collapse=', '),
+                           'from dailymax2 group by weday order by weday',
+                           ')',
+                           ## now drop all superflat days
+                           'select ',
+                           paste(' CASE ',
+                                 ' WHEN ',
+                                 '     (a.max_',nnames,'<= b.twentieth_max_',nnames,') ',
+                                 ' THEN NULL ELSE a.',nnames,' END as ',nnames,
+                                 sep='',collapse = ', '
+                                 ),
+                           ## also nullify occupancy for those days
+                           ',',
+                           paste(' CASE ',
+                                 ' WHEN ',
+                                 '     (a.max_',nnames,'<= b.twentieth_max_',nnames,') ',
+                                 ' THEN NULL ELSE a.',onames,' END as ',onames,
+                                 sep='',collapse = ', '
+                                 ),
+                           ',numericts,tod,day,obs_count',
+                           'from ',
+                           ' dailymax2 a join ',
+                           ' daily_iles b ',
+                           ' USING (weday)',
+                           ' order by numericts'
+                           )
 
     ## df.minmax <- sqldf::sqldf(sql_two_group,drv="RPostgreSQL")
-    df.minmax <- sqldf::sqldf(sql_drop_flat,drv="RPostgreSQL")
+    df.minmax <- sqldf::sqldf(sql_drop_flat,drv="RPostgreSQL",method="raw")
+
 
     ## first two clusters
     ## distance metric is two dimensional I guess, daily min, daily max
+
+    df.minmax$ts <- as.POSIXct(df.minmax$numericts,tz='UTC',origin='1970-01-01')
+    attr(df.minmax$ts,'tzone') <- 'UTC'
+
+    print(df.minmax[1:10,])
 
     df.minmax
 }
