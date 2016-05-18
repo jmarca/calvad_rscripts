@@ -25,14 +25,20 @@ good.high.clustering <- function(df){
     varnames <- grep( pattern="^ts",x=varnames,perl=TRUE,invert=TRUE,value=TRUE)
     varnames <- setdiff(varnames,c('tod','day'))
 
+
     df2 <- df
     df2$ts <- as.numeric(df2$ts)
+
+    randomnumber <- floor(runif(1, 100000,900000))
+
+    variablename <- paste('df',randomnumber,sep='_')
+    assign(variablename,df2)
 
     sql_two_group <- paste('with',
                            'fake_ts as (',
                            '  select ts as numericts,',
                            "  to_timestamp(ts) AT TIME ZONE 'UTC' as sqlts, * ",
-                           'from df2',
+                           'from ',variablename,
                            '),',
                            'dfdoy as (',
                            '  select *,extract (doy from sqlts) as doy,',
