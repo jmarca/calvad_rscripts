@@ -414,9 +414,16 @@ get.and.plot.vds.amelia <- function(pair,year,doplots=TRUE,
                 print(paste('Hey, got excessive flows for ',pair,year))
             }
         }
+        ## and drop flat days
+
+        config <- rcouchutils::get.config()
+        sqldf_postgresql(config)
+        df.vds.agg <- good.high.clustering.vds(df.vds.agg)
+
+
         ## cruft, but may as well keep it up
-        rcouchutils::couch.set.state(year,pair,doc=list('occupancy_averaged'=1)
-                                    ,db=trackingdb)
+        ##rcouchutils::couch.set.state(year,pair,doc=list('occupancy_averaged'=1)
+        ##                            ,db=trackingdb)
 
         if(doplots){
 
