@@ -93,7 +93,7 @@ good.high.clustering.vds <- function(df){
                            '),',
                            'daily_iles as (',
                            'select weday,',
-                           paste('percentile_cont(0.05) within group (order by max_',nnames,' ) as twentieth_max_',nnames,sep='',collapse=', '),
+                           paste('percentile_cont(0.85) within group (order by max_',nnames,' ) as eightyfifth_max_',nnames,sep='',collapse=', '),
                            ',',
                            paste('percentile_cont(0.5) within group (order by max_',nnames,' ) as mid_max_',nnames,sep='',collapse=', '),
                            ',',
@@ -106,7 +106,7 @@ good.high.clustering.vds <- function(df){
                            'select ',
                            paste(' CASE ',
                                  ' WHEN ',
-                                 '     (a.max_',nnames,'<= b.twentieth_max_',nnames,') ',
+                                 '     (a.max_',nnames,'<= 0.1 * b.eightyfifth_max_',nnames,') ',
                                  ' THEN NULL ELSE a.',nnames,' END as ',nnames,
                                  sep='',collapse = ', '
                                  ),
@@ -114,7 +114,7 @@ good.high.clustering.vds <- function(df){
                            ',',
                            paste(' CASE ',
                                  ' WHEN ',
-                                 '     (a.max_',nnames,'<= b.twentieth_max_',nnames,') ',
+                                 '     (a.max_',nnames,'<= 0.1 * b.eightyfifth_max_',nnames,') ',
                                  ' THEN NULL ELSE a.',onames,' END as ',onames,
                                  sep='',collapse = ', '
                                  ),
