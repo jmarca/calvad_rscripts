@@ -79,7 +79,7 @@ get.amelia.vds.file.local <- function(vdsid,path='/',year,server,serverfile){
       return('todo')
   }
     ## keep the file with the correct year
-    right_file <- grep(pattern=year,x=isa.df,value=TRUE)
+    right_file <- grep(pattern=paste('_',year,sep=''),x=isa.df,value=TRUE)
     if(length(right_file) == 0){
         print(paste('failed to find year',year,'in list',paste(isa.df,collapse=',')))
         return('todo')
