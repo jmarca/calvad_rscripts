@@ -1,24 +1,24 @@
 {
   "name": "calvad_rscripts",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "description": "calvad r scripts",
   "main": "index.js",
   "directories": {
     "test": "tests"
   },
   "scripts": {
-      "test": "Rscript Rtest.R",
-      "install":"Rscript Rinstall.R"
+    "test": "Rscript Rtest.R",
+    "install": "Rscript Rinstall.R"
   },
   "repository": {
     "type": "git",
     "url": "https://github.com/jmarca/calvad_rscripts"
   },
-    "dependencies":{
-        "rcouchutils":"git://github.com/jmarca/rstats_couch_utils.git",
-        "configr":"git://github.com/jmarca/configr.git",
-        "rstats_remote_files":"jmarca/rstats_remote_files"
-    },
+  "dependencies": {
+    "rcouchutils": "git://github.com/jmarca/rstats_couch_utils.git",
+    "configr": "git://github.com/jmarca/configr.git",
+    "rstats_remote_files": "jmarca/rstats_remote_files"
+  },
   "author": "James E. Marca",
   "license": "GPLv2",
   "bugs": {
