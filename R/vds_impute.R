@@ -53,6 +53,9 @@ self.agg.impute.VDS.site.no.plots <- function(fname,f,path,year,seconds,goodfact
 
         df.30 <- vds.aggregate(df,ts,lanes=lanes,seconds=30)
 
+        config <- rcouchutils::get.config()
+        sqldf_postgresql(config)
+
         ## detect and remove any "no data" periods
         df.30 <- good.high.clustering.vds(df.30)
 
