@@ -42,13 +42,16 @@ self.agg.impute.VDS.site.no.plots <- function(fname,f,path,year,seconds,goodfact
 
     df <- load.file(f,fname,year,path)
     ## break out times
+    ts <- df$ts
+    df$ts <- NULL
+
 
     if(sanity.check(df,ts,year=year,vdsid=vds.id)){
         gc()
         lanes <- longway.guess.lanes(df)
         print(paste('agg.impute.vds.site,',fname,', lanes',lanes))
 
-        df.30 <- vds.aggregate(df,df$ts,lanes=lanes,seconds=30)
+        df.30 <- vds.aggregate(df,ts,lanes=lanes,seconds=30)
 
         ## detect and remove any "no data" periods
         df.30 <- good.high.clustering.vds(df.30)
