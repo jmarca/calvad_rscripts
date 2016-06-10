@@ -32,8 +32,8 @@ test_that("vds impute works okay",{
 
 
     expect_that(result,equals(1))
-    datfile <- dir(path='.',pattern='vds_hour_agg',full.names=TRUE,recursive=TRUE)
-    expect_that(datfile[1],matches(paste('vds_hour_agg',vds.id,sep='.')))
+    ## datfile <- dir(path='.',pattern='vds_hour_agg',full.names=TRUE,recursive=TRUE)
+    ## expect_that(datfile[1],matches(paste('vds_hour_agg',vds.id,sep='.')))
 
     datfile <- dir(path='.',
                    pattern=paste(vds.id,'.*imputed.RData$',sep=''),
@@ -77,8 +77,8 @@ test_that("ignoring speed in imputation works okay",{
 
 
     expect_that(result,equals(1))
-    datfile <- dir(path='.',pattern='vds_hour_agg',full.names=TRUE,recursive=TRUE)
-    expect_that(datfile[1],matches(paste('vds_hour_agg',vds.id,sep='.')))
+    ## datfile <- dir(path='.',pattern='vds_hour_agg',full.names=TRUE,recursive=TRUE)
+    ## expect_that(datfile[1],matches(paste('vds_hour_agg',vds.id,sep='.')))
 
     datfile <- dir(path='.',
                    pattern=paste(vds.id,'.*imputed.RData$',sep=''),
@@ -100,9 +100,52 @@ test_that("ignoring speed in imputation works okay",{
                 equals(c(5,5,5,5,5)))
 
 })
+unlink('./files/1073210_ML_2012.120.imputed.RData')
 
+
+test_that("another problem low-values site",{
+
+    file  <- './files/311903_ML_2012.df.2012.RData'
+    fname <- '311903_ML_2012'
+    vds.id <- 311903
+    year <- 2012
+    seconds <- 120
+    path <- '.'
+    result <- self.agg.impute.VDS.site.no.plots(fname=fname,
+                                                f=file,
+                                                path=path,
+                                                year=year,
+                                                seconds=seconds,
+                                                goodfactor=3.5,
+                                                maxiter=20,
+                                                con=con,
+                                                trackingdb=parts)
+
+
+    expect_that(result,equals(1))
+    ## datfile <- dir(path='.',pattern='vds_hour_agg',full.names=TRUE,recursive=TRUE)
+    ## expect_that(datfile[1],matches(paste('vds_hour_agg',vds.id,sep='.')))
+
+    datfile <- dir(path='.',
+                   pattern=paste(vds.id,'.*imputed.RData$',sep=''),
+                   full.names=TRUE,recursive=TRUE)
+    expect_that(datfile[1],matches(paste(vds.id,
+                                         '_ML_',
+                                         year,'.',
+                                         seconds,'.',
+                                         'imputed.RData',
+                                         sep='')))
+
+    saved.state <- rcouchutils::couch.check.state(
+        year=year,
+        id=vds.id,
+        'vdsraw_max_iterations',
+        db=parts)
+    expect_that(saved.state,is_a('numeric'))
+    expect_that(saved.state,
+                equals(0))
+
+})
+unlink('./files/311903_ML_2012.120.imputed.RData')
 
 rcouchutils::couch.deletedb(parts)
-unlink('./vds_hour_agg.1211682.2012.dat')
-unlink('./files/1073210_ML_2012.120.imputed.RData')
-unlink('./vds_hour_agg.1073210.2012.dat')

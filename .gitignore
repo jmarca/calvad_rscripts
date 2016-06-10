@@ -11,3 +11,4 @@
 /man/
 **/.DS_STORE
 **/.Rproj*
+/tests/testthat/files/311903_ML_2012.120.imputed.RData

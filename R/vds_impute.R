@@ -42,15 +42,35 @@ self.agg.impute.VDS.site.no.plots <- function(fname,f,path,year,seconds,goodfact
 
     df <- load.file(f,fname,year,path)
     ## break out times
-    ts <- df$ts
-    df$ts <- NULL
 
     if(sanity.check(df,ts,year=year,vdsid=vds.id)){
         gc()
         lanes <- longway.guess.lanes(df)
         print(paste('agg.impute.vds.site,',fname,', lanes',lanes))
 
-        df.vds.agg <- vds.aggregate(df,ts,lanes=lanes,seconds=seconds)
+        df.30 <- vds.aggregate(df,df$ts,lanes=lanes,seconds=30)
+
+        ## detect and remove any "no data" periods
+        df.30 <- good.high.clustering.vds(df.30)
+
+        ## properly drop missing times
+        n.idx <- vds.lane.numbers(lanes,c("n"))
+        o.idx <- vds.lane.numbers(lanes,c("o"))
+        keep_time <- rep(TRUE,times=length(df.30$ts))
+        for(laneidx in 1:lanes){
+            keep_time <- keep_time &
+                ## drop those time periods where volume is NA (missing)
+                ! is.na(df.30[,n.idx[laneidx]] ) &
+                ## also drop all times when volume is zero and occupancy is 1
+                ! ( df.30[,n.idx[laneidx]] == 0 & df.30[,o.idx[laneidx]] == 1 )
+        }
+
+        ## aggregate up to requested seconds
+        df.vds.agg <- vds.aggregate(df.30[keep_time,]
+                                   ,df.30$ts[keep_time]
+                                   ,lanes=lanes
+                                   ,seconds=seconds)
+
 
         good.periods <- df.vds.agg$obs_count==seconds/30   & ! is.na(df.vds.agg$obs_count)
 
