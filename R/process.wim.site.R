@@ -286,7 +286,8 @@ process.wim.site <- function(wim.site,
                                          ,subhead='\npost imputation'
                                          ,force.plot=force.plot
                                          ,trackingdb=trackingdb
-                                         ,wim.path=wim.path)
+                                         ,wim.path=wim.path
+                                         ,plain.speeds=TRUE)
             if(attach.files != 1){
                 for(f2a in c(attach.files)){
                     rcouchutils::couch.attach(trackingdb,cdb.wimid,f2a)
@@ -385,7 +386,9 @@ plot_wim.data  <- function(df.merged,
                            subhead='\npost imputation',
                            force.plot=FALSE,
                            trackingdb,
-                           wim.path='.'){
+                           wim.path='.',
+                           plain.speeds=FALSE
+                           ){
     cdb.wimid <- paste('wim',site_no,direction,sep='.')
     if(!force.plot){
         testfile <- paste(site_no,direction,year,sep='_')
@@ -406,6 +409,12 @@ plot_wim.data  <- function(df.merged,
 
     ## set up a reconfigured dataframe
     recoded <- recode.df.wim( df.merged )
+    ignore_speeds <- recoded$count_all_veh_speed < 5
+    recoded$wgt_spd_all_veh_speed[ignore_speeds] <- NA
+    ## recently switched to imputing speed directly, so deal with that
+    if(plain.speeds || median(recoded$wgt_spd_all_veh_speed,na.rm = TRUE)<100){
+        plain.speeds <- TRUE
+    }
 
     nh_spds <- recoded$nh_speed/recoded$not_heavyheavy
     ## for coloring
@@ -536,13 +545,25 @@ plot_wim.data  <- function(df.merged,
                            x="time of day",
                            y="hourly counts per lane"))
 
-    q <- q + ggplot2::geom_point(
-        ggplot2::aes(x = tod
-                    ,y = count_all_veh_speed
-                    ,colour= wgt_spd_all_veh_speed/count_all_veh_speed
+    if(plain.speeds){
+        q <- q +
+            ggplot2::geom_point(
+                         ggplot2::aes(x = tod
+                                     ,y = count_all_veh_speed
+                                     ,colour= wgt_spd_all_veh_speed
+                                      )
+                        ,alpha=0.5
                      )
-       ,alpha=0.5
-        )
+    }else{
+        q <- q +
+            ggplot2::geom_point(
+                         ggplot2::aes(x = tod
+                                     ,y = count_all_veh_speed
+                                     ,colour= wgt_spd_all_veh_speed/count_all_veh_speed
+                                      )
+                        ,alpha=0.5
+                     )
+    }
     q <- q + ggplot2::facet_grid(lane~day)
 
     q <- q + ggplot2::scale_color_gradient2('average speed',
@@ -558,12 +579,24 @@ plot_wim.data  <- function(df.merged,
                            x="time of day",
                            y="hourly speed per lane, miles per hour"))
 
-    q <- q + ggplot2::geom_point(
-        ggplot2::aes(x = tod
-                    ,y = wgt_spd_all_veh_speed/count_all_veh_speed
-                    ,colour=count_all_veh_speed )
-       ,alpha=0.7
+    if(plain.speeds){
+        q <- q +
+            ggplot2::geom_point(
+                         ggplot2::aes(x = tod
+                                     ,y = wgt_spd_all_veh_speed
+                                     ,colour=count_all_veh_speed )
+                        ,alpha=0.7
         )
+    }else{
+        q <- q +
+            ggplot2::geom_point(
+                         ggplot2::aes(x = tod
+                                     ,y = wgt_spd_all_veh_speed/count_all_veh_speed
+                                     ,colour=count_all_veh_speed )
+                        ,alpha=0.7
+                     )
+
+    }
     q <- q + ggplot2::facet_grid(lane~day)
 
     q <- q + ggplot2::scale_color_gradient2('vehicle counts',

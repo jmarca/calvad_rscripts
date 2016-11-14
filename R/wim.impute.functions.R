@@ -206,6 +206,13 @@ fill.wim.gaps <- function(df.wim
   ## weight, speed, and axles
   ##
   ic.names <- names(df.wim)
+
+    ## attempt to fix speed imputation
+    spd_cnt_names <- grep( pattern="count_all_veh_speed",x=ic.names,perl=TRUE,value=TRUE)
+    spd_wgt_names <- grep( pattern="wgt_spd_all_veh_speed",x=ic.names,perl=TRUE,value=TRUE)
+    df.wim[,spd_wgt_names] <- df.wim[,spd_wgt_names]/df.wim[,spd_cnt_names]
+
+
   count.vars <- grep( pattern=count.pattern,x=ic.names,perl=TRUE,value=TRUE)
 
   ic.names <- grep( pattern=count.pattern,
