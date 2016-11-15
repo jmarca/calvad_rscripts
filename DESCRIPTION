@@ -10,7 +10,7 @@ Depends:
     Amelia,
     RPostgreSQL,
     reshape2,
-    ggplot2,
+    ggplot2 (>= 2.2.0),
     rcouchutils,
     lattice,
     zoo

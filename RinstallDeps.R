@@ -1,5 +1,5 @@
-dot_is <- paste(getwd(),'.',sep='/')
-
+## need node_modules directories
+dot_is <- getwd()
 node_paths <- dir(dot_is,pattern='\\.Rlibs',
                   full.names=TRUE,recursive=TRUE,
                   ignore.case=TRUE,include.dirs=TRUE,
@@ -11,7 +11,6 @@ if(!file.exists('path')){
 }
 lib_paths <- .libPaths()
 .libPaths(c(path,node_paths,lib_paths))
-## ready to go
+
+install.packages("roxygen2",repos="https://cloud.r-project.org")
 devtools::install_deps()
-devtools::document()
-devtools::install()
