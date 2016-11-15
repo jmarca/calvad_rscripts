@@ -287,7 +287,8 @@ process.wim.site <- function(wim.site,
                                          ,force.plot=force.plot
                                          ,trackingdb=trackingdb
                                          ,wim.path=wim.path
-                                         ,plain.speeds=TRUE)
+                                         ##,plain.speeds=TRUE
+                                          )
             if(attach.files != 1){
                 for(f2a in c(attach.files)){
                     rcouchutils::couch.attach(trackingdb,cdb.wimid,f2a)
@@ -476,7 +477,7 @@ plot_wim.data  <- function(df.merged,
                                             high=("blue"),
                                             mid=("red"),
                                             low=("yellow"))
-    q <- q + ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5))
+    q <- q + ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5),plot.subtitle = ggplot2::element_text(hjust = 0.5))
     print(q)
 
     q <- p +
@@ -500,7 +501,7 @@ plot_wim.data  <- function(df.merged,
                                             mid=("red"),
                                             low=("yellow"))
 
-    q <- q + ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5))
+    q <- q + ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5),plot.subtitle = ggplot2::element_text(hjust = 0.5))
     print(q)
 
     q <- p +
@@ -524,7 +525,7 @@ plot_wim.data  <- function(df.merged,
                                             mid=("red"),
                                             low=("yellow"))
 
-    q <- q + ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5))
+    q <- q + ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5),plot.subtitle = ggplot2::element_text(hjust = 0.5))
     print(q)
 
     q <- p +
@@ -545,7 +546,7 @@ plot_wim.data  <- function(df.merged,
                                             high=("blue"),
                                             mid=("red"),
                                             low=("yellow"))
-    q <- q + ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5))
+    q <- q + ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5),plot.subtitle = ggplot2::element_text(hjust = 0.5))
     print(q)
 
     q <- p +
@@ -581,7 +582,7 @@ plot_wim.data  <- function(df.merged,
                                             mid=("red"),
                                             low=("yellow"))
 
-    q <- q + ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5))
+    q <- q + ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5),plot.subtitle = ggplot2::element_text(hjust = 0.5))
     print(q)
 
     q <- p +
@@ -616,7 +617,7 @@ plot_wim.data  <- function(df.merged,
                                             mid=("red"),
                                             low=("yellow"))
 
-    q <- q + ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5))
+    q <- q + ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5),plot.subtitle = ggplot2::element_text(hjust = 0.5))
     print(q)
 
     dev.off()
