@@ -164,7 +164,7 @@ process.wim.site <- function(wim.site,
                                          ,direction
                                          ,year
                                          ,fileprefix='raw'
-                                         ,subhead='\npre imputation'
+                                         ,subhead='pre imputation'
                                          ,force.plot=force.plot
                                          ,trackingdb=trackingdb
                                          ,wim.path=wim.path)
@@ -192,7 +192,7 @@ process.wim.site <- function(wim.site,
                                          ,direction
                                          ,year
                                          ,fileprefix='raw_trimmed'
-                                         ,subhead='\npre imputation, no outliers'
+                                         ,subhead='pre imputation, no outliers'
                                          ,force.plot=TRUE
                                          ,trackingdb=trackingdb
                                          ,wim.path=wim.path)
@@ -283,7 +283,7 @@ process.wim.site <- function(wim.site,
                                          ,direction
                                          ,year
                                          ,fileprefix='imputed'
-                                         ,subhead='\npost imputation'
+                                         ,subhead='post imputation'
                                          ,force.plot=force.plot
                                          ,trackingdb=trackingdb
                                          ,wim.path=wim.path
@@ -383,7 +383,7 @@ plot_wim.data  <- function(df.merged,
                            direction,
                            year,
                            fileprefix=NULL,
-                           subhead='\npost imputation',
+                           subhead='post imputation',
                            force.plot=FALSE,
                            trackingdb,
                            wim.path='.',
@@ -457,7 +457,8 @@ plot_wim.data  <- function(df.merged,
     p <- ggplot2::ggplot(recoded)
 
     q <- p +
-        ggplot2::labs(list(title=paste("Scatterplot not heavy heavy duty truck hourly counts in each lane, by time of day and day of week, for",year,"at site",site_no,direction,subhead),
+        ggplot2::labs(list(title=paste("Scatterplot not heavy heavy duty truck hourly counts in each lane, by time of day and day of week, for",year,"at site",site_no,direction),
+                           subtitle=subhead,
                            x="time of day",
                            y="hourly counts per lane"))
 
@@ -479,7 +480,8 @@ plot_wim.data  <- function(df.merged,
     print(q)
 
     q <- p +
-        ggplot2::labs(list(title=paste("Scatterplot not heavy heavy duty truck hourly counts in each lane, for",year,"at site",site_no,direction,subhead),
+        ggplot2::labs(list(title=paste("Scatterplot not heavy heavy duty truck hourly counts in each lane, for",year,"at site",site_no,direction),
+                           subtitle=subhead,
                            x="date",
                            y="hourly counts per lane"))
 
@@ -502,7 +504,8 @@ plot_wim.data  <- function(df.merged,
     print(q)
 
     q <- p +
-        ggplot2::labs(list(title=paste("Scatterplot heavy heavy duty truck hourly counts in each lane, by time of day and day of week, for",year,"at site",site_no,direction,subhead),
+        ggplot2::labs(list(title=paste("Scatterplot heavy heavy duty truck hourly counts in each lane, by time of day and day of week, for",year,"at site",site_no,direction),
+                           subtitle=subhead,
                            x="time of day",
                            y="hourly counts per lane"))
 
@@ -525,7 +528,8 @@ plot_wim.data  <- function(df.merged,
     print(q)
 
     q <- p +
-        ggplot2::labs(list(title=paste("Scatterplot heavy heavy duty truck hourly counts in each lane, for",year,"at site",site_no,direction,subhead),
+        ggplot2::labs(list(title=paste("Scatterplot heavy heavy duty truck hourly counts in each lane, for",year,"at site",site_no,direction),
+                           subtitle=subhead,
                            x="date",
                            y="hourly counts per lane"))
     q <- q + ggplot2::geom_point(
@@ -545,7 +549,8 @@ plot_wim.data  <- function(df.merged,
     print(q)
 
     q <- p +
-        ggplot2::labs(list(title=paste("Scatterplot count of all vehciles from WIM summary reports, in each lane by time of day and day of week, for",year,"at site",site_no,direction,subhead),
+        ggplot2::labs(list(title=paste("Scatterplot count of all vehciles from WIM summary reports, in each lane by time of day and day of week, for",year,"at site",site_no,direction),
+                           subtitle=subhead,
                            x="time of day",
                            y="hourly counts per lane"))
 
@@ -580,7 +585,8 @@ plot_wim.data  <- function(df.merged,
     print(q)
 
     q <- p +
-        ggplot2::labs(list(title=paste("Scatterplot hourly speeds of all vehciles from WIM summary reports, in each lane by time of day and day of week, for",year,"at site",site_no,direction,subhead),
+        ggplot2::labs(list(title=paste("Scatterplot hourly speeds of all vehciles from WIM summary reports, in each lane by time of day and day of week, for",year,"at site",site_no,direction),
+                           subtitle=subhead,
                            x="time of day",
                            y="hourly speed per lane, miles per hour"))
 
