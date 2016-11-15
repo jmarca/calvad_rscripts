@@ -453,6 +453,7 @@ plot_wim.data  <- function(df.merged,
     plotheight = 400 * numlanes
     png(filename = imagefilename, width=1600, height=plotheight, bg="transparent",pointsize=24)
 
+
     p <- ggplot2::ggplot(recoded)
 
     q <- p +
@@ -474,7 +475,7 @@ plot_wim.data  <- function(df.merged,
                                             high=("blue"),
                                             mid=("red"),
                                             low=("yellow"))
-
+    q <- q + ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5))
     print(q)
 
     q <- p +
@@ -497,6 +498,7 @@ plot_wim.data  <- function(df.merged,
                                             mid=("red"),
                                             low=("yellow"))
 
+    q <- q + ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5))
     print(q)
 
     q <- p +
@@ -519,6 +521,7 @@ plot_wim.data  <- function(df.merged,
                                             mid=("red"),
                                             low=("yellow"))
 
+    q <- q + ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5))
     print(q)
 
     q <- p +
@@ -538,6 +541,7 @@ plot_wim.data  <- function(df.merged,
                                             high=("blue"),
                                             mid=("red"),
                                             low=("yellow"))
+    q <- q + ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5))
     print(q)
 
     q <- p +
@@ -572,6 +576,7 @@ plot_wim.data  <- function(df.merged,
                                             mid=("red"),
                                             low=("yellow"))
 
+    q <- q + ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5))
     print(q)
 
     q <- p +
@@ -605,6 +610,7 @@ plot_wim.data  <- function(df.merged,
                                             mid=("red"),
                                             low=("yellow"))
 
+    q <- q + ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5))
     print(q)
 
     dev.off()
