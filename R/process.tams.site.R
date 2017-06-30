@@ -1,0 +1,709 @@
+pf <- function(x,y){lattice::panel.smoothScatter(x,y,nbin=c(200,200))}
+
+load.tams.csv <- function(site_no,year,path='.'){
+    target.file <- paste(site_no,".*",year,sep='')
+    isa.csv <- dir(path, pattern=target.file,full.names=TRUE, ignore.case=TRUE,recursive=TRUE,all.files=TRUE)
+    if(length(isa.csv) == 0){
+        return ('not found')
+    }
+    tams_data <- list()
+    for(f in isa.csv){
+        this_file <- readr::read_csv(f)
+        print(this_file)
+        if(length(tams_data) == 0){
+            tams_data <- this_file
+        }else{
+            tams_data <- merge(tams_data,this_file,all=TRUE)
+        }
+    }
+    return (tams_data)
+}
+
+
+
+## day.of.week <-    c('Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday')
+## lane.defs <- c('left lane','right lane 1', 'right lane 2', 'right lane 3', 'right lane 4', 'right lane 5', 'right lane 6', 'right lane 7', 'right lane 8')
+strip.function.a <- lattice::strip.custom(which.given=1,factor.levels=day.of.week, strip.levels = TRUE )
+
+#' get Amelia TAMS file from the local file system
+#'
+#' Rather than hitting a remote server, just get the Amelia output
+#' from the local file system.  Use this if everything is running on
+#' one machine, ya?
+#'
+#' @param site_no the TAMS site number
+#' @param direction the direction of the data for this TAMS site
+#' @param path the root path of where the Amelia files are stashed
+#' @param year the year of the data
+#' @return either 'todo' indicating that the file is not on this
+#' machine or not yet done, or a dataframe containing the amelia
+#' output
+#' @export
+get.amelia.tams.file.local <- function(site_no
+                                     ,direction
+                                     ,path='/'
+                                     ,year){
+
+    ## tamsid <- paste('tams',site_no,direction,sep='')
+
+    ## file_pattern <- make.amelia.output.pattern(tamsid,year)
+    ## isa.df <- dir(path
+    ##              ,pattern=file_pattern
+    ##              ,full.names=TRUE
+    ##              ,ignore.case=TRUE
+    ##              ,recursive=TRUE,all.files=TRUE)
+    ## if(length(isa.df)==0){
+    ##     return('todo')
+    ## }
+
+    ## ## keep the file with the correct year
+    ## right_file <- grep(pattern=year,x=isa.df,value=TRUE)
+    ## if(length(right_file) == 0){
+    ##     print(paste('failed to find year',year,'in list',paste(isa.df,collapse=',')))
+    ##     return('todo')
+
+    ## }
+    ## if(length(right_file) > 1){
+    ##     print(paste('failed to isolate one file from list',paste(isa.df,collapse=','),'got',paste(right_file,collapse=',')))
+    ##     stop(2)
+
+    ## }
+    ## env <- new.env()
+    ## res <- load(file=right_file,envir=env)
+    ## return (env[[res]])
+
+}
+
+
+#' Process a TAMS site's data, including pre-plots, imputation of
+#' missing values, and post-plots.
+#'
+#' This is the main routine.
+#'
+#' @param tams.site the tams site
+#' @param year the year
+#' @param seconds the number of seconds to aggregate.  Almost always
+#' will be 3600 (which is one hour)
+#' @param preplot TRUE or FALSE, defaults to TRUE
+#' @param postplot TRUE or FALSE, defaults to TRUE
+#' @param impute TRUE or FALSE, defaults to TRUE
+#' @param force.plot TRUE or FALSE.  whether to redo the plots even if
+#' they are already in couchdb
+#' @param tams.path where the TAMS data can be found on the local file
+#' @param trackingdb the usual "vdsdata\%2ftracking"
+#' system.  Default is '/data/backup/tams' because that is the
+#' directory on the machine I developed this function on
+#' @param con a postgresql db connection for loading TAMS data
+#' @return either 0, 1, or the result of running the imputation if it
+#' failed.  Also check the trackingdb for any mention of issues.
+#' @export
+process.tams.site <- function(tams.site,
+                             year,
+                             seconds=3600,
+                             preplot=TRUE,
+                             postplot=TRUE,
+                             impute=TRUE,
+                             force.plot=FALSE,
+                             tams.path='/data/backup/tams/',
+                             trackingdb='vdsdata%2ftracking'){
+
+    print(paste('tams path is ',tams.path))
+
+    returnval <- list()
+    if(!preplot & !postplot & !impute){
+        print('nothing to do here, preplot, postplot, and impute all false')
+        return(0)
+    }
+
+    print(paste('starting to process  tams site ',tams.site,
+                'preplot',preplot,
+                'postplot',postplot,
+                'impute',impute))
+
+    ## two cases.  One, I'm redoing work and can just skip to the
+    ## impute step.  Two, I need to run impute
+
+    ## stupid globals
+    df.tams.split <- NULL
+    directions <- NULL
+    df.tams.speed.split <- NULL
+
+    if(impute){
+        tams.data <- load.tams.from.csv(tams.site,year,tams.path,trackingdb)
+    }
+
+    db_result <- get.tams.directions(tams.site=tams.site,con=con)
+    directions <- db_result$direction
+
+
+    for(direction in directions){
+        print(paste('processing direction',direction))
+        ## direction <- names(df.tams.split)[1]
+        cdb.tamsid <- paste('tams',tams.site,direction,sep='.')
+        df.tams.d.joint <- NULL
+        if(load.from.db){
+
+            df.tams.d.joint <- tams.data[[direction]]
+
+            if(length(dim(df.tams.d.joint)) !=  2){
+                ## probably have an issue here
+                print(paste("no data loaded from DB for",tams.site,direction,year," ---  skipping"))
+                next
+            }
+
+
+        }else{
+            ## load from filesystem
+            print('load from filesystem')
+            df.tams.d.joint <- get.tams.rdata(tams.site=tams.site,
+                                            direction=direction,
+                                            year=year,
+                                            tams.path=tams.path
+                                            )
+            ##print(summary(df.tams.d.joint))
+            if(is.null(dim(df.tams.d.joint))){
+                print("failed to load from filesystem")
+                next
+            }
+        }
+
+
+        if(preplot){
+            print('plotting raw data, pre impute')
+            print(dim(df.tams.d.joint))
+            attach.files <- plot_tams.data(df.tams.d.joint
+                                         ,tams.site
+                                         ,direction
+                                         ,year
+                                         ,fileprefix='raw'
+                                         ,subhead='pre imputation'
+                                         ,force.plot=force.plot
+                                         ,trackingdb=trackingdb
+                                         ,tams.path=tams.path)
+            if(attach.files != 1){
+                for(f2a in c(attach.files)){
+                    rcouchutils::couch.attach(trackingdb,cdb.tamsid,f2a)
+                }
+            }
+        }
+
+        ## right here add sanity checks for data for example, if
+        ## the hourly values are super high compared to the
+        ## "usual" max value
+
+        ## look at the plots for TAMS 103 S 2015 for example
+        config <- rcouchutils::get.config()
+        sqldf_postgresql(config)
+        df.trimmed <- good.high.clustering(df.tams.d.joint)
+
+        if(preplot){
+            print('plotting trimmed raw data, pre impute')
+            print(dim(df.trimmed))
+            attach.files <- plot_tams.data(df.trimmed
+                                         ,tams.site
+                                         ,direction
+                                         ,year
+                                         ,fileprefix='raw_trimmed'
+                                         ,subhead='pre imputation, no outliers'
+                                         ,force.plot=TRUE
+                                         ,trackingdb=trackingdb
+                                         ,tams.path=tams.path)
+            if(attach.files != 1){
+                for(f2a in c(attach.files)){
+                    rcouchutils::couch.attach(trackingdb,cdb.tamsid,f2a)
+                }
+            }
+        }
+
+        df.tams.amelia <- NULL
+
+        if(impute){
+
+            print(paste('imputing',year,tams.site,direction))
+            r <- try(
+                df.tams.amelia <- fill.tams.gaps(df.trimmed)
+            )
+            if(class(r) == "try-error") {
+                returnval[[direction]] <- paste(r,'')
+                print(paste('try error:',r))
+                rcouchutils::couch.set.state(year=year,
+                                             id=cdb.tamsid,
+                                             doc=list('imputed'=paste('try error',r)),
+                                             db=trackingdb)
+            }
+            if(df.tams.amelia$code==1){
+                ## that means good imputation
+                ## have a TAMS site data with no gaps.  save it
+
+                ## note that maxiter is currently hardcoded at 50 in
+                ## tams.impute.functions, so that's why it says plain
+                ## '50' below
+                store.amelia.chains(
+                    df.amelia=df.tams.amelia,
+                    year=year,
+                    detector.id=cdb.tamsid,
+                    imputation.name='tamsraw',
+                    maxiter=50,
+                    db=trackingdb
+                )
+                savepath <- paste(tams.path,year,sep='/')
+                if(!file.exists(savepath)){dir.create(savepath)}
+                savepath <- paste(savepath,tams.site,sep='/')
+                if(!file.exists(savepath)){dir.create(savepath)}
+                savepath <- paste(savepath,direction,sep='/')
+                if(!file.exists(savepath)){dir.create(savepath)}
+
+                target.file <- make.amelia.output.file(savepath,paste('tams',tams.site,direction,sep=''),seconds,year)
+                print(paste('name is',target.file,'savepath is',savepath))
+                ## fs write
+                save(df.tams.amelia,file=target.file,compress="xz")
+                rcouchutils::couch.set.state(year=year,
+                                             id=cdb.tamsid,
+                                             doc=list('imputed'='finished'),
+                                             db=trackingdb)
+
+            }else{
+                errdoc <- paste(df.tams.amelia$code,
+                                'message',df.tams.amelia$message)
+                print(paste("amelia not happy:",errdoc))
+                rcouchutils::couch.set.state(year=year,
+                                             id=cdb.tamsid,
+                                             doc=list('imputed'=
+                                                          paste('error:',
+                                                                errdoc)),
+                                             db=trackingdb)
+            }
+
+        }else{
+            ## not imputing this run, but maybe post plotting
+            if(postplot){
+                print('load imputed data from filesystem')
+                df.tams.amelia <- get.amelia.tams.file.local(site_no=tams.site
+                                                          ,year=year
+                                                          ,direction=direction
+                                                          ,path=tams.path)
+
+            }
+            returnval[[direction]] <- df.tams.amelia
+        }
+
+        if(postplot){
+            print('plotting post-imputation')
+            df.tams.agg.amelia <- tams.medianed.aggregate.df(df.tams.amelia)
+            attach.files <- plot_tams.data(df.tams.agg.amelia
+                                         ,tams.site
+                                         ,direction
+                                         ,year
+                                         ,fileprefix='imputed'
+                                         ,subhead='post imputation'
+                                         ,force.plot=force.plot
+                                         ,trackingdb=trackingdb
+                                         ,tams.path=tams.path
+                                         ##,plain.speeds=TRUE
+                                          )
+            if(attach.files != 1){
+                for(f2a in c(attach.files)){
+                    rcouchutils::couch.attach(trackingdb,cdb.tamsid,f2a)
+                }
+            }
+        }
+    }
+
+    returnval
+}
+
+##' upload plots to couchdb
+##'
+##' pass in a list of files, and they will be uploaded as attachments
+##' to the correct document in the tracking db
+##'
+##' @title upload.plots.couchdb
+##' @param tams.site the TAMS site id
+##' @param direction the direction for this data
+##' @param year the year
+##' @param imagepath where are the images.  Will be used if you don't
+##' pass in a list of files, otherwise will be ignored
+##' @param trackingdb defaults to the usual "vdsdata\%2ftracking"
+##' @param files.to.attach a list of files to attach to couchdb.
+##'
+##' If empty or if left as default value, will look through imagepath
+##' and will upload all of the files found that match the pattern for
+##' this tams site id, direction, and year.
+##'
+##' @return just falls of the end and exits.  La dee da.  Run this
+##' strictly for the side effect of attaching files to the document in
+##' the couchdb database
+##' @author James E. Marca
+upload.plots.couchdb <- function(tams.site
+                                 ,direction
+                                 ,year
+                                 ,imagepath
+                                 ,trackingdb='vdsdata%2ftracking'
+                                ,files.to.attach=list()){
+    cdb.tamsid <- paste('tams',tams.site,direction,sep='.')
+
+    if(length(files.to.attach) ==  0){
+        file.pattern <- paste(tams.site,direction,year,'.*png',sep='_')
+        file.path <- paste(paste(imagepath,direction,'/',sep=''),sep='')
+        files.to.attach <- dir(file.path,
+                               pattern=paste("^",file.pattern,sep=''),
+                               full.names=TRUE,all.files=TRUE)
+    }
+    for(f2a in files.to.attach){
+        rcouchutils::couch.attach(db=trackingdb
+                                 ,docname=cdb.tamsid
+                                 ,attfile=f2a
+                                  )
+    }
+}
+
+#' Plot TAMS data and save the resulting plots to the files system and
+#' CouchDB tracking database
+#'
+#' This is more or less a generic function to plot data either before
+#' or after running Amelia.  Similar to the VDS version, but this one
+#' works for TAMS data, but it doesn't care if imputations have been
+#' done or not, so indicate so by including a note in the fileprefix
+#' parameter
+#'
+#'
+#' @param df.merged the dataframe to plot
+#' @param site_no the TAMS site number
+#' @param direction the direction of flow at the site
+#' @param year the year
+#' @param fileprefix helps name the output file, and also to find it.
+#' By default the plot file will be named via the pattern
+#'
+#'     imagefileprefix <- paste(site_no,direction,year,sep='_')
+#'
+#' But if you include the fileprefix parameter, then the image file
+#' naming will have the pattern
+#'
+#'     imagefileprefix <- paste(site_no,direction,year,fileprefix,sep='_')
+#'
+#' So you can add something like "imputed" to the file name to
+#' differentiate the imputed plots from the input data plots.
+#' @param subhead Written on the plot
+#' @param force.plot defaults to FALSE.  If FALSE, and a file exists, abort
+#' @param trackingdb defaults to 'vdsdata\%2ftracking' for checking if
+#' plots already done
+#' @param tams.path where to save the files.  defaults to current working directory
+#' @return files.to.attach the files that you need to send off to
+#' couchdb tracking database.
+#' @export
+plot_tams.data  <- function(df.merged,
+                           site_no,
+                           direction,
+                           year,
+                           fileprefix=NULL,
+                           subhead='post imputation',
+                           force.plot=FALSE,
+                           trackingdb,
+                           tams.path='.',
+                           plain.speeds=FALSE
+                           ){
+    cdb.tamsid <- paste('tams',site_no,direction,sep='.')
+    if(!force.plot){
+        testfile <- paste(site_no,direction,year,sep='_')
+        if(!is.null(fileprefix)){
+            testfile <- paste(testfile,fileprefix,sep='_')
+        }
+        testfile <- paste(testfile,'006.png',sep='_')
+        have.plot <- rcouchutils::couch.has.attachment(trackingdb
+                                                      ,docname = cdb.tamsid
+                                                      ,testfile)
+        if(have.plot){
+            return (1)
+        }
+    }
+    ## print('need to make plots')
+    varnames <- names(df.merged)
+    ## make some diagnostic plots
+
+    ## set up a reconfigured dataframe
+    recoded <- recode.df.tams( df.merged )
+    ignore_speeds <- recoded$count_all_veh_speed < 5
+    recoded$wgt_spd_all_veh_speed[ignore_speeds] <- NA
+    ## recently switched to imputing speed directly, so deal with that
+    if(plain.speeds || median(recoded$wgt_spd_all_veh_speed,na.rm = TRUE)<100){
+        plain.speeds <- TRUE
+    }
+
+    nh_spds <- recoded$nh_speed/recoded$not_heavyheavy
+    ## for coloring
+    daymidpoint <- 12
+    nh_midpoint <- mean(recoded$not_heavyheavy,na.rm=TRUE)
+    hh_midpoint <- mean(recoded$heavyheavy,na.rm=TRUE)
+    nh_spds_iles <- quantile(nh_spds,
+                      probs=c(0.01,0.25,0.5,0.75,0.99),na.rm=TRUE)
+    hhspd_midpoint <- median(recoded$hh_speed/recoded$heavyheavy,na.rm=TRUE)
+
+    imagefileprefix <- paste(site_no,year,sep='_')
+
+    savepath <- paste(tams.path,year,sep='/')
+    if(!file.exists(savepath)){dir.create(savepath)}
+    savepath <- paste(savepath,site_no,sep='/')
+    if(!file.exists(savepath)){dir.create(savepath)}
+    if(direction != ''){
+        savepath <- paste(savepath,direction,sep='/')
+        if(!file.exists(savepath)){dir.create(savepath)}
+        imagefileprefix <- paste(site_no,direction,year,sep='_')
+    }
+    savepath <- paste(savepath,'images',sep='/')
+    if(!file.exists(savepath)){dir.create(savepath)}
+
+
+    if(!is.null(fileprefix) && fileprefix != ''){
+        imagefileprefix <- paste(imagefileprefix,fileprefix,sep='_')
+    }
+
+    imagefilename <- paste(savepath,
+                           paste(imagefileprefix,'%03d.png',sep='_'),sep='/')
+
+    ## print(paste('plotting to',imagefilename))
+
+    numlanes <- length(levels(recoded$lane))
+    plotheight = 400 * numlanes
+    png(filename = imagefilename, width=1600, height=plotheight, bg="transparent",pointsize=24)
+
+
+    p <- ggplot2::ggplot(recoded)
+
+    q <- p +
+        ggplot2::labs(list(title=paste("Scatterplot not heavy heavy duty truck hourly counts in each lane, by time of day and day of week, for",year,"at site",site_no,direction),
+                           subtitle=subhead,
+                           x="time of day",
+                           y="hourly counts per lane"))
+
+    q <- q + ggplot2::geom_point(
+        ggplot2::aes(x = tod
+                    ,y = not_heavyheavy
+                    ,colour= heavyheavy
+                     )
+       ,alpha=0.5
+        )
+    q <- q + ggplot2::facet_grid(lane~day)
+
+    q <- q + ggplot2::scale_color_gradient2('heavy heavy trucks',
+                                            midpoint=hh_midpoint,
+                                            high=("blue"),
+                                            mid=("red"),
+                                            low=("yellow"))
+    q <- q + ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5),plot.subtitle = ggplot2::element_text(hjust = 0.5))
+    print(q)
+
+    q <- p +
+        ggplot2::labs(list(title=paste("Scatterplot not heavy heavy duty truck hourly counts in each lane, for",year,"at site",site_no,direction),
+                           subtitle=subhead,
+                           x="date",
+                           y="hourly counts per lane"))
+
+    q <- q + ggplot2::geom_point(
+        ggplot2::aes(x = ts
+                    ,y = not_heavyheavy
+                    ,colour= heavyheavy
+                     )
+       ,alpha=0.5
+        )
+    q <- q + ggplot2::facet_grid(lane ~ .)
+
+    q <- q + ggplot2::scale_color_gradient2('heavy heavy trucks',
+                                            midpoint=hh_midpoint,
+                                            high=("blue"),
+                                            mid=("red"),
+                                            low=("yellow"))
+
+    q <- q + ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5),plot.subtitle = ggplot2::element_text(hjust = 0.5))
+    print(q)
+
+    q <- p +
+        ggplot2::labs(list(title=paste("Scatterplot heavy heavy duty truck hourly counts in each lane, by time of day and day of week, for",year,"at site",site_no,direction),
+                           subtitle=subhead,
+                           x="time of day",
+                           y="hourly counts per lane"))
+
+    q <- q + ggplot2::geom_point(
+        ggplot2::aes(x = tod
+                    ,y = heavyheavy
+                    ,colour= not_heavyheavy
+                     )
+       ,alpha=0.5
+        )
+    q <- q + ggplot2::facet_grid(lane~day)
+
+    q <- q + ggplot2::scale_color_gradient2('not heavy heavy trucks',
+                                            midpoint=nh_midpoint,
+                                            high=("blue"),
+                                            mid=("red"),
+                                            low=("yellow"))
+
+    q <- q + ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5),plot.subtitle = ggplot2::element_text(hjust = 0.5))
+    print(q)
+
+    q <- p +
+        ggplot2::labs(list(title=paste("Scatterplot heavy heavy duty truck hourly counts in each lane, for",year,"at site",site_no,direction),
+                           subtitle=subhead,
+                           x="date",
+                           y="hourly counts per lane"))
+    q <- q + ggplot2::geom_point(
+        ggplot2::aes(x = ts
+                    ,y = heavyheavy
+                    ,colour= not_heavyheavy
+                     )
+       ,alpha=0.5
+        )
+    q <- q + ggplot2::facet_grid(lane ~ .)
+    q <- q + ggplot2::scale_color_gradient2('not heavy heavy trucks',
+                                            midpoint=nh_midpoint,
+                                            high=("blue"),
+                                            mid=("red"),
+                                            low=("yellow"))
+    q <- q + ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5),plot.subtitle = ggplot2::element_text(hjust = 0.5))
+    print(q)
+
+    q <- p +
+        ggplot2::labs(list(title=paste("Scatterplot count of all vehciles from TAMS summary reports, in each lane by time of day and day of week, for",year,"at site",site_no,direction),
+                           subtitle=subhead,
+                           x="time of day",
+                           y="hourly counts per lane"))
+
+    if(plain.speeds){
+        q <- q +
+            ggplot2::geom_point(
+                         ggplot2::aes(x = tod
+                                     ,y = count_all_veh_speed
+                                     ,colour= wgt_spd_all_veh_speed
+                                      )
+                        ,alpha=0.5
+                     )
+    }else{
+        q <- q +
+            ggplot2::geom_point(
+                         ggplot2::aes(x = tod
+                                     ,y = count_all_veh_speed
+                                     ,colour= wgt_spd_all_veh_speed/count_all_veh_speed
+                                      )
+                        ,alpha=0.5
+                     )
+    }
+    q <- q + ggplot2::facet_grid(lane~day)
+
+    q <- q + ggplot2::scale_color_gradient2('average speed',
+                                            midpoint=65,
+                                            high=("blue"),
+                                            mid=("red"),
+                                            low=("yellow"))
+
+    q <- q + ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5),plot.subtitle = ggplot2::element_text(hjust = 0.5))
+    print(q)
+
+    q <- p +
+        ggplot2::labs(list(title=paste("Scatterplot hourly speeds of all vehciles from TAMS summary reports, in each lane by time of day and day of week, for",year,"at site",site_no,direction),
+                           subtitle=subhead,
+                           x="time of day",
+                           y="hourly speed per lane, miles per hour"))
+
+    if(plain.speeds){
+        q <- q +
+            ggplot2::geom_point(
+                         ggplot2::aes(x = tod
+                                     ,y = wgt_spd_all_veh_speed
+                                     ,colour=count_all_veh_speed )
+                        ,alpha=0.7
+        )
+    }else{
+        q <- q +
+            ggplot2::geom_point(
+                         ggplot2::aes(x = tod
+                                     ,y = wgt_spd_all_veh_speed/count_all_veh_speed
+                                     ,colour=count_all_veh_speed )
+                        ,alpha=0.7
+                     )
+
+    }
+    q <- q + ggplot2::facet_grid(lane~day)
+
+    q <- q + ggplot2::scale_color_gradient2('vehicle counts',
+                                            midpoint=mean(recoded$count_all_veh_speed,na.rm=TRUE),
+                                            high=("blue"),
+                                            mid=("red"),
+                                            low=("yellow"))
+
+    q <- q + ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5),plot.subtitle = ggplot2::element_text(hjust = 0.5))
+    print(q)
+
+    dev.off()
+
+    files.to.attach <- dir(savepath,pattern=paste(imagefileprefix,'0',sep='_'),full.names=TRUE,all.files=TRUE)
+
+    files.to.attach
+}
+##' recode the tams data for plotting
+##'
+##' @title recode.df.tams
+##' @param df the dataframe of data
+##' @return a recoded dataframe, using melt and all that
+##' @author James E. Marca
+recode.df.tams <- function( df ){
+    varnames <- names(df)
+    keepvars <- grep('_(r|l)\\d+$',x=varnames,perl=TRUE,value=TRUE)
+    unlaned_vars <- unique(substr(keepvars,start=1,stop=nchar(keepvars)-3))
+
+    melded <- NA
+    for(i in 1:length(unlaned_vars)){
+        measure.vars <- grep(pattern=paste('^',unlaned_vars[i],sep=''),x=varnames,value=TRUE)
+        melt_1 <- reshape2::melt(data=df,
+                                 measure.vars=measure.vars,
+                                 id.vars=c('ts','tod','day')
+                                ,variable.name='lane'
+                                ,value.name=unlaned_vars[i])
+        start_lane_part <- nchar(levels(melt_1$lane)[1])-1
+        end_lane_part   <- nchar(levels(melt_1$lane)[1])
+
+        melt_1$lane <- as.factor(substr(melt_1$lane,
+                                        start_lane_part,
+                                        end_lane_part))
+
+        if(i == 1){
+            melded <- melt_1
+        }else{
+            melded <- merge(x=melded,y=melt_1,all=TRUE)
+        }
+    }
+    ## some useful factor things
+    melded$day <- factor(melded$day,
+                         labels=c('Su','Mo','Tu','We','Th','Fr','Sa'))
+
+    ## lanes?
+    lanes <- extract_unique_lanes(df)
+
+    ## the lanes for a TAMS site might not include all lanes.  For
+    ## example, site 52 has 4 lanes, but data only for 2,3,4 (aka
+    ## r3,r2,r1, in order), not data for the left lane (lane 1, aka
+    ## l1)
+
+    rightlanes <- NULL
+    rightlabels <- NULL
+    leftlane <- c('l1')
+    leftlabel <- c('left')
+    for(lane in  rev(sort(lanes))){
+        if(lane == 'l1'){
+            ## last time through no matter what
+            next
+        }
+        ## but there might not be a left lane...
+        rightlanes <- c(rightlanes,lane)
+        if(lane == 'r1'){
+            rightlabels <- c(rightlabels,'right')
+        }else{
+            rightlabels <- c(rightlabels,paste('lane',length(rightlabels)+2))
+        }
+    }
+
+    melded$lane <- factor(melded$lane,
+                          levels=c('l1',rightlanes),
+                          labels=c('left',rightlabels))
+
+    melded
+
+}

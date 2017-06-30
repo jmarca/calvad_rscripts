@@ -13,6 +13,7 @@ Depends:
     ggplot2 (>= 2.2.0),
     rcouchutils,
     lattice,
+    tidyverse,
     zoo
 License: GPLv2
 LazyData: true
@@ -26,5 +27,6 @@ Imports:
     ggplot2,
     rcouchutils,
     lattice,
+    tidyverse,
     zoo
-RoxygenNote: 5.0.1
+RoxygenNote: 6.0.1
