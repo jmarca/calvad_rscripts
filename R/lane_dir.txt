@@ -1,0 +1,17 @@
+Yes, you're right!
+
+Sent from my iPhone
+
+> On Jun 28, 2017, at 6:17 PM, James E. Marca <james@activimetrics.com> wrote:
+> 
+> Hi Andre,
+> 
+> what is the meaning of lane_dir again?
+> 
+> 1=North
+> 2=South
+> 3=East
+> 4=West
+> 
+> perhaps?
+> 
