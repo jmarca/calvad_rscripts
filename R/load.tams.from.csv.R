@@ -23,14 +23,12 @@
 ##'
 load.tams.from.csv <- function(tams.site,year,direction,
                                tams.path='/data/backup/tams',
-                               filename.pattern=paste('tams.*',year,'.csv*',sep='')
+                               filename.pattern=paste(tams.site,'.*',year,'.*\\.(csv|csv.gz)$',sep=''),
                                trackingdb='vdsdata%2ftracking'){
-
-    isa.csv <- dir(path, pattern=filename.pattern,full.names=TRUE, ignore.case=TRUE,recursive=TRUE,all.files=TRUE)
+    isa.csv <- dir(tams.path, pattern=filename.pattern,full.names=TRUE, ignore.case=TRUE,recursive=TRUE,all.files=TRUE)
     load.result <- list()
-    if(length(isa.df)>0){
-        print (paste('loading', isa.df[1]))
-        load.result <-  readr::csv(isa.df[1])
+    if(length(isa.csv)>0){
+        load.result <- do.call("rbind",lapply(isa.csv,readr::read_csv,progress=TRUE))
     }
     return (load.result)
 }
@@ -106,22 +104,39 @@ tams.lane.and.time.aggregation <- function(lane.dir.data){
     ## to be refactored
 
 }
-
-reshape.tams.from.csv <- function(tams.csv){
+##' reshape.tams.from.csv
+##' Take tams raw CSV, and turn it into one tibble per direction
+##'
+##' Given a csv file, this function will process the CSV into one tibble per direction.
+##'
+##' @title reshape.tams.from.csv
+##' @param tams.csv csv file read from csv, for example, by readr::read_csv
+##' @param tams.path Where to save RData files, one per direction
+##' @return A list of tibbles, one per direction in the original CSV data.
+##' @author James E. Marca
+##' @export
+##'
+reshape.tams.from.csv <- function(tams.csv,tams.path,year=0,trim.to.year=TRUE){
     ## prep for sqldf if you need postgresql
     # config <- rcouchutils::get.config()
     # sqldf_postgresql(config)
 
     tams.site <- tams.csv$detstaid[1]
+    site.lanes <- max(tams.data.csv$lane)
     hour <-  3600 ## seconds per hour
     tams.csv$hourly <- as.numeric(tams.csv$timestamp_full) - as.numeric(tams.csv$timestamp_full) %% hour
+
+    ts.ct   <- as.POSIXct(tams.csv$timestamp_full,tz='UTC')
+    tams.csv$hrly <- as.numeric(trunc(ts.ct,"hours"))
     tams.csv <- tams.recode.lanes(tams.recode.lane_dir(tams.csv))
+    tams.csv$any_vehicle <- 1
     tams.csv$heavyheavy <- 0
     tams.csv$not_heavyheavy <- 0
     tams.csv$heavyheavy[tams.csv$calvad_class == 'HHDT'] <- 1
     tams.csv$not_heavyheavy[tams.csv$calvad_class == 'NHHDT'] <- 1
     ##if(length(levels(tams.csv$lane_dir)) > 1)
     tams.by.dir <- split(tams.csv,tams.csv$lane_dir)
+
 
     directions <- levels(tams.csv$lane_dir)
     mean.var.names <- c('not_heavyheavy','heavyheavy')
@@ -150,9 +165,13 @@ reshape.tams.from.csv <- function(tams.csv){
                                                sep='_'),
                                          sep=' ',
                                          collapse=', '),
-                                   ', max(vehicle_count)-min(vehicle_count) as ',
+                                   ', total(any_vehicle) as ',
                                    paste('n',l,sep='_'),
-                                   'from temp_df group by hourly',
+                                   ', max(vehicle_count) as ',
+                                   paste('maxn',l,sep='_'),
+                                   ', min(vehicle_count) as ',
+                                   paste('minn',l,sep='_'),
+                                   'from temp_df group by hrly',
                                    sep=' ',collapse=' '
                                    )
             df_hourly <- sqldf::sqldf(sqlstatement2,drv="SQLite")
@@ -160,6 +179,7 @@ reshape.tams.from.csv <- function(tams.csv){
             df_hourly$ts <- trunc(df_hourly$ts,units='hours')
             tams.data.agg[[l]] <- df_hourly
         }
+        print('combine lane by lane aggregates')
         ## combine lane by lane aggregates by same hour
         df.return <- tams.data.agg[[1]]
         if(length(tams.data.agg)>1){
@@ -167,6 +187,7 @@ reshape.tams.from.csv <- function(tams.csv){
                 df.return <- merge(df.return,tams.data.agg[[l]],all=TRUE)
             }
         }
+        print(dim(df.return))
         for(col in names(df.return)){
             navalues <- is.na(df.return[,col])
             if(any(navalues)){
@@ -178,9 +199,45 @@ reshape.tams.from.csv <- function(tams.csv){
         ts.all.df <- tibble::tibble(ts=all.ts)
         attr(ts.all.df$ts,'tzone') <- 'UTC'
         df.return <- merge(df.return,ts.all.df,all=TRUE)
+
+        if(year == 0){
+            about.the.middle <- floor(length(df.return$ts))
+            year <- 1900 + as.POSIXlt.date(df.return$ts[about.the.middle])$year
+        }
+
+        if(trim.to.year){
+            ## trim any records not in the requested year
+            print(paste('trimming to year',year))
+            keep.records <- (1900 + as.POSIXlt.date(df.return$ts)$year) ==  year
+            ## print(summary(keep.records))
+            ## print('length original')
+            ## print(dim(df.return))
+            ## print('length keep')
+            ## print(dim(df.return[keep.records,]))
+            df.return <- df.return[keep.records,]
+        }
+
+        df.return <- add.time.of.day(df.return)
         tams.by.dir[[direction]] <- df.return
+
+        ## save tams data for next time
+        filename <- paste(tams.site,direction,year,'tams.agg.RData',sep='.')
+        savepath <- tams.path
+        if(!file.exists(savepath)){dir.create(savepath)}
+        savepath <- paste(tams.path,year,sep='/')
+        if(!file.exists(savepath)){dir.create(savepath)}
+        savepath <- paste(savepath,tams.site,sep='/')
+        if(!file.exists(savepath)){dir.create(savepath)}
+        savepath <- paste(savepath,direction,sep='/')
+        if(!file.exists(savepath)){dir.create(savepath)}
+        filepath <- paste(savepath,filename,sep='/')
+
+        save(df.return,file=filepath,compress='xz')
+        print(paste('saved',tams.site,direction,'to',filepath))
+
     }
-    tams.by.dir
+
+    list(tams.by.dir,site.lanes)
 }
 
 ##     df.tams <- load.tams.data.straight(tams.site=tams.site,year=year,con=con)

@@ -3,9 +3,10 @@ node_modules.*
 ^package\.json$
 ^test$
 ^test\.config\.json
-.*cookies\.txt$
 node_modules$
 ^Rtest\.R$
 ^Rinstall\.R$
 .*scratch\.R$
 .*TODO.md
+^appveyor\.yml$
+^\.travis\.yml$

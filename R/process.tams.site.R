@@ -1,78 +1,10 @@
 pf <- function(x,y){lattice::panel.smoothScatter(x,y,nbin=c(200,200))}
 
-load.tams.csv <- function(site_no,year,path='.'){
-    target.file <- paste(site_no,".*",year,sep='')
-    isa.csv <- dir(path, pattern=target.file,full.names=TRUE, ignore.case=TRUE,recursive=TRUE,all.files=TRUE)
-    if(length(isa.csv) == 0){
-        return ('not found')
-    }
-    tams_data <- list()
-    for(f in isa.csv){
-        this_file <- readr::read_csv(f)
-        print(this_file)
-        if(length(tams_data) == 0){
-            tams_data <- this_file
-        }else{
-            tams_data <- merge(tams_data,this_file,all=TRUE)
-        }
-    }
-    return (tams_data)
-}
-
 
 
 ## day.of.week <-    c('Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday')
 ## lane.defs <- c('left lane','right lane 1', 'right lane 2', 'right lane 3', 'right lane 4', 'right lane 5', 'right lane 6', 'right lane 7', 'right lane 8')
-strip.function.a <- lattice::strip.custom(which.given=1,factor.levels=day.of.week, strip.levels = TRUE )
 
-#' get Amelia TAMS file from the local file system
-#'
-#' Rather than hitting a remote server, just get the Amelia output
-#' from the local file system.  Use this if everything is running on
-#' one machine, ya?
-#'
-#' @param site_no the TAMS site number
-#' @param direction the direction of the data for this TAMS site
-#' @param path the root path of where the Amelia files are stashed
-#' @param year the year of the data
-#' @return either 'todo' indicating that the file is not on this
-#' machine or not yet done, or a dataframe containing the amelia
-#' output
-#' @export
-get.amelia.tams.file.local <- function(site_no
-                                     ,direction
-                                     ,path='/'
-                                     ,year){
-
-    ## tamsid <- paste('tams',site_no,direction,sep='')
-
-    ## file_pattern <- make.amelia.output.pattern(tamsid,year)
-    ## isa.df <- dir(path
-    ##              ,pattern=file_pattern
-    ##              ,full.names=TRUE
-    ##              ,ignore.case=TRUE
-    ##              ,recursive=TRUE,all.files=TRUE)
-    ## if(length(isa.df)==0){
-    ##     return('todo')
-    ## }
-
-    ## ## keep the file with the correct year
-    ## right_file <- grep(pattern=year,x=isa.df,value=TRUE)
-    ## if(length(right_file) == 0){
-    ##     print(paste('failed to find year',year,'in list',paste(isa.df,collapse=',')))
-    ##     return('todo')
-
-    ## }
-    ## if(length(right_file) > 1){
-    ##     print(paste('failed to isolate one file from list',paste(isa.df,collapse=','),'got',paste(right_file,collapse=',')))
-    ##     stop(2)
-
-    ## }
-    ## env <- new.env()
-    ## res <- load(file=right_file,envir=env)
-    ## return (env[[res]])
-
-}
 
 
 #' Process a TAMS site's data, including pre-plots, imputation of
@@ -124,54 +56,37 @@ process.tams.site <- function(tams.site,
     ## impute step.  Two, I need to run impute
 
     ## stupid globals
-    df.tams.split <- NULL
     directions <- NULL
-    df.tams.speed.split <- NULL
 
-    if(impute){
-        tams.data <- load.tams.from.csv(tams.site,year,tams.path,trackingdb)
-    }
-
-    db_result <- get.tams.directions(tams.site=tams.site,con=con)
-    directions <- db_result$direction
+    ##if(impute){
+    tams.data <- load.tams.from.csv(tams.site=tams.site,year=year,tams.path=tams.path)
+    tams.data <- reshape.tams.from.csv(tams.csv=tams.data,year=year,tams.path = tams.path)
+    ##}else{
+    ##    tams.data <- load.tams.from.fs(tams.site,year,tams.path,trackingdb)
+    ##}
+    site.lanes <- tams.data[[2]]
+    tams.data <- tams.data[[1]]
+    directions <- names(tams.data)
 
 
     for(direction in directions){
         print(paste('processing direction',direction))
-        ## direction <- names(df.tams.split)[1]
         cdb.tamsid <- paste('tams',tams.site,direction,sep='.')
-        df.tams.d.joint <- NULL
-        if(load.from.db){
+        df.tams <- NULL
+        df.tams <- tams.data[[direction]]
 
-            df.tams.d.joint <- tams.data[[direction]]
-
-            if(length(dim(df.tams.d.joint)) !=  2){
-                ## probably have an issue here
-                print(paste("no data loaded from DB for",tams.site,direction,year," ---  skipping"))
-                next
-            }
-
-
-        }else{
-            ## load from filesystem
-            print('load from filesystem')
-            df.tams.d.joint <- get.tams.rdata(tams.site=tams.site,
-                                            direction=direction,
-                                            year=year,
-                                            tams.path=tams.path
-                                            )
-            ##print(summary(df.tams.d.joint))
-            if(is.null(dim(df.tams.d.joint))){
-                print("failed to load from filesystem")
-                next
-            }
+        if(length(dim(df.tams)) !=  2){
+            ## probably have an issue here
+            print(paste("no data loaded for",tams.site,direction,year," ---  skipping"))
+            next
         }
+
 
 
         if(preplot){
             print('plotting raw data, pre impute')
-            print(dim(df.tams.d.joint))
-            attach.files <- plot_tams.data(df.tams.d.joint
+            print(dim(df.tams))
+            attach.files <- plot_tams.data(df.tams
                                          ,tams.site
                                          ,direction
                                          ,year
@@ -191,15 +106,16 @@ process.tams.site <- function(tams.site,
         ## the hourly values are super high compared to the
         ## "usual" max value
 
-        ## look at the plots for TAMS 103 S 2015 for example
-        config <- rcouchutils::get.config()
-        sqldf_postgresql(config)
-        df.trimmed <- good.high.clustering(df.tams.d.joint)
+        ## I needed to trim data in psql for WIM.  leave this here for
+        ## future reference just in case
+        ## config <- rcouchutils::get.config()
+        ## sqldf_postgresql(config)
+        ## df.trimmed <- good.high.clustering(df.tams)
 
         if(preplot){
             print('plotting trimmed raw data, pre impute')
-            print(dim(df.trimmed))
-            attach.files <- plot_tams.data(df.trimmed
+            print(dim(df.tams))
+            attach.files <- plot_tams.data(df.tams
                                          ,tams.site
                                          ,direction
                                          ,year
@@ -221,7 +137,7 @@ process.tams.site <- function(tams.site,
 
             print(paste('imputing',year,tams.site,direction))
             r <- try(
-                df.tams.amelia <- fill.tams.gaps(df.trimmed)
+                df.tams.amelia <- fill.tams.gaps(df.tams)
             )
             if(class(r) == "try-error") {
                 returnval[[direction]] <- paste(r,'')
