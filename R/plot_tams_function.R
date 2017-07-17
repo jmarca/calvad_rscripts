@@ -267,7 +267,7 @@ recode.df.tams <- function( df,lanes.count ){
 
     melded <- NA
     for(i in 1:length(unlaned_vars)){
-        measure.vars <- grep(pattern=paste('^',unlaned_vars[i],sep=''),x=varnames,value=TRUE)
+        measure.vars <- grep(pattern=paste('^',unlaned_vars[i],'_',sep=''),x=varnames,value=TRUE)
         melt_1 <- reshape2::melt(data=df,
                                  measure.vars=measure.vars,
                                  id.vars=c('ts','tod','day')
