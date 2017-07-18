@@ -5,7 +5,7 @@ dot_is <- getwd()
 plaba <- regexpr(pattern='/node_modules',envrr['PWD'])
 if(plaba>0){
     ## stoppoint <- plaba + 12 ## same as  attr(plaba,'match.length')
-    stoppoint <- plaba  ## actually, go one up
+    stoppoint <- plaba - 1 ## actually, go one up
     dot_is <- substr(envrr['PWD'],1,stoppoint)
 }
 node_paths <- dir(dot_is,pattern='\\.Rlibs',
