@@ -11,9 +11,7 @@ Depends:
     RPostgreSQL,
     reshape2,
     ggplot2 (>= 2.2.0),
-    rcouchutils,
-    lattice,
-    zoo
+    rcouchutils
 License: GPLv2
 LazyData: true
 Suggests:

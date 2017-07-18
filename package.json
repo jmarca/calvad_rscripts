@@ -8,7 +8,8 @@
   },
   "scripts": {
     "test": "Rscript Rtest.R",
-    "install": "Rscript RinstallDeps.R && Rscript Rinstall.R"
+    "preinstall": "Rscript RinstallDeps.R",
+    "install": "Rscript Rinstall.R"
   },
   "repository": {
     "type": "git",
