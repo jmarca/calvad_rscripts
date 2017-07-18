@@ -1,6 +1,3 @@
-pf <- function(x,y){lattice::panel.smoothScatter(x,y,nbin=c(200,200))}
-
-
 
 ## day.of.week <-    c('Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday')
 ## lane.defs <- c('left lane','right lane 1', 'right lane 2', 'right lane 3', 'right lane 4', 'right lane 5', 'right lane 6', 'right lane 7', 'right lane 8')
