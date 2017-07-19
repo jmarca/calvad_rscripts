@@ -391,7 +391,7 @@ reshape.tams.from.csv <- function(tams.csv,tams.path,year,trim.to.year=TRUE){
         }
 
         ## save tams data for next time
-        filename <- paste(tams.site,direction,year,'tams.agg.RData',sep='.')
+        filename <- make.tams.output.filename(tams.site,direction,year)
         savepath <- tams.path
         if(!file.exists(savepath)){dir.create(savepath)}
         savepath <- paste(tams.path,year,sep='/')
@@ -408,114 +408,54 @@ reshape.tams.from.csv <- function(tams.csv,tams.path,year,trim.to.year=TRUE){
     list(tams.by.dir,number.lanes)
 }
 
-##     df.tams <- load.tams.data.straight(tams.site=tams.site,year=year,con=con)
-##     ## only continue if I have real data
-##     if(dim(df.tams)[1]==0){
-##         print(paste('problem, dim df.tams is',dim(df.tams)))
-##         rcouchutils::couch.set.state(year=year,
-##                                      id=paste('tams',tams.site,sep='.'),
-##                                      doc=list('imputed'='no tams data in database'),
-##                                      db=trackingdb)
-##         return(0)
-##     }
+##' .. content for \description{} (no empty lines) ..
+##'
+##' .. content for \details{} ..
+##' @title
+##' @param tams.site
+##' @param direction
+##' @param year
+##' @return
+##' @author James E. Marca
+make.tams.output.filename <- function(tams.site,direction,year){
+    paste(tams.site,direction,year,'tams.agg.RData',sep='.')
+}
 
-##     df.tams.speed <- get.tams.speed.from.sql(tams.site=tams.site,year=year,con=con)
-##     df.tams.split <- split(df.tams, df.tams$direction)
-##     df.tams.speed.split <- split(df.tams.speed, df.tams.speed$direction)
+##' Load TAMS data from a saved RData file.
+##'
+##' This function will use the provided site number, year, and direction to look below the tams.path to find if a suitable RData file already exists.  If so, it will load it and return it as a data.frame.  If not, it will return the character string 'todo'.
+##' @title
+##' @param tams.site the tams site
+##' @param year the year
+##' @param direction the direction, 'N', 'S', 'E', or 'W'
+##' @param tams.path the relative path to where to find TAMS files
+##' @return a data frame or a string
+##' @author James E. Marca
+##' @export
+load.tams.from.file <- function(tams.site,year,direction,tams.path){
 
+    target.file <- make.tams.output.filename(tams.site,direction,year)
+    target.file <- paste(target.file,'$',sep='')
+    savepath <-  paste(tams.path,year,tams.site,sep='/')
+    isa.df <- dir(savepath, pattern=target.file,full.names=TRUE, ignore.case=TRUE,recursive=TRUE,all.files=TRUE)
+  ## print(paste(path,target.file,paste(isa.df,collapse=','),sep=' : '))
+    if(length(isa.df)==0){
+        return('todo')
+    }
+    ## keep the file with the correct year
+    right_file <- grep(pattern=year,x=isa.df,value=TRUE)
+    if(length(right_file) == 0){
+        print(paste('failed to find year',year,'in list',paste(isa.df,collapse=',')))
+        return('todo')
 
-##     db_result <- get.tams.directions(tams.site=tams.site,con=con)
-##     directions <- db_result$direction
+    }
+    if(length(right_file) > 1){
+        print(paste('failed to isolate one file from list',paste(isa.df,collapse=','),'got',paste(right_file,collapse=',')))
+        stop(2)
 
-##     ## global return value for the following loop
-##     tams.data <- list()
-##     for(direction in directions){
-##         print(paste('processing direction',direction))
-##         ## direction <- names(df.tams.split)[1]
-##         cdb.tamsid <- paste('tams',tams.site,direction,sep='.')
+    }
+    env <- new.env()
+    res <- load(file=right_file,envir=env)
+    return (env[[res]])
 
-##         print('basic checks')
-##         if(length(df.tams.split[[direction]]$ts)<100){
-##             tams.data[[direction]] <- list()
-##             rcouchutils::couch.set.state(year=year,
-##                                          id=cdb.tamsid,
-##                                          doc=list('imputed'='less than 100 timestamps for raw data in db'),
-##                                          db=trackingdb)
-##             next
-##         }
-##         if(length(df.tams.speed.split[[direction]]$ts)<100){
-##             tams.data[[direction]] <- list()
-##             rcouchutils::couch.set.state(year=year,
-##                                          id=cdb.tamsid,
-##                                          doc=list('imputed'='less than 100 timestamps for speed data in db'),
-##                                          db=trackingdb)
-##             next
-##         }
-
-##         df.tams.d <- process.tams.2(df.tams.split[[direction]])
-##         df.tams.s <- df.tams.speed.split[[direction]]
-
-##         ## fix for site 16, counts of over 100,000 per hour (actually 30 million)
-##         too.many <- df.tams.s$veh_count > 10000 ## 10,000 veh in 5 minutes!
-##         df.tams.s <- df.tams.s[!too.many,]
-
-##         df.tams.split[[direction]] <- NULL
-##         df.tams.speed.split[[direction]] <- NULL
-
-##         df.tams.d <- tams.additional.variables(df.tams.d)
-
-##         ## aggregate over time
-##         print(' aggregate ')
-##         df.tams.dagg <- tams.lane.and.time.aggregation(df.tams.d)
-
-##         ## ... instead aborting above.
-##         ## The one such instance so far had junk measurements
-##         if(length(df.tams.s)==0){
-##             ## insert one dummy record per lane
-##             lastlane <- max(df.tams.d$lane)
-##             dummytime <- df.tams.d$ts[1]
-##             df.tams.s <- data.frame(cbind(lane=c('l1',paste('r',2:lastlane,sep=''))))
-##             df.tams.s$ts <- dummytime
-##             df.tams.s$veh_speed <- NA
-##             df.tams.s$veh_count <- NA
-##         }
-
-##         df.tams.sagg <- make.speed.aggregates(df.tams.s)
-
-##         df.tams.d.joint <- merge(df.tams.dagg,df.tams.sagg,all=TRUE)
-
-##         rm(df.tams.dagg, df.tams.sagg,df.tams.s,df.tams.d )
-
-##         df.tams.d.joint <- add.time.of.day(df.tams.d.joint)
-
-##         db.legal.names  <- gsub("\\.", "_", names(df.tams.d.joint))
-
-##         names(df.tams.d.joint) <- db.legal.names
-
-##         tams.data[[direction]] <- df.tams.d.joint
-
-##         ## right here add sanity checks for data for example, if
-##         ## the hourly values are super high compared to the
-##         ## "usual" max value
-
-##         ## look at the plots for TAMS 103 S 2015 for example
-
-
-##         ## save tams data for next time
-
-##         savepath <- tams.path
-##         if(!file.exists(savepath)){dir.create(savepath)}
-##         savepath <- paste(tams.path,year,sep='/')
-##         if(!file.exists(savepath)){dir.create(savepath)}
-##         savepath <- paste(savepath,tams.site,sep='/')
-##         if(!file.exists(savepath)){dir.create(savepath)}
-##         savepath <- paste(savepath,direction,sep='/')
-##         if(!file.exists(savepath)){dir.create(savepath)}
-##         filepath <- paste(savepath,'tams.agg.RData',sep='/')
-##         print(filepath)
-
-##         save(df.tams.d.joint,file=filepath,compress='xz')
-##         print(paste('saved to',filepath))
-##     }
-##     return (tams.data)
-## }
+}
