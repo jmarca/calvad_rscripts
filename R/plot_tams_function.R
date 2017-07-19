@@ -74,18 +74,15 @@ plot_tams.data  <- function(df,
 
     imagefileprefix <- paste(site_no,year,sep='_')
 
-    savepath <- paste(tams.path,year,sep='/')
-    if(!file.exists(savepath)){dir.create(savepath)}
-    savepath <- paste(savepath,site_no,sep='/')
-    if(!file.exists(savepath)){dir.create(savepath)}
+    savepath <- plot_path(tams.path = tams.path
+                         ,year = year
+                         ,site_no = site_no
+                         ,direction = direction
+                         ,makedir = TRUE)
+
     if(direction != ''){
-        savepath <- paste(savepath,direction,sep='/')
-        if(!file.exists(savepath)){dir.create(savepath)}
         imagefileprefix <- paste(site_no,direction,year,sep='_')
     }
-    savepath <- paste(savepath,'images',sep='/')
-    if(!file.exists(savepath)){dir.create(savepath)}
-
 
     if(!is.null(fileprefix) && fileprefix != ''){
         imagefileprefix <- paste(imagefileprefix,fileprefix,sep='_')
@@ -252,6 +249,33 @@ plot_tams.data  <- function(df,
 
     files.to.attach
 }
+##' Create the output directory for TAMS data plots
+##'
+##' Given details, this function will create a canonical output path.
+##' @title plot_path
+##' @param tams.path the starting point for the directory creation process
+##' @param year the year
+##' @param site_no the TAMS site number
+##' @param direction the direction, defaults to '' (no specific direction)
+##' @param makedir whether or not to create missing directories; defaults to TRUE
+##' @return a string representing the root directory to write image files
+##' @author James E. Marca
+##' @export
+plot_path <- function(tams.path,year,site_no,direction='',makedir=TRUE){
+    if(makedir && !file.exists(tams.path)){dir.create(tams.path)}
+    savepath <- paste(tams.path,year,sep='/')
+    if(makedir && !file.exists(savepath)){dir.create(savepath)}
+    savepath <- paste(savepath,site_no,sep='/')
+    if(makedir && !file.exists(savepath)){dir.create(savepath)}
+    if(direction != ''){
+        savepath <- paste(savepath,direction,sep='/')
+        if(makedir && !file.exists(savepath)){dir.create(savepath)}
+    }
+    savepath <- paste(savepath,'images',sep='/')
+    if(makedir && !file.exists(savepath)){dir.create(savepath)}
+    savepath
+}
+
 
 ##' recode the tams data for plotting
 ##'

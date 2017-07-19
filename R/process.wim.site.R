@@ -272,8 +272,8 @@ process.wim.site <- function(wim.site,
                                                           ,path=wim.path)
 
             }
-            returnval[[direction]] <- df.wim.amelia
         }
+        returnval[[direction]] <- df.wim.amelia
 
         if(postplot){
             print('plotting post-imputation')

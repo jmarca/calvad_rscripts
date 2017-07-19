@@ -87,9 +87,9 @@ process.tams.site <- function(tams.site,
                                           ,tams.site
                                           ,direction
                                           ,year
-                                          ,lanes.count
+                                          ,lanes.count=site.lanes
                                           ,fileprefix='raw'
-                                          ,subhead='pre imputation'
+                                          ,subhead='\npre imputation'
                                           ,force.plot=force.plot
                                           ,trackingdb=trackingdb
                                           ,tams.path=tams.path)
@@ -109,33 +109,22 @@ process.tams.site <- function(tams.site,
         ## config <- rcouchutils::get.config()
         ## sqldf_postgresql(config)
         ## df.trimmed <- good.high.clustering(df.tams)
-
-        if(preplot){
-            print('plotting trimmed raw data, pre impute')
-            print(dim(df.tams))
-            attach.files <- plot_tams.data(df.tams
-                                         ,tams.site
-                                         ,direction
-                                         ,year
-                                         ,fileprefix='raw_trimmed'
-                                         ,subhead='pre imputation, no outliers'
-                                         ,force.plot=TRUE
-                                         ,trackingdb=trackingdb
-                                         ,tams.path=tams.path)
-            if(attach.files != 1){
-                for(f2a in c(attach.files)){
-                    rcouchutils::couch.attach(trackingdb,cdb.tamsid,f2a)
-                }
-            }
-        }
+        ## and also do the plot -> couchdb thing again if needed
 
         df.tams.amelia <- NULL
 
         if(impute){
 
             print(paste('imputing',year,tams.site,direction))
+            plotspath <- calvadrscripts::plot_path(tams.path = tams.path
+                                                  ,year = year
+                                                  ,site_no = tams.site
+                                                  ,direction = direction
+                                                  ,makedir = FALSE)
+            plotsname <- paste(plotspath,'ameliaplots.png',sep='/')
             r <- try(
-                df.tams.amelia <- fill.tams.gaps(df.tams)
+                df.tams.amelia <- fill.tams.gaps(df.tams=df.tams
+                                                ,plotfile=plotsname)
             )
             if(class(r) == "try-error") {
                 returnval[[direction]] <- paste(r,'')
@@ -149,17 +138,25 @@ process.tams.site <- function(tams.site,
                 ## that means good imputation
                 ## have a TAMS site data with no gaps.  save it
 
-                ## note that maxiter is currently hardcoded at 50 in
+                ## note that maxiter is currently hardcoded at 100 in
                 ## tams.impute.functions, so that's why it says plain
-                ## '50' below
+                ## '100' below
                 store.amelia.chains(
                     df.amelia=df.tams.amelia,
                     year=year,
                     detector.id=cdb.tamsid,
                     imputation.name='tamsraw',
-                    maxiter=50,
+                    maxiter=100,
                     db=trackingdb
                 )
+
+                ## save generated plots too
+                amelia.plots <- dir(plotspath,pattern='ameliaplots'
+                                   ,full.names=TRUE,all.files=TRUE)
+                for(f2a in c(amelia.plots)){
+                    result <- rcouchutils::couch.attach(trackingdb,cdb.tamsid,f2a)
+                }
+
                 savepath <- paste(tams.path,year,sep='/')
                 if(!file.exists(savepath)){dir.create(savepath)}
                 savepath <- paste(savepath,tams.site,sep='/')
@@ -168,7 +165,7 @@ process.tams.site <- function(tams.site,
                 if(!file.exists(savepath)){dir.create(savepath)}
 
                 target.file <- make.amelia.output.file(savepath,paste('tams',tams.site,direction,sep=''),seconds,year)
-                print(paste('name is',target.file,'savepath is',savepath))
+                print(paste('name is',target.file))
                 ## fs write
                 save(df.tams.amelia,file=target.file,compress="xz")
                 rcouchutils::couch.set.state(year=year,
@@ -198,23 +195,23 @@ process.tams.site <- function(tams.site,
                                                           ,path=tams.path)
 
             }
-            returnval[[direction]] <- df.tams.amelia
         }
+
+        returnval[[direction]] <- df.tams.amelia
 
         if(postplot){
             print('plotting post-imputation')
             df.tams.agg.amelia <- tams.medianed.aggregate.df(df.tams.amelia)
             attach.files <- plot_tams.data(df.tams.agg.amelia
-                                         ,tams.site
-                                         ,direction
-                                         ,year
-                                         ,fileprefix='imputed'
-                                         ,subhead='post imputation'
-                                         ,force.plot=force.plot
-                                         ,trackingdb=trackingdb
-                                         ,tams.path=tams.path
-                                         ##,plain.speeds=TRUE
-                                          )
+                                          ,tams.site
+                                          ,direction
+                                          ,year
+                                          ,fileprefix='imputed'
+                                          ,lanes.count = site.lanes
+                                          ,subhead='\npost imputation'
+                                          ,force.plot=TRUE
+                                          ,trackingdb=trackingdb
+                                          ,tams.path=tams.path)
             if(attach.files != 1){
                 for(f2a in c(attach.files)){
                     rcouchutils::couch.attach(trackingdb,cdb.tamsid,f2a)
