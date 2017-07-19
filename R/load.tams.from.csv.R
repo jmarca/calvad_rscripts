@@ -266,7 +266,7 @@ reshape.tams.from.csv <- function(tams.csv,tams.path,year,trim.to.year=TRUE){
 
     ## extract some info
     tams.site <- tams.csv$detstaid[1]
-    number.lanes <- max(tams.data.csv$lane)
+    number.lanes <- max(tams.csv$lane)
 
     hour <-  3600 ## seconds per hour
 
