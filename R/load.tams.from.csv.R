@@ -408,14 +408,17 @@ reshape.tams.from.csv <- function(tams.csv,tams.path,year,trim.to.year=TRUE){
     list(tams.by.dir,number.lanes)
 }
 
-##' .. content for \description{} (no empty lines) ..
+##' Make the canonical TAMS output filename.
 ##'
-##' .. content for \details{} ..
-##' @title
-##' @param tams.site
-##' @param direction
-##' @param year
-##' @return
+##' Given the site number, direction, and year, create a filename that
+##' can be used for saving the data.frame for that site, year,
+##' direction to the filesystem.  Did this so that I can use it again
+##' when fetching files.
+##' @title make.tams.output.filename
+##' @param tams.site the tams site
+##' @param direction the direction, one of [NSEW]
+##' @param year the year
+##' @return a string that can be used as a filename
 ##' @author James E. Marca
 make.tams.output.filename <- function(tams.site,direction,year){
     paste(tams.site,direction,year,'tams.agg.RData',sep='.')
@@ -423,8 +426,11 @@ make.tams.output.filename <- function(tams.site,direction,year){
 
 ##' Load TAMS data from a saved RData file.
 ##'
-##' This function will use the provided site number, year, and direction to look below the tams.path to find if a suitable RData file already exists.  If so, it will load it and return it as a data.frame.  If not, it will return the character string 'todo'.
-##' @title
+##' This function will use the provided site number, year, and
+##' direction to look below the tams.path to find if a suitable RData
+##' file already exists.  If so, it will load it and return it as a
+##' data.frame.  If not, it will return the character string 'todo'.
+##' @title load.tams.from.file
 ##' @param tams.site the tams site
 ##' @param year the year
 ##' @param direction the direction, 'N', 'S', 'E', or 'W'
