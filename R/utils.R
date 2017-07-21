@@ -179,7 +179,7 @@ add.time.of.day <- function(df){
   ts.lt   <- as.POSIXlt(df$ts)
   df$tod  <- ts.lt$hour + (ts.lt$min/60)
   df$day  <- ts.lt$wday
-  df$hr   <- ts.lt$hr
+  df$hr   <- ts.lt$hour
   df
 }
 
