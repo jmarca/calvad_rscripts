@@ -12,9 +12,22 @@ force.plot <- FALSE
 tams.path <- 'tests/testthat/files'
 
 
+## clean up any earlier tests output
+tams.data.path <- paste(tams.path,year,tams.site,sep='/')
+
+drop_rdatas <- dir(tams.data.path,pattern='RData$',all.files=TRUE,full.names=TRUE,recursive=TRUE,ignore.case=TRUE,include.dirs=TRUE)
+if(length(drop_rdatas)>0) {
+    unlink(drop_rdatas)
+}
+drop_pngs <- dir(tams.data.path,pattern='png$',all.files=TRUE,full.names=TRUE,recursive=TRUE,ignore.case=TRUE,include.dirs=TRUE)
+if(length(drop_pngs)>0) {
+    unlink(drop_pngs)
+}
 
 
-test_that("oldway and new way are the same", {
+
+
+test_that("parts of processing CSV data work okay", {
 
     load.df <- calvadrscripts::load.tams.from.file(tams.site,year,'E',tams.path)
     testthat::expect_equal(load.df,'todo')
@@ -80,6 +93,15 @@ test_that("oldway and new way are the same", {
         testthat::expect_is(load.df,'data.frame')
         testthat::expect_equal(dim(load.df),c(2131,10))
         testthat::expect_equal(load.df, tams.data[[dir]])
+    }
+
+    drop_rdatas <- dir(tams.data.path,pattern='RData$',all.files=TRUE,full.names=TRUE,recursive=TRUE,ignore.case=TRUE,include.dirs=TRUE)
+    if(length(drop_rdatas)>0) {
+        unlink(drop_rdatas)
+    }
+    drop_pngs <- dir(tams.data.path,pattern='png$',all.files=TRUE,full.names=TRUE,recursive=TRUE,ignore.case=TRUE,include.dirs=TRUE)
+    if(length(drop_pngs)>0) {
+        unlink(drop_pngs)
     }
 
 })
