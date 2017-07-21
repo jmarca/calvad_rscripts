@@ -1,29 +1,23 @@
-##' Get WIM dataframe from a saved RData file
+##' Get the WIM data from the database
 ##'
-##' I stopped using this at one point when faced with borked RData
-##' files.  Probably safe to start using again.
-##'
-##' Given the WIM site number, the year, and the direction, will get
-##' the correct RData file from some directory under the path
-##' parameter.  If it exists, will return the reconstituted dataframe.
-##' If not, not.
-##'
-##' @title get.wim.rdata
+##' I used to get WIM data from the database, then save to an RData
+##' file, then use that.  But then small issues would creep in for
+##' some reason.  Therefore, the default and usual way is to load WIM
+##' data directly from the DB every time.  It takes longer, but leads
+##' to fewer errors.
+##' @title load.wim.from.db
 ##' @param wim.site the WIM site number
 ##' @param year the year
-##' @param direction the direction
+##' @param con database connection
 ##' @param wim.path the root path in the file system to start looking
 ##'     for the RData files.  The code will add in the year, then the
 ##'     site number, then the direction, so that the file can be found
 ##'     in the expected place
-##' @param filename.pattern the pattern to use when searching.  Will
-##'     look for wim.agg.RData by default, but if, say, you want to
-##'     load the imputation output file, then pass in "imputed.RData"
-##'     or similar
+##' @param trackingdb the couchdb tracking db to use, defaults to
+##'     'vdsdata\%2ftracking'
 ##' @return a dataframe with the raw, unimputed data, or NULL
 ##' @author James E. Marca
 ##' @export
-##'
 load.wim.from.db <- function(wim.site,year,con,
                              wim.path='/data/backup/wim',
                              trackingdb='vdsdata%2ftracking'){

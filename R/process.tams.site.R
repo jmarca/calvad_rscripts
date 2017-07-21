@@ -12,19 +12,18 @@
 #' @param tams.site the tams site
 #' @param year the year
 #' @param seconds the number of seconds to aggregate.  Almost always
-#' will be 3600 (which is one hour)
+#'     will be 3600 (which is one hour)
 #' @param preplot TRUE or FALSE, defaults to TRUE
 #' @param postplot TRUE or FALSE, defaults to TRUE
 #' @param impute TRUE or FALSE, defaults to TRUE
 #' @param force.plot TRUE or FALSE.  whether to redo the plots even if
-#' they are already in couchdb
+#'     they are already in couchdb
 #' @param tams.path where the TAMS data can be found on the local file
-#' @param trackingdb the usual "vdsdata\%2ftracking"
-#' system.  Default is '/data/backup/tams' because that is the
-#' directory on the machine I developed this function on
-#' @param con a postgresql db connection for loading TAMS data
+#' @param trackingdb the usual "vdsdata\%2ftracking" system.  Default
+#'     is '/data/backup/tams' because that is the directory on the
+#'     machine I developed this function on
 #' @return either 0, 1, or the result of running the imputation if it
-#' failed.  Also check the trackingdb for any mention of issues.
+#'     failed.  Also check the trackingdb for any mention of issues.
 #' @export
 process.tams.site <- function(tams.site,
                              year,
@@ -93,7 +92,7 @@ process.tams.site <- function(tams.site,
                                           ,force.plot=force.plot
                                           ,trackingdb=trackingdb
                                           ,tams.path=tams.path)
-            if(attach.files != 1){
+            if(length(attach.files) > 1 || attach.files != 1){
                 for(f2a in c(attach.files)){
                     rcouchutils::couch.attach(trackingdb,cdb.tamsid,f2a)
                 }
@@ -189,10 +188,10 @@ process.tams.site <- function(tams.site,
             ## not imputing this run, but maybe post plotting
             if(postplot){
                 print('load imputed data from filesystem')
-                df.tams.amelia <- get.amelia.tams.file.local(site_no=tams.site
-                                                          ,year=year
-                                                          ,direction=direction
-                                                          ,path=tams.path)
+                df.tams.amelia <- get.amelia.tams.file.local(tams.site=tams.site
+                                                            ,year=year
+                                                            ,direction=direction
+                                                            ,tams.path=tams.path)
 
             }
         }
@@ -212,7 +211,7 @@ process.tams.site <- function(tams.site,
                                           ,force.plot=TRUE
                                           ,trackingdb=trackingdb
                                           ,tams.path=tams.path)
-            if(attach.files != 1){
+            if(length(attach.files) > 1 || attach.files != 1){
                 for(f2a in c(attach.files)){
                     rcouchutils::couch.attach(trackingdb,cdb.tamsid,f2a)
                 }
@@ -221,49 +220,4 @@ process.tams.site <- function(tams.site,
     }
 
     returnval
-}
-
-##' upload plots to couchdb
-##'
-##' pass in a list of files, and they will be uploaded as attachments
-##' to the correct document in the tracking db
-##'
-##' @title upload.plots.couchdb
-##' @param tams.site the TAMS site id
-##' @param direction the direction for this data
-##' @param year the year
-##' @param imagepath where are the images.  Will be used if you don't
-##' pass in a list of files, otherwise will be ignored
-##' @param trackingdb defaults to the usual "vdsdata\%2ftracking"
-##' @param files.to.attach a list of files to attach to couchdb.
-##'
-##' If empty or if left as default value, will look through imagepath
-##' and will upload all of the files found that match the pattern for
-##' this tams site id, direction, and year.
-##'
-##' @return just falls of the end and exits.  La dee da.  Run this
-##' strictly for the side effect of attaching files to the document in
-##' the couchdb database
-##' @author James E. Marca
-upload.plots.couchdb <- function(tams.site
-                                 ,direction
-                                 ,year
-                                 ,imagepath
-                                 ,trackingdb='vdsdata%2ftracking'
-                                ,files.to.attach=list()){
-    cdb.tamsid <- paste('tams',tams.site,direction,sep='.')
-
-    if(length(files.to.attach) ==  0){
-        file.pattern <- paste(tams.site,direction,year,'.*png',sep='_')
-        file.path <- paste(paste(imagepath,direction,'/',sep=''),sep='')
-        files.to.attach <- dir(file.path,
-                               pattern=paste("^",file.pattern,sep=''),
-                               full.names=TRUE,all.files=TRUE)
-    }
-    for(f2a in files.to.attach){
-        rcouchutils::couch.attach(db=trackingdb
-                                 ,docname=cdb.tamsid
-                                 ,attfile=f2a
-                                  )
-    }
 }

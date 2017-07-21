@@ -105,20 +105,22 @@ process.wim.site <- function(wim.site,
     ## two cases.  One, I'm redoing work and can just skip to the
     ## impute step.  Two, I need to hit the db directly.  Figure it
     ## out by checking if I can load the data from the file
-    load.from.db <- FALSE
+    ## load.from.db <- FALSE
     if(impute){
         ## in this case, I need to load from the db, to be safe
         load.from.db <- TRUE
     }
+    ## actually, since I never load from FS anymore...
+    load.from.db <- TRUE
 
     ## stupid globals
     df.wim.split <- NULL
     directions <- NULL
     df.wim.speed.split <- NULL
 
-    if(load.from.db){
+    ## if(load.from.db){
         wim.data <- load.wim.from.db(wim.site,year,con,wim.path,trackingdb)
-    }
+    ## }
 
     db_result <- get.wim.directions(wim.site=wim.site,con=con)
     directions <- db_result$direction
@@ -318,6 +320,7 @@ process.wim.site <- function(wim.site,
 ##' and will upload all of the files found that match the pattern for
 ##' this wim site id, direction, and year.
 ##'
+##' @param site.type defaults to "wim", but you can set it to 'tams'
 ##' @return just falls of the end and exits.  La dee da.  Run this
 ##' strictly for the side effect of attaching files to the document in
 ##' the couchdb database
@@ -327,8 +330,9 @@ upload.plots.couchdb <- function(wim.site
                                  ,year
                                  ,imagepath
                                  ,trackingdb='vdsdata%2ftracking'
-                                ,files.to.attach=list()){
-    cdb.wimid <- paste('wim',wim.site,direction,sep='.')
+                                ,files.to.attach=list()
+                                 ,site.type="wim"){
+    cdb.wimid <- paste(site.type,wim.site,direction,sep='.')
 
     if(length(files.to.attach) ==  0){
         file.pattern <- paste(wim.site,direction,year,'.*png',sep='_')
@@ -372,12 +376,18 @@ upload.plots.couchdb <- function(wim.site
 #' So you can add something like "imputed" to the file name to
 #' differentiate the imputed plots from the input data plots.
 #' @param subhead Written on the plot
-#' @param force.plot defaults to FALSE.  If FALSE, and a file exists, abort
+#' @param force.plot defaults to FALSE.  If FALSE, and a file exists,
+#'     abort
 #' @param trackingdb defaults to 'vdsdata\%2ftracking' for checking if
-#' plots already done
-#' @param wim.path where to save the files.  defaults to current working directory
+#'     plots already done
+#' @param wim.path where to save the files.  defaults to current
+#'     working directory
+#' @param plain.speeds boolean indicating whether the variable in the
+#'     dataframe called "wgt_spd_all_veh_speed" is actually speeds
+#'     (TRUE), or whether it needs to be "unweighted" by dividiting it
+#'     by the variable "count_all_veh_speed"
 #' @return files.to.attach the files that you need to send off to
-#' couchdb tracking database.
+#'     couchdb tracking database.
 #' @export
 plot_wim.data  <- function(df.merged,
                            site_no,

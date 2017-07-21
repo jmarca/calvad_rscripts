@@ -1,3 +1,8 @@
+#' @importFrom grDevices colorRampPalette dev.off png
+#' @importFrom graphics abline axTicks lines plot rug smoothScatter
+#' @importFrom stats aggregate density formula median quantile runif time ts
+#' @importFrom utils head read.csv write.csv
+NULL
 
 pf <- function(x,y){lattice::panel.smoothScatter(x,y,nbin=c(200,200))}
 day.of.week <- c('Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday')

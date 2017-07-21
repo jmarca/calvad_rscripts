@@ -23,8 +23,10 @@
 ##'
 load.tams.from.csv <- function(tams.site,year,direction,
                                tams.path='/data/backup/tams',
-                               filename.pattern=paste(tams.site,'.*',year,'.*\\.(csv|csv.gz)$',sep=''),
-                               trackingdb='vdsdata%2ftracking'){
+                               filename.pattern=''){
+    if(filename.pattern == ''){
+        filename.pattern <- paste(tams.site,'.*',year,'.*\\.(csv|csv.gz)$',sep='')
+    }
     isa.csv <- dir(tams.path, pattern=filename.pattern,full.names=TRUE, ignore.case=TRUE,recursive=TRUE,all.files=TRUE)
     load.result <- list()
     if(length(isa.csv)>0){
@@ -73,38 +75,15 @@ tams.recode.lane_dir <- function(df){
 
 }
 
-##' aggregate tams data by lane and time
+##' Wild craziness for timestamps in and around midnight needs fixing.
 ##'
-##' The TAMS data is per vehicle, and so each record is a vehicle and
-##' says what lane it was in.  This function will aggregate up those
-##' records by time and by lane, so that each record holds all of the
-##' summed data for each lane, by hour.  So for example, if there is
-##' one truck in l1 and two trucks in r1 in an hour, then the result
-##' will have both in that hour's record.
-##'
-##' The lane data is captured in the variable name.  So for example,
-##' the count of not_heavyheavy in lane r1 is represented by the
-##' variable not_heavyheavy_r1.  The count in lane l1 is in
-##' not_heavyheavy_l1.  Similar for other variables.
-##'
-##' Some effort is made not to drop any data you might have
-##' accumulated along the way.  The variables that are summed up are
-##' "captured" by the regex pattern="^(h|n)h_".  So what that means is
-##' that any variable starting with hh or nh will be included.  Name
-##' your variables accordingly and you should be good.  HH stands for
-##' heavy heavy, and nh stands for not heavy heavy.
-##'
-##' This version uses sqldf, not zoo
-##'
-##' @title tams.lane.and.time.aggregation
-##' @param lane.data the tams data that is vehicle by vehicle, lane by lane
-##' @return the aggregated data as a dataframe
+##' This function stares at the data really hard and tries to clean
+##' things up.
+##' @title timestamp_insanity_fix
+##' @param df the data frame to fix
+##' @return a list of the bad hours...those that are repeated and that
+##'     should be dropped (because they can't be fixed by logic alone)
 ##' @author James E. Marca
-tams.lane.and.time.aggregation <- function(lane.dir.data){
-    ## to be refactored
-
-}
-
 timestamp_insanity_fix <- function(df){
 
     ## make sure df is sorted by id, not time
@@ -202,17 +181,22 @@ day_forward_timestamp <- function(times){
 }
 
 
-##' date_rollover_bug
 ##' A function to fix the cases where the date doesn't increment
 ##' properly but the hour:minute do switch over to 00:00
 ##'
-##' This function should be passed the almost pure CSV data.  The only
-##' modification should be that the directions are uniform (I'm going
-##' to expect all lane_dir is the same).  The records will be checked
-##' to make sure that the date increments properly when it should.
+##' This function should be passed the times from almost pure CSV
+##' data.  The only modification should be that the directions are
+##' uniform (I'm going to expect all lane_dir is the same).  The
+##' sequence of times will be checked to make sure that the date
+##' increments properly when it should.
+##'
+##' This fixes both problem cases identified: that the date increments
+##' slightly before midnight, and that the date does not increment
+##' slightly after midnight.
 ##' @title date_rollover_bug
-##' @param tams the tams csv data, but only for one direction, not both
-##' @return tams a replacement df, with the dates corrected
+##' @param times a list of times to analyze
+##' @return a corrected list of times to use instead of the passed in
+##'     list
 ##' @author James E. Marca
 date_rollover_bug <- function(times){
 
@@ -248,9 +232,14 @@ date_rollover_bug <- function(times){
 ##' Given a csv file, this function will process the CSV into one tibble per direction.
 ##'
 ##' @title reshape.tams.from.csv
-##' @param tams.csv csv file read from csv, for example, by readr::read_csv
+##' @param tams.csv csv file read from csv, for example, by
+##'     readr::read_csv
 ##' @param tams.path Where to save RData files, one per direction
-##' @return A list of tibbles, one per direction in the original CSV data.
+##' @param year the year
+##' @param trim.to.year whether to trim the data to the specified
+##'     year.  defaults to true
+##' @return A list of dataframs, one per direction in the original CSV
+##'     data.
 ##' @author James E. Marca
 ##' @export
 ##'
