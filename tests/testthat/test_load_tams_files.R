@@ -6,7 +6,7 @@ preplot <- TRUE
 postplot <- TRUE
 impute <- TRUE
 force.plot <- FALSE
-tams.path <- 'tests'
+tams.path <- 'files'
 direction <- 'E'
 
 testthat::test_that(
@@ -17,7 +17,7 @@ testthat::test_that(
                                             tams.path=tams.path)
 
         testthat::expect_is(tams.data.csv,'data.frame')
-        testthat::expect_that(dim(tams.data.csv),testthat::equals(c(27921669,11)))
+        testthat::expect_that(dim(tams.data.csv),testthat::equals(c(4636452,11)))
         testthat::expect_that(sort(names(tams.data.csv)),testthat::equals(
             c(
                 "bc_group"

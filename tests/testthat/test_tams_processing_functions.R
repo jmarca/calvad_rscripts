@@ -9,7 +9,7 @@ preplot <- TRUE
 postplot <- TRUE
 impute <- TRUE
 force.plot <- FALSE
-tams.path <- 'tests/testthat/files'
+tams.path <- 'files'
 
 
 ## clean up any earlier tests output
@@ -59,8 +59,8 @@ test_that("parts of processing CSV data work okay", {
     testthat::expect_is(tams.data.E,'data.frame')
     testthat::expect_is(tams.data.W,'data.frame')
 
-    testthat::expect_that(dim(tams.data.E),testthat::equals(c(2131,10)))
-    testthat::expect_that(dim(tams.data.W),testthat::equals(c(2131,10)))
+    testthat::expect_that(dim(tams.data.E),testthat::equals(c(1494,10)))
+    testthat::expect_that(dim(tams.data.W),testthat::equals(c(1494,10)))
 
     testthat::expect_that(sort(names(tams.data.E)),
                           testthat::equals(
@@ -91,7 +91,7 @@ test_that("parts of processing CSV data work okay", {
     for (dir in names(tams.data)){
         load.df <- calvadrscripts::load.tams.from.file(tams.site,year,dir,tams.path)
         testthat::expect_is(load.df,'data.frame')
-        testthat::expect_equal(dim(load.df),c(2131,10))
+        testthat::expect_equal(dim(load.df),c(1494,10))
         testthat::expect_equal(load.df, tams.data[[dir]])
     }
 

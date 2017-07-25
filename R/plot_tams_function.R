@@ -318,7 +318,7 @@ recode.df.tams <- function( df,lanes.count ){
     ## the lanes for a TAMS site might not include all lanes.  For
     ## example, site 7005 has 2 lanes of data (4,5), missing lanes 1,2,3
     ##
-    lanes <- calvadrscripts::vds.lane.numbers(lanes.count,'')
+    lanes <- vds.lane.numbers(lanes.count,'')
 
     rightlanes <- NULL
     rightlabels <- NULL
