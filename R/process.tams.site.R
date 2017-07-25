@@ -120,7 +120,7 @@ process.tams.site <- function(tams.site,
                                                   ,site_no = tams.site
                                                   ,direction = direction
                                                   ,makedir = FALSE)
-            plotsname <- paste(plotspath,'ameliaplots.png',sep='/')
+            plotsname <- paste(plotspath,paste('ameliaplots_',year,'.png',sep=''),sep='/')
             r <- try(
                 df.tams.amelia <- fill.tams.gaps(df.tams=df.tams
                                                 ,plotfile=plotsname)
