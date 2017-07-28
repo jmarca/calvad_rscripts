@@ -32,9 +32,13 @@ load.tams.from.csv <- function(tams.site,year,direction,
     if(length(isa.csv)>0){
         load.result <- do.call("rbind",lapply(isa.csv,readr::read_csv,progress=TRUE))
     }
-    matched <- load.result$detstaid == tams.site
-    ## just in case something strange gets in there
-    return (load.result[matched,])
+    if(length(load.result) > 0){
+        matched <- load.result$detstaid == tams.site
+        ## just in case something strange gets in there
+        load.result <- load.result[matched,]
+    }
+
+    return (load.result)
 }
 
 

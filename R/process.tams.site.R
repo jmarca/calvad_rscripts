@@ -22,8 +22,10 @@
 #' @param trackingdb the usual "vdsdata\%2ftracking" system.  Default
 #'     is '/data/backup/tams' because that is the directory on the
 #'     machine I developed this function on
-#' @return either 0, 1, or the result of running the imputation if it
-#'     failed.  Also check the trackingdb for any mention of issues.
+#' @return either list(), or a list with directions, holding for each
+#'     direction the results of running the Amelia job (either good
+#'     Amelia result, or bad Also check the trackingdb for any mention
+#'     of issues.
 #' @export
 process.tams.site <- function(tams.site,
                              year,
@@ -40,7 +42,7 @@ process.tams.site <- function(tams.site,
     returnval <- list()
     if(!preplot & !postplot & !impute){
         print('nothing to do here, preplot, postplot, and impute all false')
-        return(0)
+        return(returnval)
     }
 
     print(paste('starting to process  tams site ',tams.site,
@@ -56,6 +58,11 @@ process.tams.site <- function(tams.site,
 
     ##if(impute){
     tams.data <- load.tams.from.csv(tams.site=tams.site,year=year,tams.path=tams.path)
+    if(length(tams.data) == 0 || dim(tams.data)[1] == 0){
+        print(paste("no data found for",tams.site,year," from path ",tams.path))
+        return(returnval)
+    }
+
     tams.data <- reshape.tams.from.csv(tams.csv=tams.data,year=year,tams.path = tams.path)
     ##}else{
     ##    tams.data <- load.tams.from.fs(tams.site,year,tams.path,trackingdb)

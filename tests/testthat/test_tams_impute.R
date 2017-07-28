@@ -328,6 +328,44 @@ testthat::test_that("process tams  site also works okay",{
 })
 
 
+testthat::test_that("process tams site with no data fails gracefully",{
+    tams.site <- 7
+    year <- 2017 ## note 2017 data is horrible, will hit max iterations in Amelia
+    tams.data.path <- paste(tams.path,year,tams.site,sep='/')
+    parts <- c('tams','no_data_site')
+    result <- rcouchutils::couch.makedb(parts)
+    testthat::expect_equal(result$ok,TRUE)
+
+    list.df.tams.amelia <- process.tams.site(tams.site=tams.site,
+                                             year=year,
+                                             seconds=seconds,
+                                             preplot=TRUE,
+                                             postplot=TRUE,
+                                             force.plot=FALSE,
+                                             tams.path=tams.path,
+                                             trackingdb=parts
+                                           )
+
+
+    testthat::expect_type(list.df.tams.amelia,'list')
+    testthat::expect_length(list.df.tams.amelia,0)
+
+    for(tdp in tams.data.path){
+        drop_rdatas <- dir(tdp,pattern='RData$',all.files=TRUE,full.names=TRUE,recursive=TRUE,ignore.case=TRUE,include.dirs=TRUE)
+        if(length(drop_rdatas)>0) {
+            unlink(drop_rdatas)
+        }
+        drop_pngs <- dir(tdp,pattern='png$',all.files=TRUE,full.names=TRUE,recursive=TRUE,ignore.case=TRUE,include.dirs=TRUE)
+        if(length(drop_pngs)>0) {
+            unlink(drop_pngs)
+        }
+    }
+
+    rcouchutils::couch.delete(db=parts,docname=cdb.tamsid)
+    rcouchutils::couch.deletedb(parts)
+})
+
+
 year <- c(2016,2017) ## note 2017 data is horrible, will hit max iterations in Amelia
 tams.data.path <- paste(tams.path,year,tams.site,sep='/')
 
