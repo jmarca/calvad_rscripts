@@ -25,14 +25,16 @@ load.tams.from.csv <- function(tams.site,year,direction,
                                tams.path='/data/backup/tams',
                                filename.pattern=''){
     if(filename.pattern == ''){
-        filename.pattern <- paste(tams.site,'.*',year,'.*\\.(csv|csv.gz)$',sep='')
+        filename.pattern <- paste('^',tams.site,'_',year,'.*\\.(csv|csv.gz)$',sep='')
     }
     isa.csv <- dir(tams.path, pattern=filename.pattern,full.names=TRUE, ignore.case=TRUE,recursive=TRUE,all.files=TRUE)
     load.result <- list()
     if(length(isa.csv)>0){
         load.result <- do.call("rbind",lapply(isa.csv,readr::read_csv,progress=TRUE))
     }
-    return (load.result)
+    matched <- tams.data.csv$detstaid == tams.site
+    ## just in case something strange gets in there
+    return (load.result[matched,])
 }
 
 

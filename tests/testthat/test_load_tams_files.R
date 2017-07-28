@@ -1,5 +1,4 @@
 config <- rcouchutils::get.config(Sys.getenv('RCOUCHUTILS_TEST_CONFIG'))
-tams.site <- 7005
 year <- 2016
 seconds <- 3600
 preplot <- TRUE
@@ -10,14 +9,18 @@ tams.path <- 'files'
 direction <- 'E'
 
 testthat::test_that(
-    'can load stored, aggregated TAMS from RData file',
+    'can load TAMS from csv file',
     {
+        tams.site <- 7005
         tams.data.csv <- load.tams.from.csv(tams.site=tams.site,
                                             year=year,
                                             tams.path=tams.path)
-
-        testthat::expect_is(tams.data.csv,'data.frame')
+        testthat::expect_s3_class(tams.data.csv,'data.frame')
         testthat::expect_that(dim(tams.data.csv),testthat::equals(c(4636452,11)))
+
+        matched <- tams.data.csv$detstaid == tams.site
+        testthat::expect_equal(length(matched[matched]),length(matched))
+
         testthat::expect_that(sort(names(tams.data.csv)),testthat::equals(
             c(
                 "bc_group"
@@ -32,6 +35,44 @@ testthat::test_that(
                ,"timestamp_full"
                ,"vehicle_count"
                 )))
+
+    })
+
+testthat::test_that(
+    'will not load the wrong csv file',
+    {
+        tams.site <- 7
+        year <-  2016
+        tams.data.csv <- load.tams.from.csv(tams.site=tams.site,
+                                            year=year,
+                                            tams.path=tams.path)
+
+        testthat::expect_type(tams.data.csv,'list')
+        testthat::expect_length(tams.data.csv,0)
+
+        tams.site <- 62
+        year <-  2017
+        tams.data.csv <- load.tams.from.csv(tams.site=tams.site,
+                                            year=year,
+                                            tams.path=tams.path)
+
+        testthat::expect_type(tams.data.csv,'list')
+        testthat::expect_length(tams.data.csv,0)
+
+
+        ## even if a stupid pattern, still won't keep data with wrong id
+        filename.pattern <- paste(tams.site,'.*',year,'.*\\.(csv|csv.gz)$',sep='')
+        tams.data.csv <- calvadrscripts::load.tams.from.csv(tams.site=tams.site,
+                                            year=year,
+                                            tams.path=tams.path,
+                                            filename.pattern=filename.pattern
+                                            )
+
+        testthat::expect_type(tams.data.csv,'list')
+        testthat::expect_s3_class(tams.data.csv,'data.frame')
+        testthat::expect_length(tams.data.csv,11)
+        testthat::expect_that(dim(tams.data.csv),testthat::equals(c(0,11)))
+
 
     })
 
