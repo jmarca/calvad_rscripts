@@ -38,7 +38,7 @@ testthat::test_that("load data, plot raw, impute, and plot imputed all work", {
     load.df <- calvadrscripts::load.tams.from.file(tams.site,year,'W',tams.path)
     testthat::expect_equal(load.df,'todo')
 
-    load.list <- calvadrscripts::load.tams.from.fs(tams.site,year,tams.path)
+    load.list <- calvadrscripts::load.tams.from.fs(tams.site,year,tams.path,parts)
     testthat::expect_equal(load.list,'todo')
 
 
@@ -70,8 +70,12 @@ testthat::test_that("load data, plot raw, impute, and plot imputed all work", {
     load.df <- calvadrscripts::load.tams.from.file(tams.site,year,'W',tams.path)
     testthat::expect_equal(load.df,tams.data[['W']])
 
-    load.list <- calvadrscripts::load.tams.from.fs(tams.site,year,tams.path)
-    testthat::expect_equal(load.list,tams.data)
+    ## load from fs should not work because no data in couchdb for lanes
+    load.from.fs <- calvadrscripts::load.tams.from.fs(tams.site,year,tams.path,parts)
+    testthat::expect_equal(length(load.from.fs),1)
+    testthat::expect_equal(load.from.fs,'todo')
+
+
 
 
     direction <- 'E'
@@ -270,8 +274,8 @@ testthat::test_that("load data, plot raw, impute, and plot imputed all work", {
     testthat::expect_equal(attach.files,1)
 
     ## clean up for next test
-    rcouchutils::couch.delete(db=parts,docname=cdb.tamsid)
-    rcouchutils::couch.deletedb(parts)
+    result <- rcouchutils::couch.deletedb(parts)
+    testthat::expect_equal(result$ok,TRUE)
 })
 
 testthat::test_that("process tams  site also works okay",{
@@ -340,8 +344,8 @@ testthat::test_that("process tams  site also works okay",{
     testthat::expect_equal(list.df.tams.amelia
                            ,list.df.tams.amelia.2)
 
-    rcouchutils::couch.delete(db=parts,docname=cdb.tamsid)
-    rcouchutils::couch.deletedb(parts)
+    result <- rcouchutils::couch.deletedb(parts)
+    testthat::expect_equal(result$ok,TRUE)
 })
 
 
@@ -378,8 +382,8 @@ testthat::test_that("process tams site with no data fails gracefully",{
         }
     }
 
-    rcouchutils::couch.delete(db=parts,docname=cdb.tamsid)
-    rcouchutils::couch.deletedb(parts)
+    result <- rcouchutils::couch.deletedb(parts)
+    testthat::expect_equal(result$ok,TRUE)
 })
 
 

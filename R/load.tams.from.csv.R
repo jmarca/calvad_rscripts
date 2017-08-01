@@ -391,6 +391,10 @@ reshape.tams.from.csv <- function(tams.csv,tams.path,year,trim.to.year=TRUE){
             tams.by.dir[[direction]] <- df.return[keepers,]
         }
 
+    }
+    for(direction in directions){
+
+        df.return <- tams.by.dir[[direction]]
         ## save tams data for next time
         filename <- make.tams.output.filename(tams.site,direction,year)
         savepath <- tams.path
@@ -478,6 +482,7 @@ load.tams.from.file <- function(tams.site,year,direction,tams.path){
 ##' @param tams.site the tams site
 ##' @param year the year
 ##' @param tams.path the relative path to where to find TAMS files
+##' @param trackingdb the couchdb database to use to retrieve lane info
 ##' @return a list of data frames or a string
 ##' @author James E. Marca
 ##' @export

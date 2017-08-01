@@ -1,6 +1,6 @@
 config <- rcouchutils::get.config(Sys.getenv('RCOUCHUTILS_TEST_CONFIG'))
 
-parts <- c('tams','lanes ')
+parts <- c('tams','lanes')
 result <- rcouchutils::couch.makedb(parts)
 tams.site <- 7005
 year <- 2017
@@ -51,7 +51,7 @@ test_that("parts of processing CSV data work okay", {
 
 
     directions <- names(tams.data)
-    testthat::expect_that(sort(directions),testthat::equals(c('E','W')))
+    testthat::expect_equal(sort(directions),c('E','W'))
 
     tams.data.E <- tams.data[['E']]
     tams.data.W <- tams.data[['W']]
@@ -62,18 +62,17 @@ test_that("parts of processing CSV data work okay", {
     testthat::expect_that(dim(tams.data.E),testthat::equals(c(1494,10)))
     testthat::expect_that(dim(tams.data.W),testthat::equals(c(1494,10)))
 
-    testthat::expect_that(sort(names(tams.data.E)),
-                          testthat::equals(
-                                        c("day",
-                                          "heavyheavy_r1",
-                                          "heavyheavy_r2",
-                                         "hr",
-                                         "n_r1",
-                                         "n_r2",
-                                         "not_heavyheavy_r1",
-                                         "not_heavyheavy_r2",
-                                         "tod",
-                                         "ts")))
+    testthat::expect_equal(sort(names(tams.data.E)),
+                           c("day",
+                             "heavyheavy_r1",
+                             "heavyheavy_r2",
+                             "hr",
+                             "n_r1",
+                             "n_r2",
+                             "not_heavyheavy_r1",
+                             "not_heavyheavy_r2",
+                             "tod",
+                             "ts"))
 
     testthat::expect_equal(sort(names(tams.data.E)),
                           sort(names(tams.data.W)))
@@ -95,6 +94,47 @@ test_that("parts of processing CSV data work okay", {
         testthat::expect_equal(load.df, tams.data[[dir]])
     }
 
+
+    load.from.fs <- calvadrscripts::load.tams.from.fs(tams.site,year,tams.path,parts)
+    ## didn't yet save lane info, expect nothing back
+    testthat::expect_equal(length(load.from.fs),1)
+    testthat::expect_equal(load.from.fs,'todo')
+
+    ## save to couchdb, then do it again
+    for(direction in names(tams.data)){
+        cdb.tamsid <- paste('tams',tams.site,direction,sep='.')
+        is.stored <- rcouchutils::couch.check.state(year=year,
+                                                    id=cdb.tamsid,
+                                                    state='lanes',
+                                                    db=parts)
+        testthat::expect_equal(is.stored,'todo')
+    }
+    for(direction in names(tams.data)){
+        cdb.tamsid <- paste('tams',tams.site,direction,sep='.')
+        rcouchutils::couch.set.state(year=year,
+                                     id=cdb.tamsid,
+                                     doc=list('lanes'=site.lanes),
+                                     db=parts)
+    }
+    for(direction in names(tams.data)){
+        cdb.tamsid <- paste('tams',tams.site,direction,sep='.')
+        is.stored <- rcouchutils::couch.check.state(year=year,
+                                                    id=cdb.tamsid,
+                                                    state='lanes',
+                                                    db=parts)
+        testthat::expect_equal(is.stored,site.lanes)
+    }
+    load.from.fs <- calvadrscripts::load.tams.from.fs(tams.site,year,tams.path,parts)
+    ## didn't yet save lane info, expect nothing back
+    testthat::expect_equal(length(load.from.fs),2)
+    ## test the data
+    testthat::expect_equal(load.from.fs[[1]],tams.data)
+    testthat::expect_equal(sort(names(load.from.fs[[1]])),c('E','W'))
+    ## test the site.lanes
+    testthat::expect_equal(load.from.fs[[2]],site.lanes)
+
+
+
     drop_rdatas <- dir(tams.data.path,pattern='RData$',all.files=TRUE,full.names=TRUE,recursive=TRUE,ignore.case=TRUE,include.dirs=TRUE)
     if(length(drop_rdatas)>0) {
         unlink(drop_rdatas)
@@ -105,3 +145,5 @@ test_that("parts of processing CSV data work okay", {
     }
 
 })
+
+result <- rcouchutils::couch.deletedb(parts)
