@@ -325,7 +325,7 @@ testthat::test_that("process tams  site also works okay",{
             )
     }
 
-    ## also verify that you can load an Amelia file directly
+    ## also verify that doing it again (using RData) works fine
     list.df.tams.amelia.2 <- process.tams.site(tams.site=tams.site,
                                                year=year,
                                                seconds=seconds,

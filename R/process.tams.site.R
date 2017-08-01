@@ -59,8 +59,10 @@ process.tams.site <- function(tams.site,
     ## stupid globals
     directions <- NULL
     tams.data <- NULL
+    site.lanes <- NULL
+
     if(!use_csv){
-        tams.data <- load.tams.from.fs(tams.site,year,tams.path)
+        tams.data <- load.tams.from.fs(tams.site,year,tams.path,trackingdb)
     }
     if(length(tams.data) != 2){
         print('loading from CSV files')
@@ -71,12 +73,30 @@ process.tams.site <- function(tams.site,
         }
 
         tams.data <- reshape.tams.from.csv(tams.csv=tams.data,year=year,tams.path = tams.path)
+        site.lanes <- tams.data[[2]]
+        tams.data <- tams.data[[1]]
+    }else{
+        site.lanes <- tams.data[[2]]
+        tams.data <- tams.data[[1]]
     }
-    site.lanes <- tams.data[[2]]
-    tams.data <- tams.data[[1]]
     directions <- names(tams.data)
 
     gc()
+
+    for(direction in directions){
+        cdb.tamsid <- paste('tams',tams.site,direction,sep='.')
+        is.stored <- rcouchutils::couch.check.state(year=year,
+                                                    id=cdb.tamsid,
+                                                    state='lanes',
+                                                    db=trackingdb)
+        if(is.stored == 'todo'){
+            print('saving lanes to couchdb for next time')
+            rcouchutils::couch.set.state(year=year,
+                                         id=cdb.tamsid,
+                                         doc=list('lanes'=site.lanes),
+                                         db=trackingdb)
+        }
+    }
 
     for(direction in directions){
         print(paste('processing direction',direction))

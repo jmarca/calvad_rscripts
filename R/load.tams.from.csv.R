@@ -481,18 +481,30 @@ load.tams.from.file <- function(tams.site,year,direction,tams.path){
 ##' @return a list of data frames or a string
 ##' @author James E. Marca
 ##' @export
-load.tams.from.fs <- function(tams.site,year,tams.path){
+load.tams.from.fs <- function(tams.site,year,tams.path,trackingdb){
     tams.data <- list()
     directions <- c('N','S','E','W')
+    number.lanes <- NULL
     for (direction in directions){
         df <- load.tams.from.file(tams.site,year,direction,tams.path)
         if(length(df) > 1 & length(dim(df) == 2)){
-            tams.data[[direction]] <- df
+            cdb.tamsid <- paste('tams',tams.site,direction,sep='.')
+            is.stored <- rcouchutils::couch.check.state(year=year,
+                                                        id=cdb.tamsid,
+                                                        state='lanes',
+                                                        db=trackingdb)
+            if(is.stored == 'todo'){
+                print('must process CSV---tams lane data not saved yet')
+                return ('todo')
+            }else{
+                number.lanes <- is.stored
+                tams.data[[direction]] <- df
+            }
         }
     }
     if(length(tams.data) == 0){
         print(paste('failed to find saved data for',year,',',tams.site))
         return('todo')
     }
-    return (tams.data)
+    return (list(tams.data,number.lanes))
 }
