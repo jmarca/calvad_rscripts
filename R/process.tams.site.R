@@ -22,6 +22,8 @@
 #' @param trackingdb the usual "vdsdata\%2ftracking" system.  Default
 #'     is '/data/backup/tams' because that is the directory on the
 #'     machine I developed this function on
+#' @param use_csv TRUE (default) to load from CSV files; FALSE to try
+#'     first to use RData files
 #' @return either list(), or a list with directions, holding for each
 #'     direction the results of running the Amelia job (either good
 #'     Amelia result, or bad Also check the trackingdb for any mention
@@ -35,7 +37,8 @@ process.tams.site <- function(tams.site,
                              impute=TRUE,
                              force.plot=FALSE,
                              tams.path='/data/backup/tams/',
-                             trackingdb='vdsdata%2ftracking'){
+                             trackingdb='vdsdata%2ftracking',
+                             use_csv=TRUE){
 
     print(paste('tams path is ',tams.path))
 
@@ -56,7 +59,11 @@ process.tams.site <- function(tams.site,
     ## stupid globals
     directions <- NULL
     tams.data <- NULL
-    if(use_csv){
+    if(!use_csv){
+        tams.data <- load.tams.from.fs(tams.site,year,tams.path,trackingdb)
+    }
+    if(length(tams.data) != 2){
+        print('loading from CSV files')
         tams.data <- load.tams.from.csv(tams.site=tams.site,year=year,tams.path=tams.path)
         if(length(tams.data) == 0 || dim(tams.data)[1] == 0){
             print(paste("no data found for",tams.site,year," from path ",tams.path))
@@ -64,8 +71,6 @@ process.tams.site <- function(tams.site,
         }
 
         tams.data <- reshape.tams.from.csv(tams.csv=tams.data,year=year,tams.path = tams.path)
-    }else{
-        tams.data <- load.tams.from.fs(tams.site,year,tams.path,trackingdb)
     }
     site.lanes <- tams.data[[2]]
     tams.data <- tams.data[[1]]
