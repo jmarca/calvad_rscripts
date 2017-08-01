@@ -71,7 +71,7 @@ testthat::test_that(
         testthat::expect_type(tams.data.csv,'list')
         testthat::expect_s3_class(tams.data.csv,'data.frame')
         testthat::expect_length(tams.data.csv,11)
-        testthat::expect_equals(dim(tams.data.csv),c(0,11))
+        testthat::expect_equal(dim(tams.data.csv),c(0,11))
 
 
     })
