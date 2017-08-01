@@ -22,7 +22,7 @@
 #' @param trackingdb the usual "vdsdata\%2ftracking" system.  Default
 #'     is '/data/backup/tams' because that is the directory on the
 #'     machine I developed this function on
-#' @param use_csv TRUE (default) to load from CSV files; FALSE to try
+#' @param use_csv TRUE to load from CSV files, ignore RData; FALSE to try
 #'     first to use RData files
 #' @return either list(), or a list with directions, holding for each
 #'     direction the results of running the Amelia job (either good
@@ -38,7 +38,7 @@ process.tams.site <- function(tams.site,
                              force.plot=FALSE,
                              tams.path='/data/backup/tams/',
                              trackingdb='vdsdata%2ftracking',
-                             use_csv=TRUE){
+                             use_csv=FALSE){
 
     print(paste('tams path is ',tams.path))
 
@@ -76,6 +76,7 @@ process.tams.site <- function(tams.site,
     tams.data <- tams.data[[1]]
     directions <- names(tams.data)
 
+    gc()
 
     for(direction in directions){
         print(paste('processing direction',direction))
