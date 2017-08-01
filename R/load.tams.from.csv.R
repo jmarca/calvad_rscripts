@@ -261,7 +261,20 @@ reshape.tams.from.csv <- function(tams.csv,tams.path,year,trim.to.year=TRUE){
 
     ## extract some info
     tams.site <- tams.csv$detstaid[1]
+
+    ## ugly data hacking:
+    ## site 10002 has lanes 2,3,12,13.  this routine truncates to just 2,3
+    lanes <- as.numeric(levels(as.factor(tams.csv$lane)))
+    theoretical_lanes <- min(tams.csv$lane):max(tams.csv$lane)
+    missing_lanes <- setdiff(theoretical_lanes,lanes)
+    if(length(missing_lanes) > 0){
+        max_allowed <- min(missing_lanes)
+        good.lane.value <- tams.csv$lane < max_allowed
+        tams.csv <- tams.csv[good.lane.value,]
+    }
+
     number.lanes <- max(tams.csv$lane)
+
 
     hour <-  3600 ## seconds per hour
 
@@ -349,30 +362,52 @@ reshape.tams.from.csv <- function(tams.csv,tams.path,year,trim.to.year=TRUE){
             df_hourly <- sqldf::sqldf(sqlstatement2,drv="SQLite")
             df_hourly$ts <- as.POSIXct(df_hourly$ts,origin = "1970-01-01", tz = "GMT")
             df_hourly$ts <- trunc(df_hourly$ts,units='hours')
+            df_hourly$marker <- TRUE
+
             tams.data.hr.lane[[l]] <- df_hourly
         }
         print('combine lane by lane aggregates')
-        ## combine lane by lane aggregates by same hour
-        df.return <- tams.data.hr.lane[[1]]
-        if(length(tams.data.hr.lane)>1){
-            for(l in 2:length(tams.data.hr.lane)){
-                df.return <- merge(df.return,tams.data.hr.lane[[l]],all=TRUE)
-            }
+
+        ## combine lane by lane aggregates by same hour, by making a
+        ## df with all of the hours (min to max)
+        mints <- min(tams.data.hr.lane[[1]]$ts)
+        maxts <- max(tams.data.hr.lane[[1]]$ts)
+        for (l in lanes[-1]){
+            mints <- min(mints,min(tams.data.hr.lane[[l]]$ts))
+            maxts <- max(maxts,max(tams.data.hr.lane[[l]]$ts))
         }
+        all.ts <- seq(mints,maxts,by=hour)
+        ## add a marker to keep track of times with any data vs times
+        ## with none at all, so as to set NA to zero after the merge
+        ## step
+        df.return <- tibble::tibble(ts=all.ts,marker=FALSE)
+        ## make ts posixlt to enable merge below
+        df.return$ts <- as.POSIXlt(df.return$ts)
+
+        for(l in lanes){
+            df.return <- merge(df.return,tams.data.hr.lane[[l]],by=c('ts'),all=TRUE)
+            df.return$marker <- df.return$marker.x | df.return$marker.y
+            df.return$marker.x <- NULL
+            df.return$marker.y <- NULL
+        }
+
         print(dim(df.return))
+        ## here, if any data collected at all in an hour for any lane,
+        ## then any lanes with NA values should be zero.  The theory
+        ## is that if any data comes in for any lane, then all of the
+        ## detectors were on and working, just nothing was recorded,
+        ## so the NA should be zero, not NA.  leaving it NA will cause
+        ## Amelia to try to fill that missing value with something.
+        ## the "marker" bit identifies hours with any data vs hours
+        ## with no data
         for(col in names(df.return)){
-            navalues <- is.na(df.return[,col])
+            navalues <- is.na(df.return[,col]) & !is.na(df.return$marker)
             if(any(navalues)){
                 df.return[navalues,col] <- 0
             }
         }
+        df.return$marker <- NULL
         df.return$ts <- as.POSIXct(df.return$ts)
-        all.ts <- seq(min(df.return$ts),max(df.return$ts),by=hour)
-        ts.all.df <- tibble::tibble(ts=all.ts)
-        attr(ts.all.df$ts,'tzone') <- 'UTC'
-        df.return <- merge(df.return,ts.all.df,all=TRUE)
-
-
 
         df.return <- add.time.of.day(df.return)
         tams.by.dir[[direction]] <- df.return

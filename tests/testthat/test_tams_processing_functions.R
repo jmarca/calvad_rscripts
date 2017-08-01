@@ -125,7 +125,7 @@ test_that("parts of processing CSV data work okay", {
         testthat::expect_equal(is.stored,site.lanes)
     }
     load.from.fs <- calvadrscripts::load.tams.from.fs(tams.site,year,tams.path,parts)
-    ## didn't yet save lane info, expect nothing back
+    ## now I've saved lane info, expect data back
     testthat::expect_equal(length(load.from.fs),2)
     ## test the data
     testthat::expect_equal(load.from.fs[[1]],tams.data)
