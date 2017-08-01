@@ -30,7 +30,7 @@ load.tams.from.csv <- function(tams.site,year,direction,
     isa.csv <- dir(tams.path, pattern=filename.pattern,full.names=TRUE, ignore.case=TRUE,recursive=TRUE,all.files=TRUE)
     load.result <- list()
     if(length(isa.csv)>0){
-        load.result <- do.call("rbind",lapply(isa.csv,readr::read_csv,progress=TRUE))
+        load.result <- do.call("rbind",lapply(isa.csv,readr::read_csv,progress=FALSE))
     }
     if(length(load.result) > 0){
         matched <- load.result$detstaid == tams.site
