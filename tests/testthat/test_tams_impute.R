@@ -38,9 +38,15 @@ testthat::test_that("load data, plot raw, impute, and plot imputed all work", {
     load.df <- calvadrscripts::load.tams.from.file(tams.site,year,'W',tams.path)
     testthat::expect_equal(load.df,'todo')
 
+    load.list <- calvadrscripts::load.tams.from.fs(tams.site,year,tams.path)
+    testthat::expect_equal(load.list,'todo')
+
+
     tams.data <- calvadrscripts::load.tams.from.csv(tams.site=tams.site,
                                     year=year,
                                     tams.path=tams.path)
+
+
     tams.data <- calvadrscripts::reshape.tams.from.csv(tams.csv=tams.data,
                                        year=year,
                                        tams.path = tams.path)
@@ -56,6 +62,17 @@ testthat::test_that("load data, plot raw, impute, and plot imputed all work", {
 
     directions <- names(tams.data)
     testthat::expect_that(sort(directions),testthat::equals(c('E','W')))
+
+
+    ## now the load from file stuff should work okay
+    load.df <- calvadrscripts::load.tams.from.file(tams.site,year,'E',tams.path)
+    testthat::expect_equal(load.df,tams.data[['E']])
+    load.df <- calvadrscripts::load.tams.from.file(tams.site,year,'W',tams.path)
+    testthat::expect_equal(load.df,tams.data[['W']])
+
+    load.list <- calvadrscripts::load.tams.from.fs(tams.site,year,tams.path)
+    testthat::expect_equal(load.list,tams.data)
+
 
     direction <- 'E'
     cdb.tamsid <- paste('tams',tams.site,direction,sep='.')

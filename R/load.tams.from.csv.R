@@ -307,6 +307,12 @@ reshape.tams.from.csv <- function(tams.csv,tams.path,year,trim.to.year=TRUE){
 
         ## preplot prior to cleaning??
         tams.data.hr.lane <- split(tams,tams$lane)
+
+        ## cut down on RAM?
+        tams.by.dir[[direction]] <- NULL
+        tams <- NULL
+        gc()
+
         lanes <- names(tams.data.hr.lane)
 
         for (l in lanes){
@@ -339,6 +345,7 @@ reshape.tams.from.csv <- function(tams.csv,tams.path,year,trim.to.year=TRUE){
                                    'from temp_df group by hrly',
                                    sep=' ',collapse=' '
                                    )
+            print(sqlstatement2)
             df_hourly <- sqldf::sqldf(sqlstatement2,drv="SQLite")
             df_hourly$ts <- as.POSIXct(df_hourly$ts,origin = "1970-01-01", tz = "GMT")
             df_hourly$ts <- trunc(df_hourly$ts,units='hours')
@@ -381,8 +388,7 @@ reshape.tams.from.csv <- function(tams.csv,tams.path,year,trim.to.year=TRUE){
         keepers <- ! is.element(hrly,bad_hrs_set)
         if(length(keepers[!keepers]) > 0){
             print(paste('second pass, dropping',length(keepers[!keepers]),'records due to duplicated hours'))
-            df.return <- df.return[keepers,]
-            tams.by.dir[[direction]] <- df.return
+            tams.by.dir[[direction]] <- df.return[keepers,]
         }
 
         ## save tams data for next time
@@ -459,4 +465,34 @@ load.tams.from.file <- function(tams.site,year,direction,tams.path){
     res <- load(file=right_file,envir=env)
     return (env[[res]])
 
+}
+
+
+##' Load both directions of TAMS data from saved RData files
+##'
+##' This function is different from load.tams.from.file in that it
+##' will load up both directions, not just one.  It calls
+##' load.tams.from.file to do the actual work.  If not done yet, it
+##' will return the character string 'todo'.
+##' @title load.tams.from.fs
+##' @param tams.site the tams site
+##' @param year the year
+##' @param tams.path the relative path to where to find TAMS files
+##' @return a list of data frames or a string
+##' @author James E. Marca
+##' @export
+load.tams.from.fs <- function(tams.site,year,tams.path){
+    tams.data <- list()
+    directions <- c('N','S','E','W')
+    for (direction in directions){
+        df <- load.tams.from.file(tams.site,year,direction,tams.path)
+        if(length(df) > 1 & length(dim(df) == 2)){
+            tams.data[[direction]] <- df
+        }
+    }
+    if(length(tams.data) == 0){
+        print(paste('failed to find saved data for',year,',',tams.site))
+        return('todo')
+    }
+    return (tams.data)
 }

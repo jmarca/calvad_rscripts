@@ -55,18 +55,18 @@ process.tams.site <- function(tams.site,
 
     ## stupid globals
     directions <- NULL
+    tams.data <- NULL
+    if(use_csv){
+        tams.data <- load.tams.from.csv(tams.site=tams.site,year=year,tams.path=tams.path)
+        if(length(tams.data) == 0 || dim(tams.data)[1] == 0){
+            print(paste("no data found for",tams.site,year," from path ",tams.path))
+            return(returnval)
+        }
 
-    ##if(impute){
-    tams.data <- load.tams.from.csv(tams.site=tams.site,year=year,tams.path=tams.path)
-    if(length(tams.data) == 0 || dim(tams.data)[1] == 0){
-        print(paste("no data found for",tams.site,year," from path ",tams.path))
-        return(returnval)
+        tams.data <- reshape.tams.from.csv(tams.csv=tams.data,year=year,tams.path = tams.path)
+    }else{
+        tams.data <- load.tams.from.fs(tams.site,year,tams.path,trackingdb)
     }
-
-    tams.data <- reshape.tams.from.csv(tams.csv=tams.data,year=year,tams.path = tams.path)
-    ##}else{
-    ##    tams.data <- load.tams.from.fs(tams.site,year,tams.path,trackingdb)
-    ##}
     site.lanes <- tams.data[[2]]
     tams.data <- tams.data[[1]]
     directions <- names(tams.data)
