@@ -60,7 +60,7 @@ process.tams.site <- function(tams.site,
     directions <- NULL
     tams.data <- NULL
     if(!use_csv){
-        tams.data <- load.tams.from.fs(tams.site,year,tams.path,trackingdb)
+        tams.data <- load.tams.from.fs(tams.site,year,tams.path)
     }
     if(length(tams.data) != 2){
         print('loading from CSV files')
