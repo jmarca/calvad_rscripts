@@ -250,9 +250,10 @@ date_rollover_bug <- function(times){
 ##' @export
 ##'
 reshape.tams.from.csv <- function(tams_csv,tams.path,year,trim.to.year=TRUE){
+
     ## prep for sqldf if you need postgresql
-    # config <- rcouchutils::get.config()
-    # sqldf_postgresql(config)
+    config <- rcouchutils::get.config()
+    sqldf_postgresql(config)
 
     ## make sure order is correct.  No guarantee that files are read
     ## in in sig_id ordering
@@ -357,7 +358,7 @@ reshape.tams.from.csv <- function(tams_csv,tams.path,year,trim.to.year=TRUE){
             tams_csv[lane_dir_idx,][keepers,'keep'] <- 1
 
             sqlstatement2 <- paste("select min(hrly) as ts,",
-                                   paste('total(',
+                                   paste('sum (',
                                          c(mean.var.names),
                                          ') as ',
                                          paste(mean.var.names,
@@ -365,20 +366,22 @@ reshape.tams.from.csv <- function(tams_csv,tams.path,year,trim.to.year=TRUE){
                                                sep='_'),
                                          sep=' ',
                                          collapse=', '),
-                                   ', total(any_vehicle) as ',
+                                   ', sum(any_vehicle) as ',
                                    paste('n',l,sep='_'),
                                    'from tams_csv where keep=1 group by hrly ',
                                    sep=' ',collapse=' '
                                    )
             print(sqlstatement2)
-            df_hourly <- sqldf::sqldf(sqlstatement2,drv="SQLite")
+
+            df_hourly <- sqldf::sqldf(sqlstatement2,drv="RPostgreSQL")
 
             ## now get rid of CSV rows for this lane,direction
             tams_csv <- tams_csv[!lane_dir_idx, ]
             gc()
 
-            df_hourly$ts <- as.POSIXct(df_hourly$ts,origin = "1970-01-01", tz = "GMT")
+            df_hourly$ts <- as.POSIXct(df_hourly$ts,origin = "1970-01-01", tz = "UTC")
             df_hourly$ts <- trunc(df_hourly$ts,units='hours')
+
             df_hourly$marker <- TRUE
 
             tams.data.hr.lane[[l]] <- df_hourly

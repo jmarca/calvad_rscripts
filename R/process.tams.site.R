@@ -138,6 +138,7 @@ process.tams.site <- function(tams.site,
 
         ## I needed to trim data in psql for WIM.  leave this here for
         ## future reference just in case
+        ## and a month later, indeed I am using this!
         ## config <- rcouchutils::get.config()
         ## sqldf_postgresql(config)
         ## df.trimmed <- good.high.clustering(df.tams)
