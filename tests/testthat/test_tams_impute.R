@@ -47,7 +47,7 @@ testthat::test_that("load data, plot raw, impute, and plot imputed all work", {
                                     tams.path=tams.path)
 
 
-    tams.data <- calvadrscripts::reshape.tams.from.csv(tams.csv=tams.data,
+    tams.data <- calvadrscripts::reshape.tams.from.csv(tams_csv=tams.data,
                                        year=year,
                                        tams.path = tams.path)
 

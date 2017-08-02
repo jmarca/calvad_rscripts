@@ -37,7 +37,7 @@ test_that("parts of processing CSV data work okay", {
     tams.data <- calvadrscripts::load.tams.from.csv(tams.site=tams.site,
                                     year=year,
                                     tams.path=tams.path)
-    tams.data <- calvadrscripts::reshape.tams.from.csv(tams.csv=tams.data,
+    tams.data <- calvadrscripts::reshape.tams.from.csv(tams_csv=tams.data,
                                        year=year,
                                        tams.path = tams.path)
 

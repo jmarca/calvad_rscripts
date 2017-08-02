@@ -72,7 +72,7 @@ process.tams.site <- function(tams.site,
             return(returnval)
         }
 
-        tams.data <- reshape.tams.from.csv(tams.csv=tams.data,year=year,tams.path = tams.path)
+        tams.data <- reshape.tams.from.csv(tams_csv=tams.data,year=year,tams.path = tams.path)
         site.lanes <- tams.data[[2]]
         tams.data <- tams.data[[1]]
     }else{
