@@ -15,7 +15,6 @@ force.plot <- FALSE
 tams.path <- 'files'
 
 ## make sure no artifacts from prior tests
-
 testthat::test_that("load data, plot raw, impute, and plot imputed all work", {
 
     year <- 2016
@@ -23,6 +22,8 @@ testthat::test_that("load data, plot raw, impute, and plot imputed all work", {
     parts <- c('tams','impute')
     result <- rcouchutils::couch.makedb(parts)
     testthat::expect_equal(result$ok,TRUE)
+
+    hour <- 3600
 
     drop_rdatas <- dir(tams.data.path,pattern='RData$',all.files=TRUE,full.names=TRUE,recursive=TRUE,ignore.case=TRUE,include.dirs=TRUE)
     if(length(drop_rdatas)>0) {
@@ -41,237 +42,113 @@ testthat::test_that("load data, plot raw, impute, and plot imputed all work", {
     load.list <- calvadrscripts::load.tams.from.fs(tams.site,year,tams.path,parts)
     testthat::expect_equal(load.list,'todo')
 
+    ## basically a cut and paste from process.tams.site so that I can
+    ## prove each step is working (in case low level code gets "improved")
+
 
     tams.data <- calvadrscripts::load.tams.from.csv(tams.site=tams.site,
                                     year=year,
                                     tams.path=tams.path)
 
-
-    tams.data <- calvadrscripts::reshape.tams.from.csv(tams_csv=tams.data,
-                                       year=year,
-                                       tams.path = tams.path)
-
-    testthat::expect_type(tams.data,'list')
-
-    site.lanes <- tams.data[[2]]
+    tams.data <- clean.tams.csv.lanes(tams.data)
+    site.lanes <- max(tams.data$lane)
     testthat::expect_equal(site.lanes,5)
 
-    tams.data <- tams.data[[1]]
-    testthat::expect_type(tams.data,'list')
+    tams.data <- trim.to.year(tams.data,year)
+    testthat::expect_equal(dim(tams.data),c(4636452, 11))
+
+    tams.data <- tams.recode.lane_dir(tams.data)
+    testthat::expect_equal(sort(levels(as.factor(tams.data$lane_dir)))
+                           ,c("E","W"))
+
+    tams.data <- tams.recode.lanes(tams.data)
+    testthat::expect_equal(sort(levels(as.factor(tams.data$lane)))
+                          ,c("r1", "r2"))
+
+    bad_hrs_set <- c()
+    directions <-  levels(as.factor(tams.data$lane_dir))
+    direction <- "E"
+    dir_idx <- tams.data$lane_dir == direction
+    lanes <- levels(as.factor(tams.data[dir_idx,]$lane))
+    testthat::expect_equal(sort(lanes)
+                          ,c("r1", "r2"))
+    l <- "r1"
+    dir_idx <- tams.data$lane_dir == direction
+    lane_dir_idx <- tams.data$lane == l & dir_idx
+
+    tams.data[lane_dir_idx,'timestamp_full']  <- date_rollover_bug(tams.data[lane_dir_idx,]$timestamp_full)
+    tams.data[lane_dir_idx,'hrly'] <-
+        as.numeric(
+            trunc(
+                as.POSIXct(
+                    tams.data[lane_dir_idx,]$timestamp_full
+                   ,tz='UTC')
+               ,"hours")
+        )
+    testthat::expect_equal(length(levels(as.factor(tams.data[lane_dir_idx,]$hrly)))
+                           ,1378)
+    bad_hrs <- timestamp_insanity_fix(tams.data[lane_dir_idx,])
+    bad_hrs_set <- union(bad_hrs_set,bad_hrs)
+    testthat::expect_equal(length(bad_hrs_set),34)
+
+    keepers <- ! is.element(tams.data[lane_dir_idx,]$hrly,bad_hrs)
+    drops_num <- length(keepers[!keepers])
+    prior_num <- length(keepers)
+
+    testthat::expect_equal(drops_num,16036)
+    testthat::expect_equal(prior_num,1382722)
+
+    tams.data[lane_dir_idx,'keep'] <- FALSE
+    tams.data[lane_dir_idx,][keepers,]$keep <- TRUE
+    tams.data <- tams.extra.vars(tams.data)
+
+    df_hourly <- reshape.tams.from.csv.by.dir.by.lane(
+        tams.data[lane_dir_idx,],l
+    )
+    testthat::expect_equal(dim(df_hourly),c(1378, 4))
+    testthat::expect_equal( sort(names(df_hourly))
+                          ,c("heavyheavy_r1","n_r1","not_heavyheavy_r1","ts"))
+
+    df_hourly$ts <- as.POSIXct(df_hourly$ts,origin = "1970-01-01", tz = "UTC")
+    df_hourly$ts <- trunc(df_hourly$ts,units='hours')
+    df_hourly$marker <- TRUE
+    tams.data.hr.lane <- list() ## list for output results
+    tams.data.hr.lane[[l]] <- df_hourly
+
+    mints <- min(tams.data.hr.lane[[1]]$ts)
+    maxts <- max(tams.data.hr.lane[[1]]$ts)
+
+    all.ts <- seq(mints,maxts,by=hour)
+    testthat::expect_equal(length(all.ts),1620)
+
+    df.return <- tibble::tibble(ts=all.ts,marker=FALSE)
+    ## make ts posixlt to enable merge below
+    df.return$ts <- as.POSIXlt(df.return$ts)
+    testthat::expect_equal(dim(df.return),c(1620,2))
+    ## fake merge of lanes to full timeline
+    tams.data.hr.lane[[l]]$marker <- TRUE
+    df.return <- merge(df.return,tams.data.hr.lane[[l]],by=c('ts'),all=TRUE)
+    testthat::expect_equal(dim(df.return),c(1620,6))
 
 
-    directions <- names(tams.data)
-    testthat::expect_that(sort(directions),testthat::equals(c('E','W')))
+    df.return$marker <- df.return$marker.x | df.return$marker.y
+    df.return$marker.x <- NULL
+    df.return$marker.y <- NULL
+    testthat::expect_equal(dim(df.return),c(1620,5))
 
-
-    ## now the load from file stuff should work okay
-    load.df <- calvadrscripts::load.tams.from.file(tams.site,year,'E',tams.path)
-    testthat::expect_equal(load.df,tams.data[['E']])
-    load.df <- calvadrscripts::load.tams.from.file(tams.site,year,'W',tams.path)
-    testthat::expect_equal(load.df,tams.data[['W']])
-
-    ## load from fs should not work because no data in couchdb for lanes
-    load.from.fs <- calvadrscripts::load.tams.from.fs(tams.site,year,tams.path,parts)
-    testthat::expect_equal(length(load.from.fs),1)
-    testthat::expect_equal(load.from.fs,'todo')
-
-
-
-
-    direction <- 'E'
-    cdb.tamsid <- paste('tams',tams.site,direction,sep='.')
-
-    attach.files <- calvadrscripts::plot_tams.data(tams.data[[direction]]
-                                  ,site_no=tams.site
-                                  ,direction=direction
-                                  ,year=year
-                                  ,lanes.count=site.lanes
-                                  ,fileprefix='raw'
-                                  ,subhead='\npre imputation'
-                                  ,force.plot=TRUE
-                                  ,trackingdb=parts
-                                  ,tams.path=tams.path)
-
-
-    testthat::expect_equal(attach.files,
-                           paste(tams.path,'/'
-                                ,year,'/'
-                                ,tams.site,'/'
-                                ,direction,'/'
-                                ,'images/'
-                                ,tams.site,'_'
-                                ,direction,'_'
-                                ,year
-                                ,'_raw_',
-                                 c("001.png",
-                                   "002.png",
-                                   "003.png",
-                                   "004.png",
-                                   "005.png",
-                                   "006.png"),
-                                 sep='')
-                           )
-
-    for(f2a in c(attach.files)){
-        result <- rcouchutils::couch.attach(parts,cdb.tamsid,f2a)
-        testthat::expect_equal(result$ok,TRUE)
-        testthat::expect_equal(result$id,cdb.tamsid)
+    for(col in names(df.return)){
+        navalues <- is.na(df.return[,col]) & !is.na(df.return$marker)
+        if(any(navalues)){
+            df.return[navalues,col] <- 0
+        }
     }
-    ## need to check that saved okay with this second call
+    df.return$marker <- NULL
+    df.return$ts <- as.POSIXct(df.return$ts)
+    df.return <- add.time.of.day(df.return)
+    hrly <- as.numeric(trunc(df.return$ts,"hours"))
+    keepers <- ! is.element(hrly,bad_hrs_set)
 
-    attach.files <- calvadrscripts::plot_tams.data(tams.data[[direction]]
-                                  ,site_no=tams.site
-                                  ,direction=direction
-                                  ,year=year
-                                  ,lanes.count=site.lanes
-                                  ,fileprefix='raw'
-                                  ,subhead='\npre imputation'
-                                  ,force.plot=FALSE
-                                  ,trackingdb=parts
-                                  ,tams.path=tams.path)
-
-    ## it should have bailed out
-    testthat::expect_equal(attach.files,1)
-
-    ## make sure force.plot flag works
-    attach.files <- calvadrscripts::plot_tams.data(tams.data[[direction]]
-                                  ,site_no=tams.site
-                                  ,direction=direction
-                                  ,year=year
-                                  ,lanes.count=site.lanes
-                                  ,fileprefix='raw'
-                                  ,subhead='\npre imputation'
-                                  ,force.plot=TRUE
-                                  ,trackingdb=parts
-                                  ,tams.path=tams.path)
-
-    testthat::expect_equal(attach.files,
-                           paste(tams.path,'/'
-                                ,year,'/'
-                                ,tams.site,'/'
-                                ,direction,'/'
-                                ,'images/'
-                                ,tams.site,'_'
-                                ,direction,'_'
-                                ,year
-                                ,'_raw_',
-                                 c("001.png",
-                                   "002.png",
-                                   "003.png",
-                                   "004.png",
-                                   "005.png",
-                                   "006.png"),
-                                 sep='')
-                           )
-
-    testthat::context('Amelia call')
-
-    plotspath <- calvadrscripts::plot_path(tams.path = tams.path
-                                          ,year = year
-                                          ,site_no = tams.site
-                                          ,direction = direction
-                                          ,makedir = FALSE)
-    plotsname <- paste(plotspath,paste('ameliaplots_',year,'.png',sep=''),sep='/')
-    df.tams.amelia <- fill.tams.gaps(df.tams=tams.data[[direction]]
-                                    ,plotfile=plotsname)
-
-    testthat::expect_s3_class(df.tams.amelia,'amelia')
-    testthat::expect_equal(df.tams.amelia$code,1)
-
-
-    amelia.plots <- dir(plotspath,pattern='ameliaplots'
-                       ,full.names=TRUE,all.files=TRUE)
-    for(f2a in c(amelia.plots)){
-        result <- rcouchutils::couch.attach(parts,cdb.tamsid,f2a)
-        testthat::expect_equal(result$ok,TRUE)
-        testthat::expect_equal(result$id,cdb.tamsid)
-    }
-
-    calvadrscripts::store.amelia.chains(
-                        df.amelia=df.tams.amelia,
-                        year=year,
-                        detector.id=cdb.tamsid,
-                        imputation.name='tamsraw',
-                        maxiter=100,
-                        db=parts
-                    )
-
-    ## verify
-    result <- rcouchutils::couch.check.state(year=year,id=cdb.tamsid
-                                            ,state='tamsraw_chain_lengths'
-                                            ,db=parts)
-
-    testthat::expect_equal(length(result),5)
-    sapply(result, function (r){ testthat::expect_lt(r,100) } )
-
-
-    result <- rcouchutils::couch.check.state(year=year,id=cdb.tamsid
-                                            ,state='tamsraw_max_iterations'
-                                            ,db=parts)
-    testthat::expect_equal(result,0)
-
-    testthat::context('post process amelia result')
-    df.tams.agg.amelia <- tams.medianed.aggregate.df(df.tams.amelia)
-
-    testthat::expect_s3_class(df.tams.agg.amelia,'data.frame')
-    testthat::expect_equal(dim(df.tams.agg.amelia),c(1583,10))
-    testthat::expect_equal(sort(names(df.tams.agg.amelia)),
-                           c(
-                               "day"
-                              ,"heavyheavy_r1"
-                              ,"heavyheavy_r2"
-                              ,"hr"
-                              ,"n_r1"
-                              ,"n_r2"
-                              ,"not_heavyheavy_r1"
-                              ,"not_heavyheavy_r2"
-                              ,"tod"
-                              ,"ts"))
-
-
-
-    attach.files <- plot_tams.data(df.tams.agg.amelia,tams.site,direction,year
-                                  ,fileprefix='imputed'
-                                  ,lanes.count = site.lanes
-                                  ,subhead='\npost imputation'
-                                  ,force.plot=TRUE
-                                  ,trackingdb=parts
-                                  ,tams.path=tams.path)
-
-    testthat::expect_equal(attach.files,
-                           paste(tams.path,'/'
-                                ,year,'/'
-                                ,tams.site,'/'
-                                ,direction,'/'
-                                ,'images/'
-                                ,tams.site,'_'
-                                ,direction,'_'
-                                ,year
-                                ,'_imputed_',
-                                 c("001.png",
-                                   "002.png",
-                                   "003.png",
-                                   "004.png",
-                                   "005.png",
-                                   "006.png"),
-                                 sep='')
-                           )
-
-    for(f2a in c(attach.files)){
-        result <- rcouchutils::couch.attach(parts,cdb.tamsid,f2a)
-        testthat::expect_equal(result$ok,TRUE)
-        testthat::expect_equal(result$id,cdb.tamsid)
-    }
-    ## need to check that saved okay with this second call
-    attach.files <- plot_tams.data(df.tams.agg.amelia,tams.site,direction,year
-                                  ,fileprefix='imputed'
-                                   ,lanes.count = site.lanes
-                                  ,subhead='\npost imputation'
-                                  ,force.plot=FALSE
-                                  ,trackingdb=parts
-                                  ,tams.path=tams.path)
-    ## it should have bailed out
-    testthat::expect_equal(attach.files,1)
+    testthat::expect_equal(dim(df.return),c(1620,7))
 
     ## clean up for next test
     result <- rcouchutils::couch.deletedb(parts)
@@ -336,12 +213,24 @@ testthat::test_that("process tams  site also works okay",{
                                                preplot=FALSE,
                                                postplot=TRUE,
                                                force.plot=TRUE,
+                                               impute = TRUE,
+                                               tams.path=tams.path,
+                                               trackingdb=parts
+                                               )
+
+    ## also verify that doing it again (using RData) works fine
+    list.df.tams.amelia.3 <- process.tams.site(tams.site=tams.site,
+                                               year=year,
+                                               seconds=seconds,
+                                               preplot=FALSE,
+                                               postplot=TRUE,
+                                               force.plot=TRUE,
                                                impute = FALSE,
                                                tams.path=tams.path,
                                                trackingdb=parts
                                                )
 
-    testthat::expect_equal(list.df.tams.amelia
+    testthat::expect_equal(list.df.tams.amelia.3
                            ,list.df.tams.amelia.2)
 
     result <- rcouchutils::couch.deletedb(parts)
