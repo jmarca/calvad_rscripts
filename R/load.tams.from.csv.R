@@ -232,24 +232,20 @@ date_rollover_bug <- function(times){
     times
 }
 
-##' reshape.tams.from.csv
-##' Take tams raw CSV, and turn it into one tibble per direction
+##' reshape.tams.from.csv.by.dir.by.lane
+##' Take tams raw CSV, and turn it into one tibble per lane,direction
 ##'
 ##' Given a csv file, this function will process the CSV into one tibble per direction.
 ##'
 ##' @title reshape.tams.from.csv
 ##' @param tams_csv csv file read from csv, for example, by
 ##'     readr::read_csv
-##' @param tams.path Where to save RData files, one per direction
-##' @param year the year
-##' @param trim.to.year whether to trim the data to the specified
-##'     year.  defaults to true
-##' @return A list of dataframs, one per direction in the original CSV
-##'     data.
+##' @param lane  the lane
+##' @return aggregated CSV by hour
 ##' @author James E. Marca
 ##' @export
 ##'
-reshape.tams.from.csv <- function(tams_csv,tams.path,year,trim.to.year=TRUE){
+reshape.tams.from.csv.by.dir.by.lane <- function(tams_csv,lane){
 
     ## prep for sqldf if you need postgresql
     config <- rcouchutils::get.config()
@@ -261,8 +257,50 @@ reshape.tams.from.csv <- function(tams_csv,tams.path,year,trim.to.year=TRUE){
     ## tams_csv <- tams_csv[o,]
 
     ## extract some info
-    tams.site <- tams_csv$detstaid[1]
 
+    mean.var.names <- c('not_heavyheavy','heavyheavy')
+
+    sqlstatement2 <- paste("select min(hrly) as ts,",
+                           paste('sum (',
+                                 c(mean.var.names),
+                                 ') as ',
+                                 paste(mean.var.names,
+                                       lane,
+                                       sep='_'),
+                                 sep=' ',
+                                 collapse=', '),
+                           ', sum(any_vehicle) as ',
+                           paste('n',lane,sep='_'),
+                           'from tams_csv group by hrly ',
+                           sep=' ',collapse=' '
+                           )
+    print(sqlstatement2)
+
+    sqldf::sqldf(sqlstatement2,drv="RPostgreSQL")
+
+}
+
+save.tams.rdata <- function(tams.by.hr.direction
+                           ,tams.site
+                           ,direction
+                           ,year
+                           ,tams.path){
+
+    filename <- make.tams.output.filename(tams.site,direction,year)
+    savepath <- tams.path
+    if(!file.exists(savepath)){dir.create(savepath)}
+    savepath <- paste(tams.path,year,sep='/')
+    if(!file.exists(savepath)){dir.create(savepath)}
+    savepath <- paste(savepath,tams.site,sep='/')
+    if(!file.exists(savepath)){dir.create(savepath)}
+    savepath <- paste(savepath,direction,sep='/')
+    if(!file.exists(savepath)){dir.create(savepath)}
+    filepath <- paste(savepath,filename,sep='/')
+    save(tams.by.hr.direction,file=filepath,compress='xz')
+    print(paste('saved',tams.site,direction,'to',filepath))
+
+}
+clean.tams.csv.lanes <- function(tams_csv){
     ## ugly data hacking:
     ## site 10002 has lanes 2,3,12,13.  this routine truncates to just 2,3
     lanes <- as.numeric(levels(as.factor(tams_csv$lane)))
@@ -273,200 +311,102 @@ reshape.tams.from.csv <- function(tams_csv,tams.path,year,trim.to.year=TRUE){
         good.lane.value <- tams_csv$lane < max_allowed
         tams_csv <- tams_csv[good.lane.value,]
     }
+    return (tams_csv)
+}
 
-    number.lanes <- max(tams_csv$lane)
-
-
-    hour <-  3600 ## seconds per hour
-
+trim.to.year <- function(tams_csv,year){
     ts.ct   <- as.POSIXct(tams_csv$timestamp_full,tz='UTC')
 
-    if(trim.to.year){
-        ## trim any records not in the requested year
-        print(paste('trimming to year',year))
-        keep.records <- (1900 + as.POSIXlt.date(ts.ct)$year) ==  year
-        ## print(summary(keep.records))
-        ## print('length original')
-        ## print(dim(df.return))
-        ## print('length keep')
-        ## print(dim(df.return[keep.records,]))
-        tams_csv <- tams_csv[keep.records,]
-        ts.ct <- ts.ct[keep.records]
-    }
+    ## trim any records not in the requested year
+    print(paste('trimming to year',year))
+    keep.records <- (1900 + as.POSIXlt.date(ts.ct)$year) ==  year
+    tams_csv[keep.records,]
 
-    tams_csv$hrly <- as.numeric(trunc(ts.ct,"hours"))
-    tams_csv <- tams.recode.lanes(tams.recode.lane_dir(tams_csv))
+}
+
+tams.extra.vars <- function(tams_csv){
     tams_csv$any_vehicle <- 1
     tams_csv$heavyheavy <- 0
     tams_csv$not_heavyheavy <- 0
     tams_csv$heavyheavy[tams_csv$calvad_class == 'HHDT'] <- 1
     tams_csv$not_heavyheavy[tams_csv$calvad_class == 'NHHDT'] <- 1
-    ##if(length(levels(tams_csv$lane_dir)) > 1)
-
-    mean.var.names <- c('not_heavyheavy','heavyheavy')
-    directions <-  levels(as.factor(tams_csv$lane_dir))
-    ## tams.by.dir <- split(tams_csv,tams_csv$lane_dir)
-    tams.by.dir <- list() ## to hold output response
-    ## directions <- names(tams.by.dir)
-    bad_hrs_set <- c()
-
-    for(direction in directions){
-        print(paste('processing',tams.site,direction))
-        ## index rather than split
-        dir_idx <- tams_csv$lane_dir == direction
-        cdb.tamsid <- paste('tams',tams.site,direction,sep='.')
-        ## using indices, so tams = tams_csv[dir_idx,]
-        ## tams <- tams.by.dir[[direction]]
-
-        if(length(dir_idx[dir_idx]) ==  0){
-            ## probably have an issue here
-            print(paste("no data loaded for",tams.site,direction," ---  skipping"))
-            next
-        }
-
-        ## preplot prior to cleaning??
-
-        ## cut down on RAM?
-        ## not splitting anymore
-        ## tams.data.hr.lane <- split(tams,tams$lane)
-        tams.data.hr.lane <- list() ## list for output results
-        lanes <- levels(as.factor(tams_csv[dir_idx,]$lane))
-
-        ## tams.by.dir[[direction]] <- NULL
-        ## tams <- NULL
-        ## gc()
-
-        for (l in lanes){
-            ## redo dir_idx here because I delete rows in tams_csv below
-            dir_idx <- tams_csv$lane_dir == direction
-            lane_dir_idx <- tams_csv$lane == l & dir_idx
-
-            ## temp_df <- tams.data.hr.lane[[l]]
-
-            ## fix the date rollover bug
-            fixed_times <- date_rollover_bug(tams_csv[lane_dir_idx,]$timestamp_full)
-            tams_csv[lane_dir_idx,'timestamp_full'] <- fixed_times
-            ts.ct   <- as.POSIXct(fixed_times,tz='UTC')
-            tams_csv[lane_dir_idx,'hrly'] <- as.numeric(trunc(ts.ct,"hours"))
-            bad_hrs <- timestamp_insanity_fix(tams_csv[lane_dir_idx,])
-            bad_hrs_set <- union(bad_hrs_set,bad_hrs)
-            keepers <- ! is.element(tams_csv[lane_dir_idx,]$hrly,bad_hrs)
-            drops_num <- length(keepers[!keepers])
-            prior_num <- length(keepers)
-            print(paste('dropping',drops_num,'out of',prior_num,'total records (or',round(100*(drops_num/prior_num),2),'percent) due to duplicated hours'))
-            tams_csv$keep <- 0
-            tams_csv[lane_dir_idx,][keepers,'keep'] <- 1
-
-            sqlstatement2 <- paste("select min(hrly) as ts,",
-                                   paste('sum (',
-                                         c(mean.var.names),
-                                         ') as ',
-                                         paste(mean.var.names,
-                                               l,
-                                               sep='_'),
-                                         sep=' ',
-                                         collapse=', '),
-                                   ', sum(any_vehicle) as ',
-                                   paste('n',l,sep='_'),
-                                   'from tams_csv where keep=1 group by hrly ',
-                                   sep=' ',collapse=' '
-                                   )
-            print(sqlstatement2)
-
-            df_hourly <- sqldf::sqldf(sqlstatement2,drv="RPostgreSQL")
-
-            ## now get rid of CSV rows for this lane,direction
-            tams_csv <- tams_csv[!lane_dir_idx, ]
-            gc()
-
-            df_hourly$ts <- as.POSIXct(df_hourly$ts,origin = "1970-01-01", tz = "UTC")
-            df_hourly$ts <- trunc(df_hourly$ts,units='hours')
-
-            df_hourly$marker <- TRUE
-
-            tams.data.hr.lane[[l]] <- df_hourly
-        }
-        print('combine lane by lane aggregates')
-
-        ## combine lane by lane aggregates by same hour, by making a
-        ## df with all of the hours (min to max)
-        mints <- min(tams.data.hr.lane[[1]]$ts)
-        maxts <- max(tams.data.hr.lane[[1]]$ts)
-        for (l in lanes[-1]){
-            mints <- min(mints,min(tams.data.hr.lane[[l]]$ts))
-            maxts <- max(maxts,max(tams.data.hr.lane[[l]]$ts))
-        }
-        all.ts <- seq(mints,maxts,by=hour)
-        ## add a marker to keep track of times with any data vs times
-        ## with none at all, so as to set NA to zero after the merge
-        ## step
-        df.return <- tibble::tibble(ts=all.ts,marker=FALSE)
-        ## make ts posixlt to enable merge below
-        df.return$ts <- as.POSIXlt(df.return$ts)
-
-        for(l in lanes){
-            df.return <- merge(df.return,tams.data.hr.lane[[l]],by=c('ts'),all=TRUE)
-            df.return$marker <- df.return$marker.x | df.return$marker.y
-            df.return$marker.x <- NULL
-            df.return$marker.y <- NULL
-        }
-
-        print(dim(df.return))
-        ## here, if any data collected at all in an hour for any lane,
-        ## then any lanes with NA values should be zero.  The theory
-        ## is that if any data comes in for any lane, then all of the
-        ## detectors were on and working, just nothing was recorded,
-        ## so the NA should be zero, not NA.  leaving it NA will cause
-        ## Amelia to try to fill that missing value with something.
-        ## the "marker" bit identifies hours with any data vs hours
-        ## with no data
-        for(col in names(df.return)){
-            navalues <- is.na(df.return[,col]) & !is.na(df.return$marker)
-            if(any(navalues)){
-                df.return[navalues,col] <- 0
-            }
-        }
-        df.return$marker <- NULL
-        df.return$ts <- as.POSIXct(df.return$ts)
-
-        df.return <- add.time.of.day(df.return)
-        tams.by.dir[[direction]] <- df.return
-
-
-    }
-
-    ## finally, do one more pass to drop any missed bad hours
-    for(direction in directions){
-        df.return <- tams.by.dir[[direction]]
-
-        hrly <- as.numeric(trunc(df.return$ts,"hours"))
-        keepers <- ! is.element(hrly,bad_hrs_set)
-        if(length(keepers[!keepers]) > 0){
-            print(paste('second pass, dropping',length(keepers[!keepers]),'records due to duplicated hours'))
-            tams.by.dir[[direction]] <- df.return[keepers,]
-        }
-
-    }
-    for(direction in directions){
-
-        df.return <- tams.by.dir[[direction]]
-        ## save tams data for next time
-        filename <- make.tams.output.filename(tams.site,direction,year)
-        savepath <- tams.path
-        if(!file.exists(savepath)){dir.create(savepath)}
-        savepath <- paste(tams.path,year,sep='/')
-        if(!file.exists(savepath)){dir.create(savepath)}
-        savepath <- paste(savepath,tams.site,sep='/')
-        if(!file.exists(savepath)){dir.create(savepath)}
-        savepath <- paste(savepath,direction,sep='/')
-        if(!file.exists(savepath)){dir.create(savepath)}
-        filepath <- paste(savepath,filename,sep='/')
-        save(df.return,file=filepath,compress='xz')
-        print(paste('saved',tams.site,direction,'to',filepath))
-    }
-
-    list(tams.by.dir,number.lanes)
+    tams_csv
 }
+
+## ##' cleanup.tams.from.csv
+## ##' Take tams raw CSV, and turn it into one tibble per direction
+## ##'
+## ##' Given a csv file, this function will process the CSV into one tibble per direction.
+## ##'
+## ##' @title cleanup.tams.from.csv
+## ##' @param tams_csv csv file read from csv, for example, by
+## ##'     readr::read_csv
+## ##' @param tams.path Where to save RData files, one per direction
+## ##' @param year the year
+## ##' @param trim.to.year whether to trim the data to the specified
+## ##'     year.  defaults to true
+## ##' @return A list of dataframs, one per direction in the original CSV
+## ##'     data.
+## ##' @author James E. Marca
+## ##' @export
+## ##'
+## cleanup.tams.from.csv <- function(tams_csv,tams.path,year,trim.to.year=TRUE){
+
+##     ## extract some info
+##     tams.site <- tams_csv$detstaid[1]
+
+
+##     ##if(length(levels(tams_csv$lane_dir)) > 1)
+##     tams_csv$keep <- FALSE
+
+##     directions <-  levels(as.factor(tams_csv$lane_dir))
+##     bad_hrs_set <- c()
+
+##     for(direction in directions){
+##         print(paste('processing',tams.site,direction))
+##         ## index rather than split
+##         dir_idx <- tams_csv$lane_dir == direction
+##         cdb.tamsid <- paste('tams',tams.site,direction,sep='.')
+##         ## using indices, so tams = tams_csv[dir_idx,]
+##         ## tams <- tams.by.dir[[direction]]
+
+##         if(length(dir_idx[dir_idx]) ==  0){
+##             ## probably have an issue here
+##             print(paste("no data loaded for",tams.site,direction," ---  skipping"))
+##             next
+##         }
+
+##         ## preplot prior to cleaning??
+
+##         tams.data.hr.lane <- list() ## list for output results
+##         lanes <- levels(as.factor(tams_csv[dir_idx,]$lane))
+
+##         for (l in lanes){
+##             ## redo dir_idx here because I delete rows in tams_csv below
+##             dir_idx <- tams_csv$lane_dir == direction
+##             lane_dir_idx <- tams_csv$lane == l & dir_idx
+
+##             ## temp_df <- tams.data.hr.lane[[l]]
+
+##             ## fix the date rollover bug
+##             fixed_times <- date_rollover_bug(tams_csv[lane_dir_idx,]$timestamp_full)
+##             tams_csv[lane_dir_idx,'timestamp_full'] <- fixed_times
+##             ts.ct   <- as.POSIXct(fixed_times,tz='UTC')
+##             tams_csv[lane_dir_idx,'hrly'] <- as.numeric(trunc(ts.ct,"hours"))
+##             bad_hrs <- timestamp_insanity_fix(tams_csv[lane_dir_idx,])
+##             bad_hrs_set <- union(bad_hrs_set,bad_hrs)
+##             keepers <- ! is.element(tams_csv[lane_dir_idx,]$hrly,bad_hrs)
+##             drops_num <- length(keepers[!keepers])
+##             prior_num <- length(keepers)
+##             print(paste('dropping',drops_num,'out of',prior_num,'total records (or',round(100*(drops_num/prior_num),2),'percent) due to duplicated hours'))
+
+##             tams_csv[lane_dir_idx,][keepers,'keep'] <- TRUE
+##         }
+
+##     }
+##     tams_csv[tams_csv$keep,]
+
+## }
 
 ##' Make the canonical TAMS output filename.
 ##'
