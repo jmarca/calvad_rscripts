@@ -16,9 +16,9 @@
     "url": "https://github.com/jmarca/calvad_rscripts"
   },
   "dependencies": {
-    "configr": "jmarca/configr",
-    "rcouchutils": "jmarca/rstats_couch_utils",
-    "rstats_remote_files": "jmarca/rstats_remote_files"
+    "configr": "git://github.com/jmarca/configr",
+    "rcouchutils": "git://github.com/jmarca/rstats_couch_utils",
+    "rstats_remote_files": "git://github.com/jmarca/rstats_remote_files"
   },
   "author": "James E. Marca",
   "license": "GPLv2",
